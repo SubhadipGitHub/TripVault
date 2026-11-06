@@ -32,6 +32,10 @@ const A={
     if(!(await gate({title:"Delete this file?",plan:[`Delete <b>${esc(f.name)}</b> (${(f.size/1024).toFixed(0)} KB)`,its.length?`Bookings stay; ${its.length} will lose this attachment`:"Not linked to any booking"],irreversible:"The file can't be recovered unless it's in a backup.",ok:"Delete file"})))return;await delFile(f.id);render();toast("File deleted")},
   persist:async()=>{const ok=await navigator.storage?.persist?.();toast(ok?"Storage is now persistent":"Browser declined — keep regular backups",ok?"ok":"info");render()},
   fitDates:async()=>{const t=curTrip();const ds=tripItems(t.id).filter(i=>i.kind!=="doc").flatMap(itemDates).sort();t.start=ds[0]<t.start?ds[0]:t.start;t.end=ds[ds.length-1]>t.end?ds[ds.length-1]:t.end;await saveTrip(t);render();toast("Trip dates extended")},
+  dupTrip:()=>duplicateTrip(),
+  ideaAdd:async()=>{const t=curTrip(),v=$("#idT").value.trim();if(!v){toast("Type an idea first","bad");return}t.ideas=[...(t.ideas||[]),{id:uid(),text:v,cat:$("#idC").value,place:$("#idP").value.trim(),note:$("#idN").value.trim()}];await saveTrip(t);render()},
+  ideaDel:async el=>{const t=curTrip();t.ideas=(t.ideas||[]).filter(i=>i.id!==el.dataset.id);await saveTrip(t);render()},
+  ideaSched:async el=>{const t=curTrip(),i=(t.ideas||[]).find(x=>x.id===el.dataset.id);if(!i)return;i.scheduled=true;await saveTrip(t);const d=S.day||tripDays(t)[0];newItem("activity",{d,title:i.text,location:i.place||t.dest||""});render()},
   ics:()=>exportICS(),shareItin:()=>shareItinerary(),
   copyItin:()=>{const t=curTrip();if(t)copyTxt(itinText(t))},
   /* memories & wrapped */

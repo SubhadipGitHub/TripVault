@@ -17,7 +17,7 @@ function render(){
   if(RV.last===key)scrollTo(0,y);RV.last=key;
   const on=$(".dchip.on");on?.scrollIntoView({block:"nearest",inline:"center"});
 }
-const SUBS={book:"bookings",bookings:"bookings",money:"money",docs:"docs",pack:"pack"};
+const SUBS={ideas:"ideas",book:"bookings",bookings:"bookings",money:"money",docs:"docs",pack:"pack"};
 function go(v){
   if(SUBS[v]){S.sub=SUBS[v];v="vault"}
   S.view=v;S.meta.view=v;S.meta.sub=S.sub;saveMeta();render();scrollTo(0,0);
@@ -90,10 +90,10 @@ function viewToday(t){
 
 /* ===================== Vault (bookings · documents · money · packing) ===================== */
 function viewVault(t){
-  if(!["bookings","docs","money","pack"].includes(S.sub))S.sub="bookings";
+  if(!["bookings","docs","money","pack","ideas"].includes(S.sub))S.sub="bookings";
   const nb=tripItems(t.id).filter(i=>i.kind!=="doc"&&i.kind!=="expense").length,nd=tripItems(t.id).filter(i=>i.kind==="doc").length+S.files.filter(f=>f.tripId===t.id&&!f.memId).length;
-  const tabs=[["bookings","list","Bookings",nb],["docs","shield","Documents",nd],["money","wallet","Money",""],["pack","bag","Packing",(t.pack||[]).length?`${t.pack.filter(p=>p.done).length}/${t.pack.length}`:""]];
-  const body={bookings:viewBook,docs:viewDocs,money:t=>viewMoney(t)+settleCard(t),pack:viewPacking}[S.sub](t);
+  const tabs=[["bookings","list","Bookings",nb],["docs","shield","Documents",nd],["money","wallet","Money",""],["ideas","compass","Ideas",(t.ideas||[]).length||""],["pack","bag","Packing",(t.pack||[]).length?`${t.pack.filter(p=>p.done).length}/${t.pack.length}`:""]];
+  const body={bookings:viewBook,docs:viewDocs,money:t=>viewMoney(t)+dailySpend(t)+settleCard(t),pack:viewPacking,ideas:viewIdeas}[S.sub](t);
   return`<div class="subtabs" role="tablist">${tabs.map(([k,i,l,n])=>`<button role="tab" aria-selected="${S.sub===k}" class="${S.sub===k?"on":""}" data-a="vsub" data-s="${k}">${ic(i,"sm")} ${l}${n!==""?` <span class="dim">${n}</span>`:""}</button>`).join("")}</div>${body}`;
 }
 

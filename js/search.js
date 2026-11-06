@@ -32,6 +32,7 @@ function buildIndex(){
   });
   S.files.filter(f=>!f.memId).forEach(f=>push({type:"file",id:f.id,tripId:f.tripId,title:f.name,sub:`${(f.size/1024).toFixed(0)} KB · attachment`,icon:"file",ck:"doc",text:f.name+" "+(f.text||"")}));
   S.memories.forEach(m=>push({type:"memory",id:m.id,tripId:m.tripId,title:m.title||"Untitled moment",sub:`${fmtDs(m.date)}${m.place?" · "+m.place:""}`,icon:"camera",ck:"memory",text:[m.title,m.text,m.place,MOODS[m.mood]?.n].join(" ")}));
+  S.trips.forEach(t=>(t.ideas||[]).forEach(p=>push({type:"pack",id:p.id,tripId:t.id,title:p.text,sub:`Idea · ${p.cat||""} ${p.place||""}`,icon:"compass",ck:"activity",text:[p.text,p.place,p.note,p.cat].join(" ")})));
   S.trips.forEach(t=>(t.pack||[]).forEach(p=>push({type:"pack",id:p.id,tripId:t.id,title:p.text,sub:`Packing · ${p.done?"packed":"to pack"}`,icon:"bag",ck:"doc",text:p.text+" "+(p.cat||"")})));
   SEARCH.idx=idx;SEARCH.stale=false;
 }

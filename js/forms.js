@@ -122,7 +122,7 @@ function newItem(kind,o={}){const t=curTrip();const d=o.d||(t?(tripPhase(t).toda
   if(kind==="hotel"){it.checkIn=`${d}T14:00`;it.checkOut=`${addDays(d,1)}T12:00`;it.tz=tz}
   if(kind==="flight"||kind==="train"){it.dep=`${d}T`;it.depTz="";}
   if(kind==="expense"){const p=tzParts(tz,Date.now());it.date=o.d||todayIn(tz);it.time=`${pad(p.h)}:${pad(p.mi)}`;it.tz=tz;it.cur=t&&isIntlTrip(t)&&t.localCur?t.localCur:HC()}
-  if(kind==="doc"){it.docType=o.dt||"Passport"}
+  if(kind==="doc"){it.docType=o.dt||"Passport"}if(o.title)it.title=o.title;if(o.location)it.location=o.location;
   if(!t){toast("Create a trip first","bad");return}
   openItem(it,true)}
 async function storeFiles(files,tripId,itemIds){let linked=0,stored=0;for(const f of files){const buf=await f.arrayBuffer();const hash=await sha256(buf);const ex=S.files.find(x=>x.hash===hash);
@@ -233,7 +233,7 @@ function openTrip(t,isNew){const ov=sheet({title:isNew?"New trip":"Trip settings
   ${Sel("Type","type",t.type||"auto",[["auto","Auto-detect"],["domestic","Domestic (India)"],["international","International"]])}${TZsel("Main timezone","tz",t.tz)}
   ${F(`Total budget (${sym(HC()).trim()})`,"budget",t.budget||"",{type:"number"})}${Sel("Local currency","localCur",t.localCur||HC(),CURS)}
   ${F(`Exchange rates (${HC()} per unit)`,"rates",ratesStr(t.rates),{full:1,ph:"MYR=19.2, USD=84.5"})}</div>`,
-  foot:`${isNew?"":`<button class="btn bad" id="tDel" style="margin-right:auto">${ic("trash","sm")} Delete trip</button>`}<button class="btn" data-close>Cancel</button><button class="btn pri" id="tSv">${ic("check","sm")} Save</button>`});
+  foot:`${isNew?"":`<button class="btn" data-a="dupTrip" style="margin-right:auto">${ic("copy","sm")} Duplicate</button><button class="btn bad" id="tDel">${ic("trash","sm")} Delete trip</button>`}<button class="btn" data-close>Cancel</button><button class="btn pri" id="tSv">${ic("check","sm")} Save</button>`});
   $("[name=tz]",ov).options[0].textContent="Auto (from bookings)";
   $("#tSv",ov).onclick=async()=>{const g=gather(ov);if(!g.name){toast("Name the trip","bad");return}if(g.start&&g.end&&g.end<g.start){toast("End is before start","bad");return}
     Object.assign(t,{name:g.name,dest:g.dest,start:g.start,end:g.end,type:g.type==="auto"?"":g.type,tz:g.tz||t.tz||"Asia/Kolkata",budget:+g.budget||0,localCur:g.localCur,rates:parseRates(g.rates)});t.createdAt??=Date.now();
