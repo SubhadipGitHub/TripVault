@@ -15,6 +15,8 @@ function searchActions(){return[
   {type:"action",id:"a:mem",title:"Capture a memory",icon:"camera",text:"new memory capture photo note journal",run:()=>newMemory()},
   {type:"action",id:"a:exp",title:"Log an expense",icon:"tag",text:"expense spend cost log money add",run:()=>{go("vault");S.sub="money";render()}},
   {type:"action",id:"a:wrap",title:"Open Trip Wrapped",icon:"play",text:"wrapped story cards share export year recap",run:()=>openWrapped()},
+  {type:"action",id:"a:ics",title:"Export itinerary to calendar (.ics)",icon:"cal",text:"calendar ics google apple outlook export reminders",run:()=>exportICS()},
+  {type:"action",id:"a:share",title:"Share itinerary as a web page",icon:"share",text:"share itinerary html send family",run:()=>shareItinerary()},
   {type:"action",id:"a:backup",title:"Backup & restore",icon:"db",text:"backup restore export import json encrypted",run:()=>openBackup()},
   {type:"action",id:"a:set",title:"Settings",icon:"sliders",text:"settings theme lock passphrase buffers timezone",run:()=>openSettings()},
   ...(Vault.protected?[{type:"action",id:"a:lock",title:"Lock vault now",icon:"lock",text:"lock secure passphrase",run:()=>Vault.lock()}]:[{type:"action",id:"a:setlock",title:"Protect vault with a passphrase",icon:"lock",text:"lock encrypt passphrase password secure privacy",run:()=>openSettings()}])

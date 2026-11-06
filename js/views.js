@@ -83,7 +83,8 @@ function viewToday(t){
     ${chk.map(c=>`<div class="chk">${ic(c.lv==="ok"?"check":c.lv==="info"?"info":"alert")}<div class="sp" style="color:${c.lv==="ok"?"var(--tx2)":c.lv==="bad"?"var(--bad)":c.lv==="warn"?"var(--warn)":"var(--tx2)"}">${c.txt}</div>${c.act||""}</div>`).join("").replace(/<svg class="ic "><use href="#i-check"\/><\/svg>/g,`<svg class="ic" style="color:var(--ok)"><use href="#i-check"/></svg>`)}</div>`}
   h+=`<div class="card"><div class="h">${ic("zap")}<h2>Quick actions</h2></div><div class="grid g2">
     <button class="btn" data-a="import">${ic("upload")} Import booking</button><button class="btn" data-a="add" data-k="expense">${ic("tag")} Log expense</button>
-    <button class="btn" data-a="newMem">${ic("camera")} Capture memory</button><button class="btn" data-a="copyItin">${ic("share")} Copy itinerary</button></div></div>`;
+    <button class="btn" data-a="newMem">${ic("camera")} Capture memory</button><button class="btn" data-a="copyItin">${ic("copy")} Copy itinerary</button>
+    <button class="btn" data-a="ics">${ic("cal")} Add to calendar</button><button class="btn" data-a="shareItin">${ic("share")} Share itinerary</button></div></div>`;
   return h}
 
 /* ===================== Vault (bookings · documents · money · packing) ===================== */
@@ -91,7 +92,7 @@ function viewVault(t){
   if(!["bookings","docs","money","pack"].includes(S.sub))S.sub="bookings";
   const nb=tripItems(t.id).filter(i=>i.kind!=="doc"&&i.kind!=="expense").length,nd=tripItems(t.id).filter(i=>i.kind==="doc").length+S.files.filter(f=>f.tripId===t.id&&!f.memId).length;
   const tabs=[["bookings","list","Bookings",nb],["docs","shield","Documents",nd],["money","wallet","Money",""],["pack","bag","Packing",(t.pack||[]).length?`${t.pack.filter(p=>p.done).length}/${t.pack.length}`:""]];
-  const body={bookings:viewBook,docs:viewDocs,money:viewMoney,pack:viewPacking}[S.sub](t);
+  const body={bookings:viewBook,docs:viewDocs,money:t=>viewMoney(t)+settleCard(t),pack:viewPacking}[S.sub](t);
   return`<div class="subtabs" role="tablist">${tabs.map(([k,i,l,n])=>`<button role="tab" aria-selected="${S.sub===k}" class="${S.sub===k?"on":""}" data-a="vsub" data-s="${k}">${ic(i,"sm")} ${l}${n!==""?` <span class="dim">${n}</span>`:""}</button>`).join("")}</div>${body}`;
 }
 
@@ -197,7 +198,7 @@ function viewMoney(t){
   const ex=tripItems(t.id).filter(i=>i.kind==="expense").sort((a,b)=>(b.date||"").localeCompare(a.date||""));const exT=ex.reduce((a,i)=>a+(toINR(t,i.cost,i.cur)||0),0);
   const ph=tripPhase(t);const dd=ph.p==="during"?ph.day:ph.p==="after"?tripDays(t).length:0;
   h+=`<div class="card"><div class="h">${ic("tag")}<h2>Trip expenses</h2><span class="sp"></span><span class="small muted">${fmtM(exT)}${dd?` · ${fmtM(exT/dd)}/day`:""}</span></div>
-   <div class="fg f4" id="qx"><div><label>Amount</label><input type="number" step="0.01" id="qxA" placeholder="0"></div><div><label>Currency</label><select id="qxC">${CURS.map(c=>`<option ${c===(isIntlTrip(t)&&t.localCur?t.localCur:"INR")?"selected":""}>${c}</option>`).join("")}</select></div><div><label>Category</label><select id="qxK">${EXP_CATS.map(c=>`<option>${c}</option>`).join("")}</select></div><div><label>Note</label><input id="qxN" placeholder="Dinner at…"></div></div>
+   <div class="fg f4" id="qx"><div><label>Amount</label><input type="number" step="0.01" id="qxA" placeholder="0"></div><div><label>Currency</label><select id="qxC">${CURS.map(c=>`<option ${c===(isIntlTrip(t)&&t.localCur?t.localCur:"INR")?"selected":""}>${c}</option>`).join("")}</select></div><div><label>Category</label><select id="qxK">${EXP_CATS.map(c=>`<option>${c}</option>`).join("")}</select></div><div><label>Note</label><input id="qxN" placeholder="Dinner at…"></div>${tripPeople(t).length>1?`<div><label>Paid by</label><select id="qxP"><option value="">—</option>${tripPeople(t).map(p=>`<option>${esc(p)}</option>`).join("")}</select></div>`:""}</div>
    <div class="row mt"><span class="sp"></span><button class="btn pri" data-a="quickExp">${ic("plus")} Log expense</button></div>
    ${ex.slice(0,12).map(i=>`<div class="li tap" data-a="item" data-id="${i.id}"><div class="b"><div class="t">${esc(i.title||i.cat)}</div><div class="d">${esc(i.cat||"")} · ${fmtDs(i.date)}</div></div><div class="r">${fmtM(i.cost,i.cur)}${i.cur!=="INR"&&rate(t,i.cur)?`<div class="small dim">≈ ${fmtM(toINR(t,i.cost,i.cur))}</div>`:""}</div></div>`).join("")}</div>`;
   return h}

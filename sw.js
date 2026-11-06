@@ -4,7 +4,7 @@ const VERSION = "tv-v1";
 const SHELL = [
   "./", "index.html", "manifest.webmanifest", "css/app.css",
   "js/data.js", "js/core.js", "js/store.js", "js/parsers.js", "js/model.js", "js/forms.js", "js/backup.js",
-  "js/security.js", "js/memories.js", "js/wrapped.js", "js/search.js", "js/views.js", "js/main.js",
+  "js/security.js", "js/memories.js", "js/wrapped.js", "js/search.js", "js/extras.js", "js/views.js", "js/main.js",
   "assets/icon.svg", "assets/icon-192.png", "assets/icon-512.png", "assets/apple-touch-icon.png"
 ];
 self.addEventListener("install", e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
