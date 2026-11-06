@@ -72,7 +72,7 @@ function readiness(t){
   const days=tripDays(t);const unpl=days.filter(d=>!its.some(i=>(i.kind==="activity"||i.kind==="transfer")&&i.start?.slice(0,10)===d));if(unpl.length)add("info",`${unpl.length} day${unpl.length>1?"s":""} with no activities planned yet — tap a green free slot in Itinerary`,`<button class="btn xs" data-a="go" data-v="plan">Plan</button>`);
   if(its.length&&(!S.meta.lastBackup||S.meta.dirty>S.meta.lastBackup))add("info",S.meta.lastBackup?`Changes since last backup (${new Date(S.meta.lastBackup).toLocaleDateString()})`:"Never backed up — export a copy before you travel",`<button class="btn xs" data-a="backup">Backup</button>`);
   return C}
-const isIntlTrip=t=>t.type==="international"||(t.type!=="domestic"&&(tripItems(t.id).some(i=>i.kind==="flight"&&isIntlFlight(i))||(t.tz&&t.tz!=="Asia/Kolkata")));
+const isIntlTrip=t=>t.type==="international"||(t.type!=="domestic"&&(tripItems(t.id).some(i=>i.kind==="flight"&&isIntlFlight(i))||(t.tz&&t.tz!==S.settings.homeTz)));
 function budgetOf(t){const its=tripItems(t.id).filter(i=>i.kind!=="doc");let committed=0,paid=0,pending=0;const unconv=[],cats={},dues=[],curs={};
   for(const it of its){const p=payInfo(it);if(!p.cost)continue;curs[p.cur]=(curs[p.cur]||0)+p.cost;const r=rate(t,p.cur);if(r==null){unconv.push({it,p});continue}
     committed+=p.cost*r;paid+=p.paid*r;pending+=p.pend*r;const cat=it.kind==="expense"?(it.cat||"Misc"):KINDS[it.kind].n;cats[cat]=(cats[cat]||0)+p.cost*r;if(p.pend>0)dues.push({it,p,inr:p.pend*r})}

@@ -38,9 +38,10 @@ const offLabel=(tz,ms=Date.now())=>{const o=tzOff(tz,ms);const s=o>=0?"+":"-";co
 const tzShort=tz=>(tz||"").split("/").pop().replace(/_/g," ");
 /* ===== Money ===== */
 const sym=c=>CUR_SYM[c]??(c+" ");
-function fmtM(v,c="INR",dec){if(v==null||isNaN(v))return"—";const n=Math.abs(v)>=1000||dec===0?Math.round(v):Math.round(v*100)/100;
+const HC=()=>S.settings?.homeCur||"INR";
+function fmtM(v,c=HC(),dec){if(v==null||isNaN(v))return"—";const n=Math.abs(v)>=1000||dec===0?Math.round(v):Math.round(v*100)/100;
   const s=c==="INR"?n.toLocaleString("en-IN",{maximumFractionDigits:2}):n.toLocaleString("en-US",{maximumFractionDigits:2});return(v<0?"-":"")+sym(c)+s.replace("-","")}
-function rate(trip,c){if(!c||c==="INR")return 1;const r=trip?.rates?.[c];return r>0?r:null}
+function rate(trip,c){if(!c||c===HC())return 1;const r=trip?.rates?.[c];return r>0?r:null}
 function toINR(trip,amt,c){const r=rate(trip,c);return r==null?null:(+amt||0)*r}
 function parseRates(s){const o={};(s||"").split(/[,;\n]/).forEach(p=>{const m=p.match(/([A-Z]{3})\s*[=:]\s*([\d.]+)/i);if(m)o[m[1].toUpperCase()]=+m[2]});return o}
 const ratesStr=o=>Object.entries(o||{}).map(([k,v])=>`${k}=${v}`).join(", ");
@@ -109,5 +110,5 @@ function payInfo(it){
   const sched=(it.payments||[]).filter(p=>p.status!=="paid");
   const pend=it.kind==="expense"?0:Math.max(0,cost-paid);
   const due=sched.map(p=>p.due).filter(Boolean).sort()[0]||null;
-  return{cost,paid:it.kind==="expense"?cost:Math.min(paid,cost||paid),pend,due,cur:it.cur||"INR"};
+  return{cost,paid:it.kind==="expense"?cost:Math.min(paid,cost||paid),pend,due,cur:it.cur||HC()};
 }

@@ -29,7 +29,7 @@ function itemFields(it,o={}){
 const PAY_M=["UPI","Card","Net banking","Cash","Wallet","Forex card","Pay at property","Agent","Other"];
 const payRow=p=>`<div class="payrow fg f4" style="margin-top:6px;align-items:end"><div><label>Status</label><select data-p="status"><option value="paid" ${p.status==="paid"?"selected":""}>Paid</option><option value="pending" ${p.status!=="paid"?"selected":""}>Pending</option></select></div><div><label>Amount</label><input data-p="amount" type="number" step="0.01" value="${esc(p.amount??"")}"></div><div><label>${p.status==="paid"?"Paid on":"Due by"}</label><input data-p="due" type="date" value="${esc(p.due||p.date||"")}"></div><div class="row" style="gap:4px"><select data-p="method">${PAY_M.map(m=>`<option ${m===p.method?"selected":""}>${m}</option>`).join("")}</select><button class="ibtn" data-rmpay title="Remove">${ic("x","sm")}</button></div></div>`;
 function costBlock(it){const isExp=it.kind==="expense";
-  return`<div class="sep"></div><div class="fg f4">${F(isExp?"Amount":"Total cost","cost",it.cost,{type:"number",step:"0.01"})}${Sel("Currency","cur",it.cur||"INR",CURS)}${isExp?"":`<div class="full row" style="gap:6px;align-self:end"><input type="checkbox" name="refundable" ${it.refundable?"checked":""} id="rf"><label for="rf" style="margin:0">Refundable / free cancellation</label></div>`}</div>
+  return`<div class="sep"></div><div class="fg f4">${F(isExp?"Amount":"Total cost","cost",it.cost,{type:"number",step:"0.01"})}${Sel("Currency","cur",it.cur||HC(),CURS)}${isExp?"":`<div class="full row" style="gap:6px;align-self:end"><input type="checkbox" name="refundable" ${it.refundable?"checked":""} id="rf"><label for="rf" style="margin:0">Refundable / free cancellation</label></div>`}</div>
    ${isExp?"":`<div id="pays">${(it.payments||[]).map(payRow).join("")}</div><div class="row wrap mt"><button class="btn xs" data-addpay>${ic("plus","sm")} Payment</button><button class="btn xs ok" data-fullpay>${ic("check","sm")} Mark fully paid</button><span class="small dim">Pending = cost − paid</span></div>`}`}
 function gatherPays(root){return $$(".payrow",root).map(r=>({id:uid(),status:$("[data-p=status]",r).value,amount:+$("[data-p=amount]",r).value||0,due:$("[data-p=due]",r).value,method:$("[data-p=method]",r).value})).filter(p=>p.amount>0)}
 function wirePays(root){root.addEventListener("click",e=>{
@@ -52,7 +52,7 @@ function buildItem(base,g){const it={...base};const lt=(d,t)=>d?`${d}T${t||"00:0
   else{Object.assign(it,{title:g.title,start:lt(g.stD,g.stT||"10:00"),end:g.enD||g.enT?lt(g.enD||g.stD,g.enT||g.stT):"",location:g.location,tz:g.tz||it.tz||""});if(!it.tz)it.tz=dayTz(S.trips.find(t=>t.id===it.tripId)||{id:"",tz:"Asia/Kolkata"},g.stD)}
   if(g.ref!==undefined)it.ref=k==="flight"?g.ref.toUpperCase():g.ref;if(g.bookingId!==undefined)it.bookingId=g.bookingId;
   if(g.names!==undefined)it.names=g.names.split(/\s*,\s*/).filter(Boolean);
-  if(g.cost!==undefined){it.cost=+g.cost||0;it.cur=g.cur||"INR"}if(g.refundable!==undefined)it.refundable=g.refundable;if(g.notes!==undefined)it.notes=g.notes;
+  if(g.cost!==undefined){it.cost=+g.cost||0;it.cur=g.cur||HC()}if(g.refundable!==undefined)it.refundable=g.refundable;if(g.notes!==undefined)it.notes=g.notes;
   return it}
 function validItem(it){switch(it.kind){case"flight":return(it.from&&it.to||it.flightNo)&&it.dep?null:"Need flight no. or route, and departure date";
   case"train":return it.dep?null:"Need departure date";case"hotel":return it.name&&it.checkIn?null:"Need property name and check-in date";
@@ -117,11 +117,11 @@ function openItem(it,isNew){
     await delItem(it.id);ov.remove();render();toast("Deleted")});
 }
 function newItem(kind,o={}){const t=curTrip();const d=o.d||(t?(tripPhase(t).today||tripRange(t).s):"")||todayIn("Asia/Kolkata");const tz=t?dayTz(t,d):"Asia/Kolkata";
-  const it={id:uid(),tripId:t?.id,kind,names:[],payments:[],cur:"INR"};
+  const it={id:uid(),tripId:t?.id,kind,names:[],payments:[],cur:HC()};
   if(kind==="activity"||kind==="transfer"){it.start=`${d}T${o.s||"10:00"}`;it.end=o.e?`${d}T${o.e}`:"";it.tz=tz}
   if(kind==="hotel"){it.checkIn=`${d}T14:00`;it.checkOut=`${addDays(d,1)}T12:00`;it.tz=tz}
   if(kind==="flight"||kind==="train"){it.dep=`${d}T`;it.depTz="";}
-  if(kind==="expense"){const p=tzParts(tz,Date.now());it.date=o.d||todayIn(tz);it.time=`${pad(p.h)}:${pad(p.mi)}`;it.tz=tz;it.cur=t&&isIntlTrip(t)&&t.localCur?t.localCur:"INR"}
+  if(kind==="expense"){const p=tzParts(tz,Date.now());it.date=o.d||todayIn(tz);it.time=`${pad(p.h)}:${pad(p.mi)}`;it.tz=tz;it.cur=t&&isIntlTrip(t)&&t.localCur?t.localCur:HC()}
   if(kind==="doc"){it.docType=o.dt||"Passport"}
   if(!t){toast("Create a trip first","bad");return}
   openItem(it,true)}
@@ -182,7 +182,7 @@ function openReview(R,kind){
    ${P.kind==="flight"?`<button class="btn xs mt" id="addSeg">${ic("plus","sm")} Add segment</button>`:""}
    <div class="seg"><div class="fg f4">${P.kind==="flight"?F("PNR / booking ref","ref",P.ref,{up:1,cls:P.ref?"found":"miss"})+F("Booking ID (OTA)","bookingId",P.bookingId):P.kind==="hotel"||P.kind==="train"||P.kind==="transfer"||P.kind==="activity"?F(P.kind==="train"?"PNR":"Confirmation / ref","ref",P.ref,{cls:P.ref?"found":"miss"}):""}
      ${F("Traveller names","names",(P.names||[]).join(", "),{full:1,ph:"Comma separated",cls:P.names?.length?"found":"miss"})}
-     ${F("Total cost","cost",P.cost,{type:"number",step:"0.01",cls:P.cost?"found":"miss"})}${Sel("Currency","cur",P.cur||"INR",CURS)}
+     ${F("Total cost","cost",P.cost,{type:"number",step:"0.01",cls:P.cost?"found":"miss"})}${Sel("Currency","cur",P.cur||HC(),CURS)}
      ${Sel("Payment","pay",P.pay||"",[["","Not sure"],["paid","Fully paid"],["pending","Pending / pay later"]],{cls:P.pay?"found":""})}${F("Due by (if pending)","due",P.kind==="hotel"?(P.checkIn||"").slice(0,10):"",{type:"date"})}</div></div>
    ${R.texts[0]?`<details class="mt"><summary>Raw text read from ${R.file?"the file":"your paste"} (${R.texts[0].length} chars)</summary><pre class="raw">${esc(R.texts[0].slice(0,6000))}</pre></details>`:""}`;
   const ov=sheet({title:`Review & save`,body,foot:`<button class="btn" id="rvBack">Back</button><span class="sp"></span><button class="btn pri" id="rvSave">${ic("check","sm")} Save to ${R.tripId==="__new"?"new trip":"trip"}</button>`});
@@ -211,12 +211,12 @@ function openReview(R,kind){
     navigator.storage?.persist?.();
     S.cur=tripId;S.meta.cur=tripId;await fitTrip(tripId,true);const fd=itemDates(items[0])[0];if(fd)S.day=fd;S.view="plan";saveMeta();
     ov.remove();render();toast(`Added ${items.length} ${KINDS[P.kind].n.toLowerCase()}${items.length>1?"s":""} to the itinerary`);setTimeout(nextFile,350)}}
-function autoTrip(items){const it=items[0];let city="",tz="",cc="IN";
-  if(it.kind==="flight"){const out=items.find(i=>AP[i.from]?.cc==="IN"&&AP[i.to]?.cc!=="IN")||items[0];const a=AP[out.to];city=a?.city||out.to;tz=a?.tz;cc=a?.cc||"IN"}
-  else if(it.kind==="hotel"){const a=findAirports(it.name+" "+it.address).find(x=>x.city);city=a?AP[a.v].city:(it.address||"").split(",").slice(-2,-1)[0]?.trim()||it.name;tz=it.tz;cc=a?AP[a.v].cc:"IN"}
+function autoTrip(items){const it=items[0];let city="",tz="",cc=homeCC();
+  if(it.kind==="flight"){const out=items.find(i=>AP[i.from]?.cc===homeCC()&&AP[i.to]?.cc!==homeCC())||items[0];const a=AP[out.to];city=a?.city||out.to;tz=a?.tz;cc=a?.cc||homeCC()}
+  else if(it.kind==="hotel"){const a=findAirports(it.name+" "+it.address).find(x=>x.city);city=a?AP[a.v].city:(it.address||"").split(",").slice(-2,-1)[0]?.trim()||it.name;tz=it.tz;cc=a?AP[a.v].cc:homeCC()}
   else if(it.kind==="train"){city=it.toName||it.to;tz="Asia/Kolkata"}else city=it.title;
-  const ds=items.flatMap(itemDates).sort();const lc=CC_CUR[cc]||"INR";
-  return{id:uid(),name:`Trip to ${city||"somewhere"}`,dest:city,start:ds[0]||"",end:ds[ds.length-1]||"",tz:tz||"Asia/Kolkata",type:cc==="IN"?"domestic":"international",localCur:lc,rates:{},budget:0,createdAt:Date.now()}}
+  const ds=items.flatMap(itemDates).sort();const lc=CC_CUR[cc]||HC();
+  return{id:uid(),name:`Trip to ${city||"somewhere"}`,dest:city,start:ds[0]||"",end:ds[ds.length-1]||"",tz:tz||S.settings.homeTz,type:cc===homeCC()?"domestic":"international",localCur:lc,rates:{},budget:0,createdAt:Date.now()}}
 function sampleText(k){const d0=addDays(todayIn("Asia/Kolkata"),40),d5=addDays(d0,5),L=d=>{const x=dObj(d);return`${WD[x.getUTCDay()]}, ${pad(x.getUTCDate())} ${MON[x.getUTCMonth()]} ${x.getUTCFullYear()}`};
   if(k==="flight")return`IndiGo · E-Ticket / Itinerary\nPNR/Booking Ref.: Q7XK2M\nBooking Date: ${L(todayIn("Asia/Kolkata"))}\nPassenger(s): Mr Arjun Mehta, Ms Riya Mehta\nFlight   From   To   Departure   Arrival\n6E 1061   Bengaluru (BLR) T1   Kuala Lumpur (KUL) T1   ${L(d0)} 07:15   ${L(d0)} 14:05\n6E 1062   Kuala Lumpur (KUL) T1   Bengaluru (BLR) T1   ${L(d5)} 15:20   ${L(d5)} 17:10\nBaggage: Check-in 15 Kg, Cabin 7 Kg\nTotal Amount Paid: INR 48,640.00\nPayment Status: Successful`;
   if(k==="hotel")return`Booking.com\nThanks, Arjun! Your booking in Kuala Lumpur is confirmed.\nHotel: Grand Millennium Kuala Lumpur\nAddress: 160 Jalan Bukit Bintang, 55100 Kuala Lumpur, Malaysia\nConfirmation number: 4821.553.907\nPIN code: 7241\nCheck-in   ${L(d0)}   from 15:00\nCheck-out   ${L(addDays(d0,3))}   until 12:00\nYour reservation   3 nights, 1 room\nGuest name: Arjun Mehta\nPrice   MYR 1,450.00\nYou'll pay when you stay at Grand Millennium Kuala Lumpur`;
@@ -231,8 +231,8 @@ function openTrip(t,isNew){const ov=sheet({title:isNew?"New trip":"Trip settings
   ${F("Trip name","name",t.name,{full:1,ph:"Honeymoon · Malaysia"})}${F("Destination","dest",t.dest,{full:1,ph:"Kuala Lumpur, Langkawi"})}
   ${F("Start","start",t.start,{type:"date"})}${F("End","end",t.end,{type:"date"})}
   ${Sel("Type","type",t.type||"auto",[["auto","Auto-detect"],["domestic","Domestic (India)"],["international","International"]])}${TZsel("Main timezone","tz",t.tz)}
-  ${F("Total budget (₹)","budget",t.budget||"",{type:"number"})}${Sel("Local currency","localCur",t.localCur||"INR",CURS)}
-  ${F("Exchange rates (₹ per unit)","rates",ratesStr(t.rates),{full:1,ph:"MYR=19.2, USD=84.5"})}</div>`,
+  ${F(`Total budget (${sym(HC()).trim()})`,"budget",t.budget||"",{type:"number"})}${Sel("Local currency","localCur",t.localCur||HC(),CURS)}
+  ${F(`Exchange rates (${HC()} per unit)`,"rates",ratesStr(t.rates),{full:1,ph:"MYR=19.2, USD=84.5"})}</div>`,
   foot:`${isNew?"":`<button class="btn bad" id="tDel" style="margin-right:auto">${ic("trash","sm")} Delete trip</button>`}<button class="btn" data-close>Cancel</button><button class="btn pri" id="tSv">${ic("check","sm")} Save</button>`});
   $("[name=tz]",ov).options[0].textContent="Auto (from bookings)";
   $("#tSv",ov).onclick=async()=>{const g=gather(ov);if(!g.name){toast("Name the trip","bad");return}if(g.start&&g.end&&g.end<g.start){toast("End is before start","bad");return}

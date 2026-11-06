@@ -32,7 +32,7 @@ Run locally: `python3 -m http.server 8000` then open http://localhost:8000. Ther
 
 ## Known limits
 
-- Base currency is INR; other currencies convert with rates you enter.
+- Pick your home currency in Settings (or on the welcome screen). Other currencies convert with per-trip rates you enter; the bundled sample trip is priced in INR/MYR.
 - Parsers cover common Indian and international formats; always review extracted fields. Images are attached but not OCR'd.
 - Wrapped distance is estimated from flight time (no airport coordinates are bundled).
 - Visa and entry rules are not bundled; the app reminds you to check official sources.

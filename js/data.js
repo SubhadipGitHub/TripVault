@@ -9,6 +9,7 @@ const AIRLINES={"6E":"IndiGo","AI":"Air India","IX":"Air India Express","UK":"Vi
 const CC_CUR={IN:"INR",AE:"AED",QA:"QAR",BH:"BHD",OM:"OMR",KW:"KWD",SA:"SAR",JO:"JOD",IL:"ILS",TR:"TRY",EG:"EGP",LK:"LKR",MV:"USD",NP:"NPR",BD:"BDT",BT:"BTN",PK:"PKR",SG:"SGD",MY:"MYR",TH:"THB",ID:"IDR",PH:"PHP",VN:"VND",KH:"USD",MM:"MMK",LA:"LAK",HK:"HKD",MO:"MOP",TW:"TWD",CN:"CNY",JP:"JPY",KR:"KRW",AU:"AUD",NZ:"NZD",FJ:"FJD",GB:"GBP",IE:"EUR",FR:"EUR",DE:"EUR",NL:"EUR",BE:"EUR",CH:"CHF",AT:"EUR",CZ:"CZK",HU:"HUF",PL:"PLN",DK:"DKK",SE:"SEK",NO:"NOK",FI:"EUR",ES:"EUR",PT:"EUR",IT:"EUR",GR:"EUR",IS:"ISK",RU:"RUB",GE:"GEL",AZ:"AZN",KZ:"KZT",UZ:"UZS",KE:"KES",ZA:"ZAR",ET:"ETB",MU:"MUR",SC:"SCR",TZ:"TZS",MA:"MAD",NG:"NGN",US:"USD",CA:"CAD",MX:"MXN",BR:"BRL",AR:"ARS",PE:"PEN",CO:"COP",CL:"CLP"};
 const CUR_SYM={INR:"₹",USD:"$",EUR:"€",GBP:"£",MYR:"RM",SGD:"S$",THB:"฿",AED:"AED ",JPY:"¥",AUD:"A$",IDR:"Rp",VND:"₫",LKR:"Rs",NPR:"Rs",CHF:"CHF ",HKD:"HK$",KRW:"₩",CNY:"¥",QAR:"QAR ",SAR:"SAR ",NZD:"NZ$",CAD:"C$",PHP:"₱",TRY:"₺"};
 const CURS=["INR","USD","EUR","GBP","AED","MYR","SGD","THB","IDR","VND","LKR","NPR","JPY","AUD","HKD","CHF","QAR","SAR","KRW","CNY","NZD","CAD","PHP","TRY","BDT","MUR","ZAR"];
+const HOME_CURS=CURS;
 const TZS=[...new Set(["Asia/Kolkata",...Object.values(AP).map(a=>a.tz)])].sort();
 const KINDS={
   flight:{n:"Flight",i:"plane"},hotel:{n:"Stay",i:"bed"},train:{n:"Train",i:"train"},transfer:{n:"Transfer",i:"car"},
