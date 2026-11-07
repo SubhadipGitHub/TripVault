@@ -108,7 +108,9 @@ const HI={
   "Camera permission was denied. Allow it in the browser's site settings and try again.":"कैमरे की अनुमति नहीं मिली। ब्राउज़र की साइट सेटिंग्स में अनुमति दें और फिर कोशिश करें।",
   "Enter the code":"कोड डालें","The code has 8 characters":"कोड में 8 अक्षर होते हैं","That code didn't work. Check it on the other phone":"यह कोड नहीं चला। दूसरे फ़ोन पर जाँचें",
   "Not a Trip Vault transfer":"यह ट्रिप वॉल्ट ट्रांसफ़र नहीं है","Send trips to another phone (QR)":"ट्रिप्स दूसरे फ़ोन पर भेजें (QR)","Receive trips from another phone (QR)":"दूसरे फ़ोन से ट्रिप्स पाएँ (QR)",
-  /* weekday & month abbreviations shown on their own (day strip) */
+  /* plan calendar legend */
+  "Travel":"यात्रा","Free to plan":"योजना के लिए ख़ाली","Not in trip":"ट्रिप में नहीं",
+  /* weekday & month abbreviations shown on their own (calendar) */
   "Sun":"रवि","Mon":"सोम","Tue":"मंगल","Wed":"बुध","Thu":"गुरु","Fri":"शुक्र","Sat":"शनि",
   "Jan":"जन","Feb":"फ़र","Mar":"मार्च","Apr":"अप्रै","May":"मई","Jun":"जून","Jul":"जुला","Aug":"अग","Sep":"सितं","Oct":"अक्टू","Nov":"नवं","Dec":"दिसं"
 };

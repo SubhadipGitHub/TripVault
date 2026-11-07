@@ -173,19 +173,57 @@ a.btn{text-decoration:none;color:var(--tx)}
 .clock div{font-variant-numeric:tabular-nums}
 .clock b{font:700 22px var(--serif);display:block}
 
-/* ---------- day strip & timeline ---------- */
-.strip{display:flex;gap:7px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:thin;scroll-snap-type:x proximity}
-.dchip{flex:none;width:64px;padding:8px 4px;border-radius:14px;background:var(--bg2);border:1px solid var(--line);text-align:center;cursor:pointer;scroll-snap-align:center;transition:transform .12s,border-color .15s}
-.dchip:hover{border-color:var(--line2)}
-.dchip.on{border-color:var(--acc);background:var(--acc-soft);transform:translateY(-2px)}
-.dchip .w{font-size:10px;color:var(--tx3);text-transform:uppercase;font-weight:700;letter-spacing:.6px}
-.dchip .n{font:700 20px/1.15 var(--serif)}
-.dchip .m{font-size:10px;color:var(--tx2)}
-.dchip .fb{height:4px;border-radius:2px;background:var(--line);margin:6px 6px 4px;overflow:hidden}
-.dchip .fb i{display:block;height:100%;background:var(--ok)}
-.dchip .dots{display:flex;gap:2px;justify-content:center;height:6px}
-.dchip .dots i{width:5px;height:5px;border-radius:50%;background:var(--c)}
-.dchip.today .n{color:var(--acc)}
+/* ---------- plan calendar & timeline ---------- */
+.cal{margin-top:2px}
+.calnav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px}
+.calnav .ibtn{width:34px;height:34px}
+.calnav .ibtn:disabled{opacity:.35;cursor:default}
+.calms{display:grid;grid-template-columns:1fr;gap:18px}
+.calm.second{display:none}
+@media(min-width:900px){.calms{grid-template-columns:1fr 1fr;gap:26px}.calm.second{display:block}}
+.calt{font:700 16px var(--serif);margin:0 2px 6px;letter-spacing:.2px}
+.calg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));row-gap:4px}
+.calw{text-align:center;font:700 10px var(--sans);color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;padding:2px 0 4px}
+.calc{position:relative;height:48px;width:100%;border:0;background:none;padding:0;font:inherit;color:inherit;display:grid;place-items:center;-webkit-tap-highlight-color:transparent}
+.calc.pad{visibility:hidden}
+/* trip range band joins the days like a booking calendar */
+.calc.in::before{content:"";position:absolute;inset:4px 0;background:color-mix(in srgb,var(--acc) 9%,transparent);z-index:0}
+.calc.rs::before{left:50%}.calc.re::before{right:50%}
+.calc.in:not(.rs):not(.re):not(.rm)::before{display:none}
+.calc .cd{position:relative;z-index:1;width:min(92%,48px);height:44px;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;border:1.5px solid transparent;transition:transform .12s,background .15s,border-color .15s}
+.calc .n{font:700 15px/1 var(--serif);font-variant-numeric:tabular-nums}
+.calc .dots{display:flex;gap:2px;height:4px}
+.calc .dots i{width:4px;height:4px;border-radius:50%;background:var(--c)}
+.calc .fb{width:60%;height:3px;border-radius:2px;background:color-mix(in srgb,var(--tx3) 25%,transparent);overflow:hidden}
+.calc .fb i{display:block;height:100%;background:var(--ok)}
+.calc.in{cursor:pointer}
+.calc.in:hover .cd{transform:translateY(-1px);border-color:var(--line2)}
+.calc.in:focus-visible{outline:none}
+.calc.in:focus-visible .cd{box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--acc)}
+.calc.t-travel .cd{background:color-mix(in srgb,var(--flight) 22%,var(--card));border-color:color-mix(in srgb,var(--flight) 55%,transparent)}
+.calc.t-stay .cd{background:color-mix(in srgb,var(--hotel) 18%,var(--card));border-color:color-mix(in srgb,var(--hotel) 45%,transparent)}
+.calc.t-act .cd{background:color-mix(in srgb,var(--activity) 18%,var(--card));border-color:color-mix(in srgb,var(--activity) 45%,transparent)}
+.calc.t-free .cd{background:color-mix(in srgb,var(--ok) 6%,var(--card));border:1.5px dashed color-mix(in srgb,var(--ok) 60%,transparent)}
+.calc.today .cd{box-shadow:0 0 0 2px var(--acc)}
+.calc.today .n{color:var(--acc)}
+.calc.on .cd{background:var(--acc);border-color:var(--acc);color:var(--acc-ink);transform:translateY(-2px);box-shadow:0 6px 16px color-mix(in srgb,var(--acc) 40%,transparent)}
+.calc.on .n{color:var(--acc-ink)}
+.calc.on .fb{background:color-mix(in srgb,var(--acc-ink) 25%,transparent)}
+.calc.on .fb i{background:var(--acc-ink)}
+.calc.on .dots i{box-shadow:0 0 0 1px var(--acc-ink)}
+.calc.off{cursor:not-allowed}
+.calc.off .n{color:var(--tx3);opacity:.45;font-weight:500}
+.calc.off.today .cd{box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--acc) 50%,transparent)}
+.callg{display:flex;flex-wrap:wrap;gap:6px 12px;margin-top:10px}
+.callg span{display:inline-flex;align-items:center;gap:5px}
+.callg .sw{width:12px;height:12px;border-radius:4px;border:1.5px solid transparent;display:inline-block}
+.callg .sw.t-travel{background:color-mix(in srgb,var(--flight) 30%,var(--card));border-color:var(--flight)}
+.callg .sw.t-stay{background:color-mix(in srgb,var(--hotel) 25%,var(--card));border-color:var(--hotel)}
+.callg .sw.t-act{background:color-mix(in srgb,var(--activity) 25%,var(--card));border-color:var(--activity)}
+.callg .sw.t-free{border:1.5px dashed var(--ok)}
+.callg .sw.today{box-shadow:0 0 0 2px var(--acc)}
+.callg .sw.off{background:color-mix(in srgb,var(--tx3) 15%,transparent)}
+@media(max-width:360px){.calc{height:42px}.calc .cd{border-radius:9px;height:38px}.calc .n{font-size:13px}.calc .fb{display:none}}
 .tl{position:relative;height:38px;background:var(--bg2);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:8px 0 2px}
 .tl .blk{position:absolute;top:5px;bottom:5px;border-radius:6px;background:var(--c);opacity:.92;min-width:3px}
 .tl .blk.buf{background:repeating-linear-gradient(45deg,color-mix(in srgb,var(--c) 45%,transparent) 0 4px,transparent 4px 8px);opacity:1}

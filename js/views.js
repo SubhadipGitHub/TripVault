@@ -15,7 +15,6 @@ function render(){
   const V={today:viewToday,plan:viewPlan,vault:viewVault,memories:viewMemories}[S.view]||viewToday;
   app.innerHTML=`<div class="${RV.last===key?"":"rise"}">${V(t)}</div>`;
   if(RV.last===key)scrollTo(0,y);RV.last=key;
-  const on=$(".dchip.on");on?.scrollIntoView({block:"nearest",inline:"center"});
 }
 const SUBS={ideas:"ideas",book:"bookings",bookings:"bookings",money:"money",docs:"docs",pack:"pack"};
 function go(v){
@@ -168,14 +167,35 @@ function dayList(m,d,t){
     if(s.mid)return`<div class="ev"><div class="tm">All day</div><div class="sp small">${esc(ev.label)}</div></div>`;
     if(it.kind==="flight"&&!s.from&&ev.etz!==ev.tz&&!s.cont)sm=`→ ${ev.e.slice(11)} ${esc(it.to||"")} time`;
     return`<div class="ev tap" data-a="item" data-id="${it.id}"><div class="tm">${tm}<small>${sm}</small></div>${kic(it.kind,1)}<div class="sp" style="min-width:0"><div style="font-weight:600">${title}</div><div class="small muted">${it.kind==="flight"||it.kind==="train"?itemTitle(it)+" · ":""}${it.kind==="hotel"?esc(it.address||""):esc(it.location||it.airline||it.cls||"")}</div></div><div class="evref">${refChip(it.ref)}${mapLink(it.kind==="flight"&&ev.label.startsWith(it.flightNo||"Flight")?airportQ(it.from):itemPlace(it))}</div></div>`}).join("")}
+/* ---------- Plan calendar: month grid, only trip days selectable ---------- */
+const CAL_TRAVEL=["flight","train","bus","ferry","car"];
+const calWide=()=>matchMedia("(min-width:900px)").matches;
+function calType(m){const k=new Set(m.segs.filter(s=>!s.ev.buf).map(s=>s.ev.kind));
+  return[...k].some(x=>CAL_TRAVEL.includes(x))?"travel":m.stay?"stay":k.size?"act":"free"}
+function calMonth(ym,inTrip,models,td,first,last,cls){
+  const[y,mo]=ym.split("-").map(Number),lead=dObj(ym+"-01").getUTCDay(),nd=new Date(Date.UTC(y,mo,0)).getUTCDate();
+  let h=`<div class="calm ${cls}"><div class="calt"><span>${MON[mo-1]}</span> <span>${y}</span></div><div class="calg">${WD.map(w=>`<div class="calw" aria-hidden="true">${w}</div>`).join("")}`;
+  for(let i=0;i<lead;i++)h+=`<div class="calc pad" aria-hidden="true"></div>`;
+  for(let i=1;i<=nd;i++){const d=`${ym}-${pad(i)}`;
+    if(!inTrip.has(d)){h+=`<button type="button" class="calc off${d===td?" today":""}" disabled aria-disabled="true" tabindex="-1" aria-label="${fmtD(d,1)}, not in this trip"><span class="cd"><span class="n">${i}</span></span></button>`;continue}
+    const m=models[d],typ=calType(m),kinds=[...new Set(m.segs.filter(s=>!s.ev.buf).map(s=>s.ev.kind))],sel=d===S.day,dn=dayDiff(first,d)+1;
+    const band=first===last?"":d===first?"rs":d===last?"re":"rm";
+    h+=`<button type="button" class="calc in t-${typ} ${band}${sel?" on":""}${d===td?" today":""}" data-a="day" data-d="${d}" tabindex="${sel?0:-1}" aria-pressed="${sel}" aria-label="${fmtD(d,1)}, day ${dn}, ${({travel:"travel day",stay:"staying",act:"activities",free:"nothing booked"})[typ]}, ${dur(m.free)} free"><span class="cd"><span class="n">${i}</span><span class="dots">${kinds.slice(0,4).map(k=>`<i class="k-${k}"></i>`).join("")}</span><span class="fb"><i style="width:${Math.min(100,m.free/m.win*100)}%"></i></span></span></button>`}
+  return h+`</div></div>`}
+function calGrid(t,days,models,td){
+  const inTrip=new Set(days),months=[...new Set(days.map(d=>d.slice(0,7)))],first=days[0],last=days[days.length-1],wide=calWide()&&months.length>1;
+  const dm=S.day.slice(0,7);let i=months.indexOf(S.calM);
+  if(i<0||(S.calFor!==S.day&&dm!==months[i]&&!(wide&&dm===months[i+1])))i=Math.max(0,months.indexOf(dm));
+  if(wide&&i>months.length-2)i=months.length-2;S.calM=months[i];S.calFor=S.day;
+  const end=wide?i+1:i,show=months.slice(i,end+1),nav=months.length>1;
+  return`<div class="cal" data-trip="${esc(t.id)}">${nav?`<div class="calnav"><button type="button" class="ibtn" data-a="calNav" data-n="-1" aria-label="Previous month" ${i<=0?"disabled":""}>${ic("back","sm")}</button><span class="small muted">${fmtDs(first)} – ${fmtDs(last)}</span><button type="button" class="ibtn" data-a="calNav" data-n="1" aria-label="Next month" ${end>=months.length-1?"disabled":""}>${ic("arrow","sm")}</button></div>`:""}
+   <div class="calms">${show.map((ym,j)=>calMonth(ym,inTrip,models,td,first,last,j?"second":"")).join("")}</div>
+   <div class="callg small dim"><span><i class="sw t-travel"></i>Travel</span><span><i class="sw t-stay"></i>Stay</span><span><i class="sw t-act"></i>Activities</span><span><i class="sw t-free"></i>Free to plan</span><span><i class="sw today"></i>Today</span><span><i class="sw off"></i>Not in trip</span></div></div>`}
 function viewPlan(t){
   const days=tripDays(t);if(!days.length)return`<div class="card empty">${kic("activity")}<b>No dates yet</b><div class="small">Import a booking or set trip dates to see the day-by-day plan.</div><div class="row mt" style="justify-content:center"><button class="btn pri" data-a="import">${ic("zap")} Import</button><button class="btn" data-a="editTrip">Set dates</button></div></div>`;
   const td=todayIn(t.tz||"Asia/Kolkata");if(!S.day||!days.includes(S.day))S.day=days.includes(td)?td:days[0];
   const models=Object.fromEntries(days.map(d=>[d,dayModel(t,d)]));const totFree=days.reduce((a,d)=>a+models[d].free,0);
-  let h=`<div class="card"><div class="h">${ic("cal")}<h2>${days.length} days · ${dur(totFree)} of free time to plan</h2><span class="sp"></span><button class="btn xs" data-a="copyItin">${ic("share","sm")} Copy</button></div><div class="strip">`;
-  for(const d of days){const m=models[d],x=dObj(d);const kinds=[...new Set(m.segs.filter(s=>!s.ev.buf).map(s=>s.ev.kind))];
-    h+=`<div class="dchip ${d===S.day?"on":""} ${d===td?"today":""}" data-a="day" data-d="${d}"><div class="w">${WD[x.getUTCDay()]}</div><div class="n">${x.getUTCDate()}</div><div class="m">${MON[x.getUTCMonth()]}</div><div class="fb"><i style="width:${Math.min(100,m.free/m.win*100)}%"></i></div><div class="dots">${kinds.map(k=>`<i class="k-${k}"></i>`).join("")}</div></div>`}
-  h+=`</div><div class="small dim" style="margin-top:4px"><span style="color:var(--ok)">▬</span> green bar = share of the waking day still free (${S.settings.wake}–${S.settings.sleep})</div></div>`;
+  let h=`<div class="card"><div class="h">${ic("cal")}<h2>${days.length} days · ${dur(totFree)} of free time to plan</h2><span class="sp"></span><button class="btn xs" data-a="copyItin">${ic("share","sm")} Copy</button></div>${calGrid(t,days,models,td)}</div>`;
   const d=S.day,m=models[d];const di=days.indexOf(d)+1;
   h+=`<div class="card"><div class="h"><div><h2 style="font-size:15px">Day ${di} · ${fmtD(d,1)}</h2><div class="small muted">${ic("globe","sm")} ${esc(tzShort(m.tz))} (${offLabel(m.tz,toUTC(d+"T12:00",m.tz))})${m.stay?` · ${ic("bed","sm")} ${esc(m.stay.name)}`:""}</div></div><span class="sp"></span><span class="pill ok">${dur(m.free)} free</span></div>
     ${tlBar(m,d)}<div class="row small dim wrap" style="gap:10px;margin:2px 0 8px">${["flight","train","bus","ferry","car","hotel","transfer","activity"].filter(k=>!["bus","ferry","car"].includes(k)||tripItems(t.id).some(i=>i.kind===k)).map(k=>`<span class="row" style="gap:4px"><i style="width:8px;height:8px;border-radius:2px;background:var(--${k})"></i>${KINDS[k].n}</span>`).join("")}<span class="row" style="gap:4px"><i style="width:10px;height:8px;border:1.5px dashed var(--ok);border-radius:2px"></i>Free</span></div>

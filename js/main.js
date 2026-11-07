@@ -13,11 +13,12 @@ const A={
   trips:()=>openTrips(),backup:()=>openBackup(),settings:()=>openSettings(),import:()=>openImport(),search:()=>openSearch(),
   newTrip:()=>{$$(".ov").forEach(o=>o.remove());openTrip({id:uid(),name:"",rates:{},tz:S.settings.homeTz,localCur:HC()},true)},
   editTrip:()=>{const t=curTrip();t?openTrip(t):A.newTrip()},
-  selTrip:el=>{S.cur=el.dataset.id;S.meta.cur=S.cur;S.day=null;saveMeta();$$(".ov").forEach(o=>o.remove());render()},
+  selTrip:el=>{S.cur=el.dataset.id;S.meta.cur=S.cur;S.day=null;S.calM=null;saveMeta();$$(".ov").forEach(o=>o.remove());render()},
   loadSample:()=>loadSample(),
   go:el=>go(el.dataset.v),
   vsub:el=>{S.sub=el.dataset.s;S.meta.sub=S.sub;saveMeta();render()},
-  day:el=>{S.day=el.dataset.d;render()},
+  day:el=>{const kb=document.activeElement===el;S.day=el.dataset.d;render();if(kb)$(`.calc[data-d="${S.day}"]`)?.focus({preventScroll:true})},
+  calNav:el=>{const t=curTrip();if(!t)return;const ms=[...new Set(tripDays(t).map(d=>d.slice(0,7)))],i=ms.indexOf(S.calM)+ +el.dataset.n;if(i<0||i>=ms.length)return;S.calM=ms[i];S.calFor=S.day;render()},
   bookf:el=>{BOOKF=el.dataset.k;render()},
   item:el=>{const it=S.items.find(i=>i.id===el.dataset.id);if(it)openItem(structuredClone(it))},
   add:el=>newItem(el.dataset.k,{d:el.dataset.d,dt:el.dataset.dt}),
@@ -70,7 +71,16 @@ document.addEventListener("keydown",e=>{
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();if(!Vault.locked&&S.settings)SEARCH.ov?closeSearch():openSearch()}
   else if(e.key==="/"&&!typing&&!Vault.locked&&S.settings&&!$(".ov")&&!WR.ov&&!PASS.ov){e.preventDefault();openSearch()}
   else if((e.key==="Enter"||e.key===" ")&&e.target.matches?.(".pk,.mem,.wrapcta")){e.preventDefault();e.target.click()}
+  else if(e.target.matches?.(".calc[data-d]")&&CAL_KEYS[e.key]){e.preventDefault();calMove(e.target.dataset.d,CAL_KEYS[e.key])}
 });
+/* Plan calendar: arrow keys move focus between trip days (non-trip days are skipped); Enter/Space selects */
+const CAL_KEYS={ArrowLeft:-1,ArrowRight:1,ArrowUp:-7,ArrowDown:7,Home:"s",End:"e"};
+function calMove(from,step){const t=curTrip();if(!t)return;const days=tripDays(t);
+  const to=step==="s"?days[0]:step==="e"?days[days.length-1]:addDays(from,step);
+  const d=days.includes(to)?to:step<0?days[0]:days[days.length-1];if(d===from)return;
+  let b=$(`.calc[data-d="${d}"]`);if(!b){S.calM=d.slice(0,7);S.calFor=S.day;render();b=$(`.calc[data-d="${d}"]`)}
+  $$(".calc[data-d]").forEach(x=>x.tabIndex=-1);if(b){b.tabIndex=0;b.focus({preventScroll:true})}}
+matchMedia("(min-width:900px)").addEventListener?.("change",()=>{if(S.view==="plan"&&curTrip()&&!$(".ov"))render()});
 document.addEventListener("change",async e=>{
   const r=e.target.closest("[data-rate]");if(r){const t=curTrip();t.rates={...(t.rates||{})};const v=+r.value;if(v>0)t.rates[r.dataset.rate]=v;else delete t.rates[r.dataset.rate];await saveTrip(t);render();toast(`Rate saved: 1 ${r.dataset.rate} = ${sym(HC())}${v}`)}});
 let _emgT=null;
