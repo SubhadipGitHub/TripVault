@@ -52,7 +52,7 @@ function showLock(){
   f.onsubmit=async e=>{e.preventDefault();if(!inp.value)return;const b=f.querySelector("button");b.disabled=true;$("#lke",d).textContent="";
     const ok=await Vault.unlock(inp.value);
     if(!ok){await new Promise(r=>setTimeout(r,500));$("#lke",d).textContent="That passphrase didn't work.";b.disabled=false;inp.select();return}
-    inp.value="";await loadAll();applyTheme();d.remove();S.view=S.meta.view||"today";S.sub=S.meta.sub||"bookings";armIdle();render();consumeLaunch()};
+    inp.value="";await loadAll();applyTheme();d.remove();S.view=S.meta.view||"today";S.sub=S.meta.sub||"bookings";armIdle();render();AV.intro(curTrip());consumeLaunch()};
   $("#lkEmg",d)?.addEventListener("click",()=>openEmgCard());
   $("#lkw",d).onclick=async()=>{if(confirm("Erase everything stored by Trip Vault in this browser? This cannot be undone. Restore later from a backup file."))await wipeAll()};
 }
@@ -65,7 +65,7 @@ function openSettings(){
    ${Vault.protected?`<div class="note ok">${ic("shield")}<div><b>Encrypted with AES-256-GCM.</b> The key is made from your passphrase and never stored. Locks after <b>${s.autoLock?s.autoLock+" min":"no time"}</b> of inactivity.</div></div><div class="row wrap mt"><button class="btn" id="chPass">${ic("key","sm")} Change passphrase</button><button class="btn" id="lockNow">${ic("lock","sm")} Lock now</button><button class="btn ghost" id="offPass">${ic("unlock","sm")} Remove lock</button></div>`
      :`<div class="note warn">${ic("alert")}<div><b>Not locked.</b> Your data sits unencrypted in this browser. Anyone using this browser profile could open it. Set a passphrase to encrypt everything on this device.</div></div><div class="row mt"><button class="btn pri" id="onPass" ${hasCrypto?"":"disabled"}>${ic("lock","sm")} Set a passphrase</button></div>`}
    <div class="small dim mt">Trip Vault makes no network requests: it has no server, analytics or accounts. A browser extension, malware or someone with your unlocked device can still see what's on screen.</div>
-   <div class="fg mt">${Sel("Auto-lock after idle","autoLock",s.autoLock,[[0,"Never"],[1,"1 minute"],[5,"5 minutes"],[15,"15 minutes"],[60,"1 hour"]])}${Sel("Home currency","homeCur",s.homeCur||"INR",CURS)}${Sel("Appearance","theme",s.theme,[["auto","Match my device"],["dark","Midnight"],["light","Parchment"]])}${Sel("Language","lang",s.lang||"en",[["en","English"],["hi","हिन्दी (beta)"]])}</div>
+   <div class="fg mt">${Sel("Auto-lock after idle","autoLock",s.autoLock,[[0,"Never"],[1,"1 minute"],[5,"5 minutes"],[15,"15 minutes"],[60,"1 hour"]])}${Sel("Home currency","homeCur",s.homeCur||"INR",CURS)}${Sel("Appearance","theme",s.theme,[["auto","Match my device"],["dark","Midnight"],["light","Parchment"]])}${Sel("Language","lang",s.lang||"en",[["en","English"],["hi","हिन्दी (beta)"]])}${Sel("Character animations","anim",s.anim||"full",[["full","Full (intro + idle)"],["calm","Calm (no intro)"],["off","Off"]])}</div>
    <label class="row mt" style="cursor:pointer"><input type="checkbox" name="optimizePhotos" ${s.optimizePhotos?"checked":""}> <span style="font-size:12.5px;color:var(--tx)">Resize memory photos to 1600px when saving (saves lots of space)</span></label>
    <div class="sep"></div><div class="h">${ic("eye")}<h2>Reading screenshots</h2></div>
    <div class="small muted">Smart import reads text from screenshots and photos of tickets on this device. The text reader (${OCR_SIZE}) loads the first time you import an image. Download it now if you'll be offline later.</div>

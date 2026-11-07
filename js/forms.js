@@ -246,15 +246,27 @@ function openTrips(){const rows=S.trips.slice().sort((a,b)=>(a.start||"9").local
   sheet({title:"Your trips",body:rows||`<div class="empty">No trips yet.</div>`,foot:`<button class="btn" data-a="loadSample">${ic("sparkle","sm")} Sample</button><button class="btn pri" data-a="newTrip">${ic("plus","sm")} New trip</button>`})}
 function openTrip(t,isNew){const ov=sheet({title:isNew?"New trip":"Trip settings",body:`<div class="fg">
   ${F("Trip name","name",t.name,{full:1,ph:"Honeymoon · Malaysia"})}${F("Destination","dest",t.dest,{full:1,ph:"Kuala Lumpur, Langkawi"})}
+  <div class="full"><label>Who's going</label><div id="crewPk"></div></div>
   ${F("Start","start",t.start,{type:"date"})}${F("End","end",t.end,{type:"date"})}
   ${Sel("Type","type",t.type||"auto",[["auto","Auto-detect"],["domestic","Domestic (India)"],["international","International"]])}${TZsel("Main timezone","tz",t.tz)}
   ${F(`Total budget (${sym(HC()).trim()})`,"budget",t.budget||"",{type:"number"})}${Sel("Local currency","localCur",t.localCur||HC(),CURS)}
   ${F(`Exchange rates (${HC()} per unit)`,"rates",ratesStr(t.rates),{full:1,ph:"MYR=19.2, USD=84.5"})}</div>`,
   foot:`${isNew?"":`<button class="btn" data-a="dupTrip" style="margin-right:auto">${ic("copy","sm")} Duplicate</button><button class="btn bad" id="tDel">${ic("trash","sm")} Delete trip</button>`}<button class="btn" data-close>Cancel</button><button class="btn pri" id="tSv">${ic("check","sm")} Save</button>`});
   $("[name=tz]",ov).options[0].textContent="Auto (from bookings)";
+  /* Who's going: solo / couple / group, and him or her for each traveller (drives the crew characters) */
+  const cp=crewOf(t);let party=cp.party,cr=[...cp.crew];const pk=$("#crewPk",ov),ptL={solo:"Solo",couple:"Couple",group:"Group"},ptI={solo:"user",couple:"heart",group:"globe"};
+  const drawCrew=()=>{pk.innerHTML=`<div class="tabs" role="group" aria-label="Who's going">${Object.keys(ptL).map(k=>`<button type="button" class="${party===k?"on":""}" aria-pressed="${party===k}" data-pt="${k}">${ic(ptI[k],"sm")} ${ptL[k]}</button>`).join("")}</div>
+    <div class="row wrap crewrow">${cr.map((x,i)=>`<button type="button" class="btn xs crewp ${x}" data-ci="${i}" aria-label="Traveller ${i+1}: ${x==="f"?"her":"him"}. Tap to switch">${ic("user","sm")} ${x==="f"?"Her":"Him"}</button>`).join("")}${party==="group"?`<button type="button" class="btn xs" data-cn="-1" ${cr.length<=3?"disabled":""} aria-label="One fewer traveller">−</button><button type="button" class="btn xs" data-cn="1" ${cr.length>=6?"disabled":""} aria-label="One more traveller">+</button>`:""}</div>`};
+  pk.addEventListener("click",e=>{const b=e.target.closest("button");if(!b||b.disabled)return;e.preventDefault();
+    if(b.dataset.pt){party=b.dataset.pt;const n=party==="solo"?1:party==="couple"?2:Math.max(3,cr.length);cr=Array.from({length:n},(_,i)=>cr[i]||(party==="couple"?(cr[0]==="f"?"m":"f"):i%2?"f":"m"))}
+    else if(b.dataset.ci){const i=+b.dataset.ci;cr[i]=cr[i]==="f"?"m":"f"}
+    else if(b.dataset.cn){const n=Math.min(6,Math.max(3,cr.length+ +b.dataset.cn));cr=Array.from({length:n},(_,i)=>cr[i]||(i%2?"f":"m"))}
+    drawCrew()});drawCrew();
+  const sI=$("[name=start]",ov),eI=$("[name=end]",ov),syncEnd=()=>{eI.min=sI.value||"";if(sI.value&&(!eI.value||eI.value<sI.value))eI.value=sI.value};sI.addEventListener("change",syncEnd);eI.min=sI.value||"";
   $("#tSv",ov).onclick=async()=>{const g=gather(ov);if(!g.name){toast("Name the trip","bad");return}if(g.start&&g.end&&g.end<g.start){toast("End is before start","bad");return}
+    const crewWas=JSON.stringify(crewOf(t));t.party=party;t.crew=cr.slice();if(isNew||crewWas!==JSON.stringify(crewOf(t)))AV.cheer();
     Object.assign(t,{name:g.name,dest:g.dest,start:g.start,end:g.end,type:g.type==="auto"?"":g.type,tz:g.tz||t.tz||"Asia/Kolkata",budget:+g.budget||0,localCur:g.localCur,rates:parseRates(g.rates)});t.createdAt??=Date.now();
-    await saveTrip(t);S.cur=t.id;S.meta.cur=t.id;saveMeta();ov.remove();$$(".ov").forEach(o=>o.remove());render();toast(isNew?"Trip created — now import a booking":"Saved")};
+    await saveTrip(t);S.cur=t.id;S.meta.cur=t.id;S.day=null;S.calM=null;saveMeta();ov.remove();$$(".ov").forEach(o=>o.remove());render();toast(isNew?"Trip created — now import a booking":"Saved")};
   $("#tDel",ov)?.addEventListener("click",async()=>{const its=tripItems(t.id),fs=S.files.filter(f=>f.tripId===t.id),nm=tripMems(t.id).length;
     if(!(await gate({title:`Delete “${esc(t.name)}”?`,plan:[`Delete the trip and its ${its.length} entries (bookings, activities, expenses, documents)`,`Delete ${fs.length} stored file(s) and ${nm} memor${nm===1?"y":"ies"}`,"Other trips are not touched"],irreversible:`All of the above. ${S.meta.lastBackup?"Your last backup was "+new Date(S.meta.lastBackup).toLocaleString()+".":"You have never exported a backup."}`,ok:"Delete trip"})))return;
     for(const i of its)await DB.del("items",i.id);for(const f of fs)await DB.del("files",f.id);for(const m of S.memories.filter(m=>m.tripId===t.id))await DB.del("memories",m.id);await DB.del("trips",t.id);S.memories=S.memories.filter(m=>m.tripId!==t.id);
