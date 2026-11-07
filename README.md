@@ -7,7 +7,7 @@ A private, offline-first home for everything about a trip: bookings, tickets, pa
 ## What it does
 
 - **Smart import**: drop PDF e-tickets, `.eml`, HTML or pasted SMS (airlines, Booking.com/Agoda, IRCTC, redBus-style bus tickets, ferries, car rentals). Screenshots and photos of tickets are read with on-device OCR (Tesseract, self-hosted, about 7 MB loaded on first use, or ahead of time from Settings). Fields are extracted on-device and you confirm them. Duplicate files and duplicate bookings are flagged.
-- **Plan**: per-day timelines with airport/station buffers, check-ins, time zones and tappable free slots.
+- **Plan**: a month calendar that opens on the trip start, colours trip days by what they hold (travel, stay, activities, free) and only lets you pick days in the trip; per-day timelines with airport/station buffers, check-ins, time zones and tappable free slots.
 - **Vault**: bookings, documents (passport/visa/insurance expiry checked against trip dates), money (paid vs pending, multi-currency, per-trip exchange rates), packing lists (domestic or international) and emergency notes.
 - **Ideas, spend by day, duplicate trip**: a wish-list board that schedules into the plan, a daily spend chart, and copy a trip as a template.
 - **Coming up**: web check-in opening, leave-for-the-airport, payment due dates and document expiry on Today. *Add to calendar* puts them in your phone's calendar with alarms, so reminders work without a server.
@@ -21,6 +21,7 @@ A private, offline-first home for everything about a trip: bookings, tickets, pa
 - **Packing sets**: add beach, trek, business, with-kids or cold-weather items to any list, or copy items from another trip.
 - **हिन्दी interface (beta)**: switch in Settings or on the welcome screen. Navigation, headings, buttons, forms, settings, reminders and readiness checks are translated; booking details and anything you type stay as entered.
 - **Search everything** (`Ctrl/Cmd+K` or `/`): trips, PNRs, names, notes, memories and the text inside imported PDFs.
+- **Your travel crew**: small chibi-style 3D characters (three.js, bundled, works offline) for a solo trip, a couple or a group, him or her for each traveller (set under *Who's going* in Trip settings). They walk in at launch, then live on the Today card, and cheer when you create a trip or change the crew. Each trip gets its own look. *Settings → Character animations* turns off the intro or the characters; reduced-motion devices get a still frame.
 - **Memories**: a photo journal with moods and highlights.
 - **Wrapped**: story cards for a trip, a year or all time. Save as PNG, ZIP, share, or print a trip book. "Hide amounts" for safe sharing.
 - **Security**: optional passphrase encryption (AES-256-GCM, PBKDF2-SHA256 600k) of all data at rest, idle auto-lock, encrypted `.tvault` backups, and a Content-Security-Policy that blocks all network requests.
@@ -50,4 +51,4 @@ Run locally: `python3 -m http.server 8000` then open http://localhost:8000. Ther
 
 ## Layout
 
-`index.html` shell · `css/app.css` theme · `js/` modules (`core`, `store` encryption/IndexedDB, `parsers`, `model`, `forms`, `backup`, `security`, `memories`, `wrapped`, `search`, `views`, `main`) · `sw.js` offline cache.
+`index.html` shell · `css/app.css` theme · `js/` modules (`core`, `store` encryption/IndexedDB, `parsers`, `model`, `forms`, `backup`, `security`, `memories`, `wrapped`, `search`, `avatars` travel crew, `views`, `main`) · `vendor/` bundled libraries (three.js, OCR, QR) · `sw.js` offline cache.

@@ -11,10 +11,10 @@ function render(){
   $$("#nav [data-v]").forEach(b=>b.classList.toggle("on",b.dataset.v===S.view));
   $("#lockBtn").classList.toggle("hide",!Vault.protected);
   const app=$("#app"),y=scrollY,key=S.view+":"+(S.sub||"");
-  if(!t){app.innerHTML=viewWelcome();RV.last="";return}
+  if(!t){app.innerHTML=viewWelcome();RV.last="";AV.attach();return}
   const V={today:viewToday,plan:viewPlan,vault:viewVault,memories:viewMemories}[S.view]||viewToday;
   app.innerHTML=`<div class="${RV.last===key?"":"rise"}">${V(t)}</div>`;
-  if(RV.last===key)scrollTo(0,y);RV.last=key;
+  if(RV.last===key)scrollTo(0,y);RV.last=key;AV.attach();
 }
 const SUBS={ideas:"ideas",book:"bookings",bookings:"bookings",money:"money",docs:"docs",pack:"pack"};
 function go(v){
@@ -23,7 +23,7 @@ function go(v){
 }
 
 /* ===================== Welcome / first run ===================== */
-function viewWelcome(){return`<div class="card welcome rise">
+function viewWelcome(){return`<div class="card welcome rise">${avSlot(null,"wel")}
   <div class="eyebrow">Welcome aboard</div>
   <h1 style="margin-top:8px">Every trip, <em>one private vault.</em></h1>
   <p class="muted" style="max-width:56ch;margin-top:12px;font-size:15px">Tickets, stays, passports, payments, the day-by-day plan and your memories — searchable in one place, for domestic and international trips. No account. No cloud. It all stays on this device.</p>
@@ -54,7 +54,7 @@ function bpHero(t){
   const stub=ph.p==="before"?`<div class="u">${intl?"Departs in":"Leaves in"}</div><div class="n">${ph.days}</div><div class="u">${ph.days===1?"day":"days"}</div>`:ph.p==="during"?`<div class="u">Now on</div><div class="n">Day ${ph.day}</div><div class="u">of ${ph.of}</div>`:ph.p==="after"?`<div class="u">Trip</div><div class="n" style="font-size:26px">Done</div><div class="stamp ok" style="margin-top:6px">Wrapped</div>`:`<div class="u">No dates</div><div class="n">—</div>`;
   return`<div class="bp"><span class="notch t"></span><span class="notch b"></span>
    <div class="main"><div class="row wrap" style="gap:8px"><span class="eyebrow">${intl?"International":"Domestic"} · ${esc(t.name)}</span><span class="sp"></span><button class="btn xs ghost" data-a="editTrip" aria-label="Edit trip">${ic("edit","sm")} Edit</button></div>${route}
-    <div class="meta"><div>Dates<b>${s?fmtDs(s)+" – "+fmtDs(e):"Not set"}</b></div><div>Nights<b>${nights}</b></div><div>Travellers<b>${names.length||"—"}</b></div></div>${clocks(t)}</div>
+    <div class="bpx"><div class="meta"><div>Dates<b>${s?fmtDs(s)+" – "+fmtDs(e):"Not set"}</b></div><div>Nights<b>${nights}</b></div><div>Travellers<b>${names.length||crewOf(t).crew.length}</b></div></div>${avSlot(t)}</div>${clocks(t)}</div>
    <div class="stub">${stub}<div class="bar2"></div></div></div>`}
 function startList(t){
   const its=tripItems(t.id),steps=[

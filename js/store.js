@@ -49,7 +49,7 @@ const DB={db:null,
 
 /* ===== App state ===== */
 const S={trips:[],items:[],files:[],memories:[],cur:null,view:"today",sub:"bookings",day:null,settings:null,meta:{}};
-const DEF_SET={wake:"07:00",sleep:"22:00",minGap:60,preIntl:180,preDom:120,postIntl:60,postDom:30,trainPre:30,homeTz:"Asia/Kolkata",autoLock:5,theme:"auto",optimizePhotos:true};
+const DEF_SET={wake:"07:00",sleep:"22:00",minGap:60,preIntl:180,preDom:120,postIntl:60,postDom:30,trainPre:30,homeTz:"Asia/Kolkata",autoLock:5,theme:"auto",optimizePhotos:true,anim:"full"};
 async function loadAll(){
   [S.trips,S.items,S.files,S.memories]=await Promise.all(DATA_STORES.map(s=>DB.all(s)));
   const st=await DB.get("meta","settings");S.settings={...DEF_SET,...(st?.v||{})};

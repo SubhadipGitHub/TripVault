@@ -17,6 +17,7 @@ const A={
   loadSample:()=>loadSample(),
   go:el=>go(el.dataset.v),
   vsub:el=>{S.sub=el.dataset.s;S.meta.sub=S.sub;saveMeta();render()},
+  avPoke:()=>AV.poke(),
   day:el=>{const kb=document.activeElement===el;S.day=el.dataset.d;render();if(kb)$(`.calc[data-d="${S.day}"]`)?.focus({preventScroll:true})},
   calNav:el=>{const t=curTrip();if(!t)return;const ms=[...new Set(tripDays(t).map(d=>d.slice(0,7)))],i=ms.indexOf(S.calM)+ +el.dataset.n;if(i<0||i>=ms.length)return;S.calM=ms[i];S.calFor=S.day;render()},
   bookf:el=>{BOOKF=el.dataset.k;render()},
@@ -124,7 +125,7 @@ async function consumeLaunch(){
   if(Vault.locked){const m=await DB.get("meta","state");S.meta=m?.v||{};showLock();return}
   await loadAll();applyTheme();S.view=({book:"vault",money:"vault",docs:"vault"}[S.meta.view])||S.meta.view||"today";S.sub=S.meta.sub||({book:"bookings",money:"money",docs:"docs"})[S.meta.view]||"bookings";
   if(!["today","plan","vault","memories"].includes(S.view))S.view="today";
-  render();armIdle();consumeLaunch();
+  render();armIdle();AV.intro(curTrip());consumeLaunch();
 })();
 setInterval(()=>{if(S.cur&&(S.view==="today"||S.view==="plan")&&!$(".ov")&&!SEARCH.ov&&!WR.ov&&!Vault.locked&&document.visibilityState==="visible"&&!document.activeElement?.matches("input,select,textarea"))render()},60000);
 if("serviceWorker"in navigator&&location.protocol.startsWith("http"))addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
