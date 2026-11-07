@@ -60,7 +60,7 @@ const apTz=c=>AP[c]?.tz||null;
 const isIntlFlight=it=>{const a=AP[it.from],b=AP[it.to];return a&&b?a.cc!==b.cc:!!(it.intl)};
 function itemStart(it){
   switch(it.kind){
-    case"flight":case"train":return it.dep?{l:it.dep,tz:it.depTz||apTz(it.from)||"Asia/Kolkata"}:null;
+    case"flight":case"train":case"bus":case"ferry":return it.dep?{l:it.dep,tz:it.depTz||apTz(it.from)||it.tz||"Asia/Kolkata"}:null;
     case"hotel":return it.checkIn?{l:it.checkIn,tz:it.tz}:null;
     case"doc":return null;
     case"expense":return it.date?{l:it.date+"T"+(it.time||"12:00"),tz:it.tz}:null;
@@ -78,10 +78,14 @@ function itemEvents(it,set=S.settings){
     const arr=it.arr||fromUTC(du+120*6e4,atz);
     add(it.dep,arr,dtz,{etz:atz,label:`${it.flightNo||"Flight"} ${it.from||""}→${it.to||""}`,main:1});
     const au=toUTC(arr,atz);add(arr,fromUTC(au+post*6e4,atz),atz,{buf:1,label:intl?"Immigration, baggage & transfer":"Baggage & exit"});
-  }else if(it.kind==="train"&&it.dep){
+  }else if(isRide(it.kind)&&it.dep){
     const tz=it.tz||"Asia/Kolkata";const du=toUTC(it.dep,tz);
-    add(fromUTC(du-set.trainPre*6e4,tz),it.dep,tz,{buf:1,label:"Reach station"});
-    add(it.dep,it.arr||fromUTC(du+180*6e4,tz),tz,{label:`${it.trainNo||"Train"} ${it.from||""}→${it.to||""}`,main:1});
+    add(fromUTC(du-set.trainPre*6e4,tz),it.dep,tz,{buf:1,label:"Reach "+RIDE_L[it.kind].reach});
+    add(it.dep,it.arr||fromUTC(du+180*6e4,tz),tz,{label:`${it.trainNo||KINDS[it.kind].n} ${it.from||""}→${it.to||""}`,main:1});
+  }else if(it.kind==="car"){
+    const tz=it.tz||"Asia/Kolkata";
+    if(it.start){const u=toUTC(it.start,tz);add(it.start,fromUTC(u+30*6e4,tz),tz,{label:`Pick up car · ${it.name||"Car rental"}`,main:1})}
+    if(it.end){const u=toUTC(it.end,tz);add(fromUTC(u-30*6e4,tz),it.end,tz,{label:`Drop off car · ${it.name||"Car rental"}`,main:1})}
   }else if(it.kind==="hotel"){
     const tz=it.tz||"Asia/Kolkata";
     if(it.checkIn){const u=toUTC(it.checkIn,tz);add(it.checkIn,fromUTC(u+30*6e4,tz),tz,{label:`Check-in · ${it.name||"Stay"}`,main:1})}
@@ -94,12 +98,15 @@ function itemEvents(it,set=S.settings){
 const itemTitle=it=>{switch(it.kind){
   case"flight":return`${it.from||"???"} → ${it.to||"???"}`;
   case"train":return`${it.from||"?"} → ${it.to||"?"}${it.trainName?" · "+it.trainName:""}`;
+  case"bus":case"ferry":return`${it.from||"?"} → ${it.to||"?"}${it.trainName?" · "+it.trainName:""}`;
+  case"car":return it.name||"Car rental";
   case"hotel":return it.name||"Stay";
   case"doc":return it.title||it.docType||"Document";
   default:return it.title||KINDS[it.kind].n}};
 const itemSub=it=>{switch(it.kind){
   case"flight":{const a=splitLT(it.dep),b=splitLT(it.arr);return`${it.flightNo||""}${it.airline?" · "+it.airline:""} · ${fmtDs(a.d)} ${a.t}${b.t?"–"+b.t+(b.d&&b.d!==a.d?" (+"+dayDiff(a.d,b.d)+")":""):""}`}
-  case"train":{const a=splitLT(it.dep),b=splitLT(it.arr);return`${it.trainNo||""}${it.cls?" · "+it.cls:""} · ${fmtDs(a.d)} ${a.t}${b.t?"–"+b.t:""}`}
+  case"train":case"bus":case"ferry":{const a=splitLT(it.dep),b=splitLT(it.arr);return`${[it.trainNo,it.cls].filter(Boolean).join(" · ")}${it.trainNo||it.cls?" · ":""}${fmtDs(a.d)} ${a.t}${b.t?"–"+b.t:""}`}
+  case"car":{const a=splitLT(it.start),b=splitLT(it.end);return`${fmtDs(a.d)} ${a.t}${b.d?` → ${fmtDs(b.d)} ${b.t}`:""}${it.pickup?" · "+it.pickup:""}`}
   case"hotel":{const n=it.checkIn&&it.checkOut?dayDiff(it.checkIn.slice(0,10),it.checkOut.slice(0,10)):0;return`${fmtDs(it.checkIn?.slice(0,10))} → ${fmtDs(it.checkOut?.slice(0,10))} · ${n} night${n===1?"":"s"}`}
   case"doc":return`${it.docType||""}${it.expiry?" · expires "+fmtD(it.expiry,1):""}`;
   case"expense":return`${it.cat||""} · ${fmtDs(it.date)}`;

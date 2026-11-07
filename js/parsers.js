@@ -253,7 +253,11 @@ function detectKind(text){const t=text.toLowerCase();const c=(rx)=>(t.match(rx)|
   const fl=c(/\bflights?\b|\bboarding\b|\bterminal\b|\bbaggage\b|\bcabin\b|\be-?ticket\b|\bairlines?\b|\bweb check-?in\b|\bcheck-?in baggage\b/g)+findFlights(text).length*2;
   const ho=c(/\bcheck-?in\b|\bcheck-?out\b|\bhotel\b|\broom\b|\bnights?\b|\bproperty\b|\bresort\b|\bstay\b|\bguests?\b/g)-c(/check-?in baggage|web check-?in/g)*2;
   const tr=c(/\birctc\b|\btrain\b|\bcoach\b|\bberth\b|\bsleeper\b|\brailways?\b|\bboarding (?:station|at)\b|\bquota\b|\bchart\b/g)+(/pnr\s*(?:no\.?|number)?\s*[:\-]?\s*\d{10}\b/i.test(text)?5:0);
-  const m=Math.max(fl,ho,tr);if(m<1)return"activity";return m===tr?"train":m===fl?"flight":"hotel"}
+  const bu=c(/\bredbus\b|\bbus\b|\bboarding point\b|\bdropping point\b|\btravels\b|\bvolvo\b|\b(?:k|ms|aps|ts|gs|hp|up|rs|o)rtc\b|\bseater\b|\bsleeper bus\b|\babhibus\b|\bintrcity\b|\bzingbus\b/g)*2;
+  const fe=c(/\bferry\b|\bjetty\b|\bvessel\b|\bsailing\b|\bcatamaran\b|\bspeedboat\b|\bembark(?:ation)?\b/g)*2;
+  const ca=c(/\bcar rental\b|\brental car\b|\bcar hire\b|\bpick-?up (?:location|date|time)\b|\bdrop-?off (?:location|date|time)\b|\bself[- ]drive\b|\bdriver'?s licen[cs]e\b|\bzoomcar\b|\bhertz\b|\bavis\b|\beuropcar\b|\bsixt\b/g)*2;
+  const m=Math.max(fl,ho,tr,bu,fe,ca);if(m<1)return"activity";
+  return m===tr?"train":m===fl?"flight":m===bu?"bus":m===fe?"ferry":m===ca?"car":"hotel"}
 function nearest(arr,i,after=true,max=1e9){let b=null;for(const x of arr){const d=after?x.i-i:i-x.i;if(d>=0&&d<=max&&(!b||d<b.d))b={...x,d}}return b}
 function parseFlights(text,ref){
   const fl=findFlights(text),aps=findAirports(text),dates=notMeta(text,findDates(text,ref)),times=findTimes(text);
@@ -325,6 +329,39 @@ function parseTrain(text,ref){
   return{ref:pnr,trainNo:tm?.[1]||"",trainName:tm?.[2]?tcase(tm[2].split(/\s{2,}|\s+class\b/i)[0].trim()):"",from:fr?.code||"",fromName:fr?.name||"",to:to?.code||"",toName:to?.name||"",
     dep:dp?.d?`${dp.d}T${dp.t||"00:00"}`:"",arr:ar?.d&&ar?.t?`${ar.d}T${ar.t}`:"",cls:cl?.[1]||"",quota,seat:stat[0]?stat.slice(1).filter(Boolean).join("/"):"",tz:"Asia/Kolkata",
     _f:{ref:!!pnr,trainNo:!!tm,from:!!fr,to:!!to,dep:!!(dp?.d&&dp?.t),arr:!!(ar?.t)}}}
+/* Bus (redBus, abhibus, state RTCs, private operators) and ferry tickets. Labels vary a lot, so this
+   looks for common labels and leaves anything it can't find for the review screen. */
+function parseRide(text,ref,kind){
+  const dates=notMeta(text,findDates(text,ref)),times=findTimes(text);
+  const lab=l=>{const m=text.match(new RegExp(`(?:^|\\n|\\s{2,}|\\|)\\s*(?:${l})\\s*[:\\-]\\s*([^\\n|]{2,70})`,"i"));return m?m[1].split(/\s{2,}|\t/)[0].trim():""};
+  const tkt=labelVal(text,["ticket\\s*(?:no|number)","tin","pnr","booking\\s*id","booking\\s*ref(?:erence)?","reference"],"([A-Z0-9][A-Z0-9\\-]{4,19})",v=>/\d/.test(v));
+  const op=lab("bus\\s*operator|travels?\\s*name|operator|operated\\s*by|service\\s*provider|travels");
+  let from=lab("from|source|origin|leaving\\s*from"),to=lab("to|destination|going\\s*to");
+  if(!from||!to){const m=text.match(/\b([A-Z][A-Za-z.]+(?:\s[A-Z][A-Za-z.]+){0,2})\s+(?:to|→|->)\s+([A-Z][A-Za-z.]+(?:\s[A-Z][A-Za-z.]+){0,2})\b/);if(m){from=from||m[1];to=to||m[2]}}
+  const bp=lab("boarding\\s*point|pick-?up\\s*point|boarding\\s*at|departure\\s*(?:jetty|terminal|port)|embarkation"),dp=lab("dropping\\s*point|drop(?:-?off)?\\s*point|alighting\\s*point|arrival\\s*(?:jetty|terminal|port)|disembarkation");
+  const seat=(lab("seat\\s*(?:no|number|numbers|nos|\\(s\\))?\\.?|seats|berth")||"").replace(/[^A-Za-z0-9 ,\/\-]/g,"").trim().slice(0,30);
+  const typ=lab("bus\\s*type|coach\\s*type|class|seat\\s*type");
+  const svc=lab("bus\\s*(?:no|number)|service\\s*(?:no|number)|vessel|ship\\s*name|sailing");
+  const tAt=l=>{const m=text.match(new RegExp(`(?:${l})\\s*[:\\-]?`,"i"));if(!m)return null;const p=m.index+m[0].length;const t=nearest(times,p,true,60);const d=t?(nearest(dates,t.e,true,40)||nearest(dates,p,true,80)||nearest(dates,p,false,80)):nearest(dates,p,true,80);return{t:t?.v||"",d:d?.v||""}};
+  // time and date often sit under different labels ("Boarding Time" vs "Date of Journey"), so look them up separately
+  const tm=tAt("departure\\s*time|boarding\\s*time|reporting\\s*time|sailing\\s*time|dep(?:arture)?|departs?"),dd=tAt("date\\s*of\\s*journey|journey\\s*date|doj|travel\\s*date|departure\\s*date|date");
+  let dpt={d:dd?.d||tm?.d||dates[0]?.v||"",t:tm?.t||dd?.t||""};if(dpt.d&&!dpt.t)dpt.t=times[0]?.v||"";
+  const arr=tAt("arrival\\s*time|dropping\\s*time|arr(?:ival)?|reach(?:ing)?\\s*time");
+  if(arr&&arr.t&&dpt.d){if(!arr.d)arr.d=dpt.d;if(arr.d===dpt.d&&arr.t<dpt.t)arr.d=addDays(dpt.d,1)}
+  const clean=s=>tcase(String(s||"").replace(/\(.*?\)/g,"").replace(/[^A-Za-z .'\-]/g," ").replace(/\s+/g," ").trim()).slice(0,40);
+  return{ref:tkt||"",trainNo:svc.slice(0,30),trainName:op.slice(0,40),from:clean(from),to:clean(to),fromName:bp.slice(0,70),toName:dp.slice(0,70),cls:typ.slice(0,30),seat,
+    dep:dpt?.d?`${dpt.d}T${dpt.t||"00:00"}`:"",arr:arr?.d&&arr?.t?`${arr.d}T${arr.t}`:"",tz:"",
+    _f:{ref:!!tkt,trainName:!!op,from:!!from,to:!!to,fromName:!!bp,toName:!!dp,seat:!!seat,dep:!!(dpt?.d&&dpt?.t),arr:!!(arr?.t)}}}
+function parseCar(text,ref){
+  const dates=notMeta(text,findDates(text,ref)),times=findTimes(text);
+  const lab=l=>{const m=text.match(new RegExp(`(?:${l})\\s*[:\\-]\\s*([^\\n]{2,80})`,"i"));return m?m[1].split(/\s{2,}|\t/)[0].trim():""};
+  const at=l=>{const m=text.match(new RegExp(`(?:${l})`,"i"));if(!m)return null;const p=m.index+m[0].length;const d=nearest(dates,p,true,80);const t=d?nearest(times,d.e,true,30)||nearest(times,p,true,80):nearest(times,p,true,80);return{d:d?.v||"",t:t?.v||""}};
+  const pu=at("pick-?\\s*up\\s*(?:date|time|on)?"),dr=at("drop-?\\s*off\\s*(?:date|time|on)?|return\\s*(?:date|time|on)?");
+  const name=lab("rental\\s*company|supplier|car\\s*hire\\s*company|vendor|provided\\s*by")||(text.match(/\b(Hertz|Avis|Europcar|Sixt|Enterprise|Budget|Zoomcar|Revv|Myles|Thrifty|Alamo|National|Dollar)\b/i)||[])[1]||"";
+  const ref2=labelVal(text,["confirmation\\s*(?:no|number|code)","booking\\s*(?:ref(?:erence)?|no|number|id)","reservation\\s*(?:no|number)","voucher"],"([A-Z0-9][A-Z0-9\\-]{4,19})",v=>/\d/.test(v));
+  return{ref:ref2||"",name:tcase(name).slice(0,40),pickup:lab("pick-?\\s*up\\s*(?:location|branch|address|point)"),dropoff:lab("drop-?\\s*off\\s*(?:location|branch|address|point)|return\\s*location"),carType:lab("car\\s*(?:type|class|group|model)|vehicle(?:\\s*type)?"),
+    start:pu?.d?`${pu.d}T${pu.t||"10:00"}`:"",end:dr?.d?`${dr.d}T${dr.t||"10:00"}`:"",tz:"",
+    _f:{ref:!!ref2,name:!!name,pickup:!!lab("pick-?\\s*up\\s*(?:location|branch|address|point)"),start:!!pu?.d,end:!!dr?.d}}}
 function scoreParse(p){const f=o=>Object.values(o?._f||{}).filter(Boolean).length;let s=(p.ref?2:0)+(p.names?.length?1:0)+(p.cost?1:0);
   if(p.kind==="flight")s+=(p.segments||[]).reduce((a,x)=>a+x._score,0);else s+=f(p);return s}
 function parseBest(texts,kind,ref){let best=null;for(const t of texts.filter(Boolean)){const p=parseBooking(t,kind,ref);p._score=scoreParse(p);if(!best||p._score>best._score)best=p}return best||parseBooking("",kind,ref)}
@@ -337,5 +374,7 @@ function parseBooking(text,kind,ref){
     return{...base,ref:pnr&&/[A-Z]/.test(pnr)?pnr:(pnr||""),bookingId:bid||"",segments:parseFlights(text,ref)}}
   if(kind==="hotel")return{...base,...parseHotel(text,ref)};
   if(kind==="train")return{...base,...parseTrain(text,ref)};
+  if(kind==="bus"||kind==="ferry")return{...base,...parseRide(text,ref,kind)};
+  if(kind==="car")return{...base,...parseCar(text,ref)};
   const d=findDates(text,ref)[0],t=findTimes(text)[0];
   return{...base,title:text.split("\n").find(l=>l.trim().length>3)?.trim().slice(0,60)||"",start:d?`${d.v}T${t?.v||"10:00"}`:""}}

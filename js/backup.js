@@ -65,6 +65,7 @@ async function loadSample(){const today=todayIn("Asia/Kolkata"),d0=addDays(today
     {kind:"activity",title:"Batu Caves & banana-leaf breakfast",start:`${D(2)}T07:30`,end:`${D(2)}T11:00`,tz:KL,location:"Batu Caves, Gombak"},
     {kind:"flight",flightNo:"AK 6430",airline:"AirAsia",from:"KUL",to:"LGK",dep:`${D(3)}T10:30`,arr:`${D(3)}T11:35`,depTz:KL,arrTz:KL,terminal:"2",ref:"M8JQ4P",groupId:g2,cost:6200,cur:"INR",payments:[P("paid",6200,"UPI")],names:nm},
     {kind:"hotel",name:"Casa del Mar Langkawi",address:"Jalan Pantai Cenang, 07000 Langkawi, Malaysia",checkIn:`${D(3)}T14:00`,checkOut:`${D(5)}T07:00`,tz:KL,ref:"1488520117",cost:38400,cur:"INR",payments:[P("paid",20000,"UPI"),P("pending",18400,"Agent",D(-7))],names:nm},
+    {kind:"car",name:"Langkawi Auto Rental",pickup:"Langkawi International Airport (LGK), arrivals hall",dropoff:"Langkawi International Airport (LGK)",carType:"Compact automatic",start:`${D(3)}T12:00`,end:`${D(5)}T07:30`,tz:KL,ref:"LAR-55120",cost:240,cur:"MYR",payments:[P("pending",240,"Pay at pick-up",D(3))]},
     {kind:"activity",title:"Island-hopping tour",start:`${D(4)}T09:30`,end:`${D(4)}T13:30`,tz:KL,location:"Pantai Cenang jetty",cost:120,cur:"MYR",payments:[]},
     {kind:"flight",flightNo:"AK 6429",airline:"AirAsia",from:"LGK",to:"KUL",dep:`${D(5)}T09:00`,arr:`${D(5)}T10:05`,depTz:KL,arrTz:KL,terminal:"",ref:"M8JQ4P",groupId:g2,cost:0,cur:"INR",payments:[],names:nm},
     {kind:"flight",flightNo:"6E 1062",airline:"IndiGo",from:"KUL",to:"BLR",dep:`${D(5)}T15:20`,arr:`${D(5)}T17:10`,depTz:KL,arrTz:"Asia/Kolkata",terminal:"1",ref:"Q7XK2M",groupId:g1,cost:0,cur:"INR",payments:[],names:nm},
@@ -88,7 +89,7 @@ async function loadSample(){const today=todayIn("Asia/Kolkata"),d0=addDays(today
 function itinText(t){let s=`${t.name}\n${tripMeta(t)}\n`;
   for(const d of tripDays(t)){const evs=tripItems(t.id).flatMap(it=>itemEvents(it).filter(e=>e.main&&e.s.slice(0,10)===d)).sort((a,b)=>a.su-b.su);
     s+=`\n${fmtD(d,1)} · ${tzShort(dayTz(t,d))}\n`;if(!evs.length)s+="  (free day)\n";
-    for(const e of evs){const it=e.it;s+=`  ${e.s.slice(11)}  ${e.label}${it.kind==="flight"||it.kind==="train"?` → arr ${e.e.slice(11)}${it.terminal?" · T"+it.terminal:""}`:""}${it.ref?`  [${it.ref}]`:""}${it.location?` · ${it.location}`:""}\n`}
+    for(const e of evs){const it=e.it;s+=`  ${e.s.slice(11)}  ${e.label}${isTransport(it.kind)?` → arr ${e.e.slice(11)}${it.terminal?" · T"+it.terminal:""}`:""}${it.ref?`  [${it.ref}]`:""}${it.location?` · ${it.location}`:""}\n`}
     const st=stayOn(t,d);if(st)s+=`  Night: ${st.name}${st.address?" — "+st.address:""}\n`}
   return s}
 

@@ -17,6 +17,7 @@ function searchActions(){return[
   {type:"action",id:"a:wrap",title:"Open Trip Wrapped",icon:"play",text:"wrapped story cards share export year recap",run:()=>openWrapped()},
   {type:"action",id:"a:pass",title:"Show boarding pass / ticket",icon:"phone",text:"boarding pass ticket gate show pnr seat scan qr barcode",run:()=>openPass()},
   {type:"action",id:"a:csv",title:"Export costs (CSV or printable report)",icon:"download",text:"export csv excel sheets expense report reimbursement receipts print",run:()=>{go("vault");S.sub="money";render();setTimeout(()=>$("[data-a=expCSV]")?.scrollIntoView({block:"center"}),50)}},
+  {type:"action",id:"a:emg",title:"Emergency card",icon:"heart",text:"emergency medical id blood group allergy contact insurance helpline",run:()=>openEmgCard()},
   {type:"action",id:"a:ics",title:"Export itinerary to calendar (.ics)",icon:"cal",text:"calendar ics google apple outlook export reminders",run:()=>exportICS()},
   {type:"action",id:"a:share",title:"Share itinerary as a web page",icon:"share",text:"share itinerary html send family",run:()=>shareItinerary()},
   {type:"action",id:"a:backup",title:"Backup & restore",icon:"db",text:"backup restore export import json encrypted",run:()=>openBackup()},
@@ -30,7 +31,7 @@ function buildIndex(){
   S.items.forEach(it=>{
     const type=it.kind==="doc"?"doc":it.kind==="expense"?"expense":"booking";
     push({type,id:it.id,tripId:it.tripId,kind:it.kind,title:itemTitle(it),sub:itemSub(it),ref:it.ref,icon:KINDS[it.kind]?.i||"flag",ck:it.kind,
-      text:[itemTitle(it),itemSub(it),it.ref,it.bookingId,(it.names||[]).join(" "),it.notes,it.address,it.location,it.airline,it.flightNo,it.trainNo,it.trainName,it.fromName,it.toName,it.docType,it.cat,it.name,it.pin,it.phone,it.from&&AP[it.from]?.names.join(" "),it.to&&AP[it.to]?.names.join(" "),KINDS[it.kind]?.n].filter(Boolean).join(" · ")});
+      text:[itemTitle(it),itemSub(it),it.ref,it.bookingId,(it.names||[]).join(" "),it.notes,it.address,it.location,it.airline,it.flightNo,it.trainNo,it.trainName,it.fromName,it.toName,it.pickup,it.dropoff,it.carType,it.docType,it.cat,it.name,it.pin,it.phone,it.from&&AP[it.from]?.names.join(" "),it.to&&AP[it.to]?.names.join(" "),KINDS[it.kind]?.n].filter(Boolean).join(" · ")});
   });
   S.files.filter(f=>!f.memId).forEach(f=>push({type:"file",id:f.id,tripId:f.tripId,title:f.name,sub:`${(f.size/1024).toFixed(0)} KB · attachment`,icon:"file",ck:"doc",text:f.name+" "+(f.text||"")}));
   S.memories.forEach(m=>push({type:"memory",id:m.id,tripId:m.tripId,title:m.title||"Untitled moment",sub:`${fmtDs(m.date)}${m.place?" · "+m.place:""}`,icon:"camera",ck:"memory",text:[m.title,m.text,m.place,MOODS[m.mood]?.n].join(" ")}));

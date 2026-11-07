@@ -47,12 +47,13 @@ function showLock(){
   const d=document.createElement("div");d.className="lockscr";d.id="lock";d.setAttribute("role","dialog");d.setAttribute("aria-label","Vault locked");
   d.innerHTML=`<div class="lockbox rise"><div class="seal">${ic("lock","xl")}</div><h1>Trip Vault</h1><p class="muted" style="margin-top:6px">Your vault is locked. Enter your passphrase to open it.</p>
    <form id="lkf"><div><label for="lkp" class="sr">Passphrase</label><input id="lkp" type="password" autocomplete="current-password" placeholder="Passphrase"></div><button class="btn pri lg" style="justify-content:center">${ic("unlock")} Unlock</button><div class="err" id="lke" role="alert"></div></form>
-   <p class="small dim">Forgot it? It can't be recovered. You can erase this device's vault and restore from a backup.</p><button class="btn xs ghost" id="lkw" type="button">Erase this device's vault…</button></div>`;
+   <p class="small dim">Forgot it? It can't be recovered. You can erase this device's vault and restore from a backup.</p><button class="btn xs ghost" id="lkw" type="button">Erase this device's vault…</button>${emgHas()?`<div class="mt"><button class="btn" id="lkEmg" type="button">${ic("heart","sm")} Emergency info</button></div>`:""}</div>`;
   document.body.append(d);const f=$("#lkf",d),inp=$("#lkp",d);inp.focus();
   f.onsubmit=async e=>{e.preventDefault();if(!inp.value)return;const b=f.querySelector("button");b.disabled=true;$("#lke",d).textContent="";
     const ok=await Vault.unlock(inp.value);
     if(!ok){await new Promise(r=>setTimeout(r,500));$("#lke",d).textContent="That passphrase didn't work.";b.disabled=false;inp.select();return}
     inp.value="";await loadAll();applyTheme();d.remove();S.view=S.meta.view||"today";S.sub=S.meta.sub||"bookings";armIdle();render();consumeLaunch()};
+  $("#lkEmg",d)?.addEventListener("click",()=>openEmgCard());
   $("#lkw",d).onclick=async()=>{if(confirm("Erase everything stored by Trip Vault in this browser? This cannot be undone. Restore later from a backup file."))await wipeAll()};
 }
 
@@ -66,6 +67,12 @@ function openSettings(){
    <div class="small dim mt">Trip Vault makes no network requests: it has no server, analytics or accounts. A browser extension, malware or someone with your unlocked device can still see what's on screen.</div>
    <div class="fg mt">${Sel("Auto-lock after idle","autoLock",s.autoLock,[[0,"Never"],[1,"1 minute"],[5,"5 minutes"],[15,"15 minutes"],[60,"1 hour"]])}${Sel("Home currency","homeCur",s.homeCur||"INR",CURS)}${Sel("Appearance","theme",s.theme,[["auto","Match my device"],["dark","Midnight"],["light","Parchment"]])}</div>
    <label class="row mt" style="cursor:pointer"><input type="checkbox" name="optimizePhotos" ${s.optimizePhotos?"checked":""}> <span style="font-size:12.5px;color:var(--tx)">Resize memory photos to 1600px when saving (saves lots of space)</span></label>
+   <div class="sep"></div><div class="h">${ic("heart")}<h2>Emergency card</h2></div>
+   <div class="small muted">For first responders or anyone helping you: a short medical-ID style card. ${Vault.protected?"It can be opened from the lock screen without your passphrase.":"Once you set a passphrase, it can also be opened from the lock screen."}</div>
+   <label class="row mt" style="cursor:pointer"><input type="checkbox" name="emgOn" ${s.emgOn?"checked":""}> <span style="font-size:12.5px;color:var(--tx)">Show an <b>Emergency info</b> button on the lock screen</span></label>
+   <div class="note warn mt">${ic("alert")}<div>These fields are stored <b>without encryption</b> so they can be shown while the vault is locked. Only add what you would put on a medical ID card.</div></div>
+   <div class="fg mt">${F("Name","emgName",s.emgName)}${F("Blood group","emgBlood",s.emgBlood,{ph:"B+"})}${F("Allergies","emgAllergy",s.emgAllergy,{full:1,ph:"Penicillin, peanuts…"})}${F("Medical conditions / medicines","emgMed",s.emgMed,{full:1,ph:"Asthma (inhaler in bag)…"})}
+   ${F("Emergency contact","emgContact",s.emgContact,{ph:"Riya (spouse)"})}${F("Contact phone","emgPhone",s.emgPhone,{type:"tel",ph:"+91 98…"})}${F("Insurer & policy no.","emgIns",s.emgIns)}${F("Insurance helpline","emgHelp",s.emgHelp,{type:"tel"})}</div>
    <div class="sep"></div><div class="h">${ic("clock")}<h2>Day planner</h2></div><div class="fg f4">
    ${F("Day starts","wake",s.wake,{type:"time"})}${F("Day ends","sleep",s.sleep,{type:"time"})}${F("Min. free slot (min)","minGap",s.minGap,{type:"number"})}${TZsel("Home timezone","homeTz",s.homeTz)}</div>
    <div class="h mt">${ic("plane")}<h2>Travel buffers (minutes)</h2></div><div class="fg f4">${F("Before intl flight","preIntl",s.preIntl,{type:"number"})}${F("Before domestic","preDom",s.preDom,{type:"number"})}${F("After intl arrival","postIntl",s.postIntl,{type:"number"})}${F("After domestic","postDom",s.postDom,{type:"number"})}${F("Before train","trainPre",s.trainPre,{type:"number"})}</div>
@@ -81,3 +88,13 @@ function openSettings(){
     S.settings=n;await DB.put("meta",{k:"settings",v:n});applyTheme();armIdle();ov.remove();render();toast("Settings saved")};
   $("#wipe",ov).onclick=async()=>{if(!(await gate({title:"Erase the whole vault?",plan:[`Delete ${S.trips.length} trip(s), ${S.items.length} entries, ${S.memories.length} memories and ${S.files.length} file(s) from this browser`,"Reset settings and remove the passphrase"],irreversible:`Everything. ${S.meta.lastBackup?"Last backup: "+new Date(S.meta.lastBackup).toLocaleString():"No backup has ever been exported."}`,ok:"Erase all"})))return;await wipeAll()}
 }
+
+/* ===================== Emergency card =====================
+   Kept in settings (meta store, never encrypted) so the lock screen can show it. */
+function emgFields(){const s=S.settings||{};return[["Name",s.emgName],["Blood group",s.emgBlood],["Allergies",s.emgAllergy],["Medical conditions / medicines",s.emgMed],["Emergency contact",s.emgContact,s.emgPhone],["Insurance",s.emgIns,s.emgHelp]].filter(r=>r[1]||r[2])}
+const emgHas=()=>!!S.settings?.emgOn&&emgFields().length>0;
+function openEmgCard(){
+  const L=emgFields();if(!L.length){toast("Add your details under Settings → Emergency card","info");if(!Vault.locked)openSettings();return}
+  const tel=p=>p?`<a class="btn xs" href="tel:${esc(p.replace(/[^\d+]/g,""))}">${ic("phone","sm")} ${esc(p)}</a>`:"";
+  sheet({title:`${ic("heart")} Emergency card`,body:`<div class="emg">${L.map(([l,v,p])=>`<div class="emg-r"><small>${l}</small>${v?`<b>${esc(v)}</b>`:""}${tel(p)}</div>`).join("")}</div>
+   <div class="small dim mt">${S.settings.emgOn?"Also available from the lock screen.":"Not shown on the lock screen (turn it on in Settings)."} Edit it in Settings.</div>`})}
