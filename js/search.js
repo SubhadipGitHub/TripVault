@@ -57,9 +57,9 @@ function hlMark(raw,toks){let s=esc(raw);toks.filter(t=>t.length>0).forEach(t=>{
 function openSearch(initial=""){
   if(SEARCH.ov)return;closeAllSheetsExceptLock();SEARCH.q=initial;SEARCH.sel=0;
   const ov=document.createElement("div");ov.className="pal";ov.setAttribute("role","dialog");ov.setAttribute("aria-label","Search");SEARCH.ov=ov;
-  ov.innerHTML=`<div class="box"><div class="qrow">${ic("search","lg")}<input id="sq" type="search" placeholder="Search bookings, PNRs, passports, memories, text inside PDFs…" autocomplete="off" spellcheck="false" aria-label="Search everything"><span class="kbd">Esc</span></div>
+  ov.innerHTML=`<div class="box"><div class="qrow">${ic("search","lg")}<input id="sq" type="search" placeholder="Search bookings, PNRs, passports, memories, text inside PDFs…" autocomplete="off" spellcheck="false" aria-label="Search everything"><span class="kbd hint-k">Esc</span><button type="button" class="ibtn xbtn" data-close aria-label="Close search">${ic("x")}</button></div>
    <div class="chips" id="schips"></div><div class="res" id="sres" role="listbox"></div>
-   <div class="foot"><span>${ic("lock","sm")} Searched on this device only</span><span class="sp"></span><span class="kbd">↑↓</span> move <span class="kbd">Enter</span> open</div></div>`;
+   <div class="foot"><span>${ic("lock","sm")} Searched on this device only</span><span class="sp"></span><span class="hint-k"><span class="kbd">↑↓</span> move <span class="kbd">Enter</span> open</span></div></div>`;
   document.body.append(ov);const inp=$("#sq",ov);inp.value=initial;
   const paintChips=()=>{$("#schips",ov).innerHTML=SEARCH_CHIPS.map(([k,l])=>`<button data-k="${k}" class="${SEARCH.kind===k?"on":""}">${l}</button>`).join("")+(S.trips.length>1?`<span class="sp"></span><button data-scope="1" class="${SEARCH.scope==="cur"?"on":""}">${SEARCH.scope==="cur"?"This trip only":"All trips"}</button>`:"")};
   const paint=()=>{
@@ -73,7 +73,7 @@ function openSearch(initial=""){
   paintChips();paint();inp.focus();
   inp.addEventListener("input",()=>{SEARCH.sel=0;paint()});
   ov.addEventListener("click",e=>{
-    if(e.target===ov){closeSearch();return}
+    if(e.target===ov||e.target.closest("[data-close]")){closeSearch();return}
     const k=e.target.closest("[data-k]");if(k){SEARCH.kind=k.dataset.k;SEARCH.sel=0;paintChips();paint();inp.focus();return}
     if(e.target.closest("[data-scope]")){SEARCH.scope=SEARCH.scope==="cur"?"all":"cur";paintChips();paint();inp.focus();return}
     const h=e.target.closest(".hit");if(h)pick(+h.dataset.i)});

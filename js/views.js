@@ -153,7 +153,7 @@ function dayList(m,d,t){
     else if(s.cont){sm="→ next day "+ev.e.slice(11)}
     if(s.mid)return`<div class="ev"><div class="tm">All day</div><div class="sp small">${esc(ev.label)}</div></div>`;
     if(it.kind==="flight"&&!s.from&&ev.etz!==ev.tz&&!s.cont)sm=`→ ${ev.e.slice(11)} ${esc(it.to||"")} time`;
-    return`<div class="ev tap" data-a="item" data-id="${it.id}"><div class="tm">${tm}<small>${sm}</small></div>${kic(it.kind,1)}<div class="sp" style="min-width:0"><div style="font-weight:600">${title}</div><div class="small muted">${it.kind==="flight"||it.kind==="train"?itemTitle(it)+" · ":""}${it.kind==="hotel"?esc(it.address||""):esc(it.location||it.airline||it.cls||"")}</div></div><div>${refChip(it.ref)}</div></div>`}).join("")}
+    return`<div class="ev tap" data-a="item" data-id="${it.id}"><div class="tm">${tm}<small>${sm}</small></div>${kic(it.kind,1)}<div class="sp" style="min-width:0"><div style="font-weight:600">${title}</div><div class="small muted">${it.kind==="flight"||it.kind==="train"?itemTitle(it)+" · ":""}${it.kind==="hotel"?esc(it.address||""):esc(it.location||it.airline||it.cls||"")}</div></div><div class="evref">${refChip(it.ref)}</div></div>`}).join("")}
 function viewPlan(t){
   const days=tripDays(t);if(!days.length)return`<div class="card empty">${kic("activity")}<b>No dates yet</b><div class="small">Import a booking or set trip dates to see the day-by-day plan.</div><div class="row mt" style="justify-content:center"><button class="btn pri" data-a="import">${ic("zap")} Import</button><button class="btn" data-a="editTrip">Set dates</button></div></div>`;
   const td=todayIn(t.tz||"Asia/Kolkata");if(!S.day||!days.includes(S.day))S.day=days.includes(td)?td:days[0];

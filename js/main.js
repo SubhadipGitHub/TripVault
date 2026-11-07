@@ -4,7 +4,7 @@ function openBlob(f){if(!f?.blob){toast("File data missing","bad");return}const 
 function addMenuSheet(){
   const tile=(a,k,icn,lbl,sub)=>`<button class="btn" style="justify-content:flex-start;padding:12px;align-items:flex-start" data-a="${a}" ${k?`data-k="${k}"`:""}>${k&&KINDS[k]?kic(k,1):`<span class="kic sm" style="--c:var(--acc)">${ic(icn,"sm")}</span>`}<span style="white-space:normal;text-align:left"><b>${lbl}</b>${sub?`<span class="small muted" style="display:block;font-weight:500">${sub}</span>`:""}</span></button>`;
   const ov=sheet({title:"Add to your trip",body:`
-   <button class="btn pri lg" style="width:100%;justify-content:center" data-a="import">${ic("zap")} Smart import — drop a ticket, email or PDF</button>
+   <button class="btn pri lg" style="width:100%;justify-content:center;white-space:normal;text-align:center" data-a="import">${ic("zap")} Smart import — drop a ticket, email or PDF</button>
    <div class="eyebrow" style="margin:16px 0 8px">Or add by hand</div>
    <div class="grid g2">${tile("newMem","","camera","Memory","Photos and a few words")}${tile("add","expense","tag","Expense","Spend on the road")}${tile("add","activity","flag","Activity","Plan something")}${tile("add","flight","plane","Flight","")}${tile("add","hotel","bed","Stay","")}${tile("add","train","train","Train","")}${tile("add","transfer","car","Transfer","")}${tile("add","doc","shield","Document","Passport, visa, insurance")}</div>`});
   ov.addEventListener("click",e=>{if(e.target.closest("[data-a]"))ov.remove()});
