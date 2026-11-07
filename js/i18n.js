@@ -95,12 +95,16 @@ const HI={
   "Story cards from your own bookings, spend and memories. Save them as images.":"आपकी बुकिंग, ख़र्च और यादों से बने स्टोरी कार्ड। इन्हें इमेज के रूप में सेव करें।",
   "Jot a line, drop a photo, tag the mood. These become the heart of your Trip Wrapped.":"एक लाइन लिखें, फ़ोटो डालें, मूड चुनें। यही आपके ट्रिप रैप्ड का दिल बनते हैं।",
   "Joyful":"ख़ुश","In awe":"हैरान","Peaceful":"शांत","Playful":"मस्त","Delicious":"स्वादिष्ट","Grateful":"आभारी","Worn out":"थका हुआ",
+  /* reading screenshots (OCR) */
+  "Download for offline use":"ऑफ़लाइन इस्तेमाल के लिए डाउनलोड करें","Downloaded · refresh":"डाउनलोड हो चुका · रीफ़्रेश","Ready for offline use":"ऑफ़लाइन इस्तेमाल के लिए तैयार","Downloading…":"डाउनलोड हो रहा है…","Try again":"फिर कोशिश करें",
+  "Loading the text reader":"टेक्स्ट रीडर लोड हो रहा है","Starting the text reader":"टेक्स्ट रीडर शुरू हो रहा है","Loading English":"अंग्रेज़ी लोड हो रही है","Getting ready":"तैयारी हो रही है","Text read from image":"इमेज से पढ़ा गया टेक्स्ट",
+  "Text reader ready. Screenshots can now be read offline":"टेक्स्ट रीडर तैयार। अब स्क्रीनशॉट ऑफ़लाइन पढ़े जा सकते हैं",
   /* weekday & month abbreviations shown on their own (day strip) */
   "Sun":"रवि","Mon":"सोम","Tue":"मंगल","Wed":"बुध","Thu":"गुरु","Fri":"शुक्र","Sat":"शनि",
   "Jan":"जन","Feb":"फ़र","Mar":"मार्च","Apr":"अप्रै","May":"मई","Jun":"जून","Jul":"जुला","Aug":"अग","Sep":"सितं","Oct":"अक्टू","Nov":"नवं","Dec":"दिसं"
 };
 /* A few headings carry counts; translate the label and keep the numbers. */
-const HI_RX=[[/^Packing · (.+)$/,"पैकिंग · $1"],[/^Ideas · (.+)$/,"आइडिया · $1"],[/^Getting started · (.+)$/,"शुरुआत · $1"],[/^Day (\d+) · (.+)$/,"दिन $1 · $2"],[/^Received (\d+) of (\d+) frames$/,"$2 में से $1 फ़्रेम मिले"],[/^Frame (\d+) of (\d+)$/,"फ़्रेम $1 / $2"],
+const HI_RX=[[/^Packing · (.+)$/,"पैकिंग · $1"],[/^Ideas · (.+)$/,"आइडिया · $1"],[/^Getting started · (.+)$/,"शुरुआत · $1"],[/^Day (\d+) · (.+)$/,"दिन $1 · $2"],[/^Received (\d+) of (\d+) frames$/,"$2 में से $1 फ़्रेम मिले"],[/^Frame (\d+) of (\d+)$/,"फ़्रेम $1 / $2"],[/^Reading the image · (\d+)%$/,"इमेज पढ़ी जा रही है · $1%"],[/^Loading English · (\d+)%$/,"अंग्रेज़ी लोड हो रही है · $1%"],
   [/^in (\d+) days$/,"$1 दिन में"],[/^in (\d+h(?: \d+m)?|\d+m)$/,"$1 में"],[/^(\d+h(?: \d+m)?|\d+m) free$/,"$1 ख़ाली"],[/^Free · (.+)$/,"ख़ाली · $1"],[/^Now · ends (.+)$/,"अभी · $1 पर ख़त्म"],
   [/^Web check-in opens for (.+)$/,"$1 का वेब चेक-इन खुलेगा"],[/^Web check-in is open for (.+)$/,"$1 का वेब चेक-इन खुला है"],
   [/^About (.+) before departure\. Confirm the window with (.+)$/,"रवानगी से लगभग $1 पहले। समय $2 से पक्का करें"],[/^Usually closes about an hour before departure(.*)$/,"आम तौर पर रवानगी से लगभग एक घंटा पहले बंद$1"],
