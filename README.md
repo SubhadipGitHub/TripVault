@@ -6,7 +6,7 @@ A private, offline-first home for everything about a trip: bookings, tickets, pa
 
 ## What it does
 
-- **Smart import**: drop PDF e-tickets, `.eml`, HTML or pasted SMS (airlines, Booking.com/Agoda, IRCTC, redBus-style bus tickets, ferries, car rentals). Fields are extracted on-device and you confirm them. Duplicate files and duplicate bookings are flagged.
+- **Smart import**: drop PDF e-tickets, `.eml`, HTML or pasted SMS (airlines, Booking.com/Agoda, IRCTC, redBus-style bus tickets, ferries, car rentals). Screenshots and photos of tickets are read with on-device OCR (Tesseract, self-hosted, about 7 MB loaded on first use, or ahead of time from Settings). Fields are extracted on-device and you confirm them. Duplicate files and duplicate bookings are flagged.
 - **Plan**: per-day timelines with airport/station buffers, check-ins, time zones and tappable free slots.
 - **Vault**: bookings, documents (passport/visa/insurance expiry checked against trip dates), money (paid vs pending, multi-currency, per-trip exchange rates), packing lists (domestic or international) and emergency notes.
 - **Ideas, spend by day, duplicate trip**: a wish-list board that schedules into the plan, a daily spend chart, and copy a trip as a template.
@@ -44,7 +44,7 @@ Run locally: `python3 -m http.server 8000` then open http://localhost:8000. Ther
 ## Known limits
 
 - Pick your home currency in Settings (or on the welcome screen). Other currencies convert with per-trip rates you enter; the bundled sample trip is priced in INR/MYR.
-- Parsers cover common Indian and international formats; always review extracted fields. Images are attached but not OCR'd.
+- Parsers cover common Indian and international formats; always review extracted fields. OCR can confuse look-alike characters (it read a test PNR "K4XW7N" as "KAXW7N"), so PNRs from images are flagged for checking. Scanned PDFs (pages that are only images) are not OCR'd yet.
 - Wrapped distance is estimated from flight time (no airport coordinates are bundled).
 - Visa and entry rules are not bundled; the app reminds you to check official sources.
 
