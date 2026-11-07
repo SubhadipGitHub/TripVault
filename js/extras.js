@@ -9,7 +9,7 @@ function buildICS(t){
     const desc=[it.ref&&"Ref: "+it.ref,it.seat&&"Seat: "+it.seat,it.terminal&&"Terminal: "+it.terminal,it.names?.length&&"Travellers: "+it.names.join(", "),it.notes].filter(Boolean).join("\n");
     L.push("BEGIN:VEVENT","UID:"+it.id+"-"+i+"@tripvault","DTSTAMP:"+stamp,"DTSTART:"+icsDt(e.su),"DTEND:"+icsDt(Math.max(e.eu,e.su+36e5/2)),"SUMMARY:"+icsEsc(e.label),
       "LOCATION:"+icsEsc(it.address||it.location||""),"DESCRIPTION:"+icsEsc(desc));
-    if(it.kind==="flight"||it.kind==="train")L.push("BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+icsEsc(e.label),"TRIGGER:-PT"+(it.kind==="flight"?"4":"2")+"H","END:VALARM");
+    if(isTransport(it.kind))L.push("BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+icsEsc(e.label),"TRIGGER:-PT"+(it.kind==="flight"?"4":"2")+"H","END:VALARM");
     L.push("END:VEVENT");n++});
   // Reminders: check-in opening (timed), payments due and document expiry (all-day)
   const dDate=d=>d.replace(/-/g,"");
@@ -28,19 +28,23 @@ function exportICS(){const t=curTrip();if(!t)return;const{text,n}=buildICS(t);if
 /* ---------- split expenses ---------- */
 const tripPeople=t=>Array.isArray(t.people)&&t.people.length?t.people:[...new Set(tripItems(t.id).flatMap(i=>i.names||[]))].slice(0,8);
 function settle(t){
-  const ppl=tripPeople(t),bal=Object.fromEntries(ppl.map(p=>[p,0]));let total=0;
+  const ppl=tripPeople(t),bal=Object.fromEntries(ppl.map(p=>[p,0])),paid=Object.fromEntries(ppl.map(p=>[p,0])),owe=Object.fromEntries(ppl.map(p=>[p,0]));let total=0,skipped=0;
   for(const e of tripItems(t.id).filter(i=>i.kind==="expense"&&i.paidBy&&bal[i.paidBy]!==undefined)){
-    const v=toINR(t,e.cost,e.cur);if(v==null)continue;total+=v;const share=v/ppl.length;bal[e.paidBy]+=v;ppl.forEach(p=>bal[p]-=share)}
+    const v=toINR(t,e.cost,e.cur);if(v==null){skipped++;continue}total+=v;
+    const who=(e.splitWith||[]).filter(p=>ppl.includes(p)),sh=who.length?who:ppl,share=v/sh.length;
+    bal[e.paidBy]+=v;paid[e.paidBy]+=v;sh.forEach(p=>{bal[p]-=share;owe[p]+=share})}
   const cr=ppl.filter(p=>bal[p]>1).map(p=>({p,v:bal[p]})).sort((a,b)=>b.v-a.v),db=ppl.filter(p=>bal[p]<-1).map(p=>({p,v:-bal[p]})).sort((a,b)=>b.v-a.v),pay=[];
   while(cr.length&&db.length){const a=cr[0],d=db[0],x=Math.min(a.v,d.v);pay.push({from:d.p,to:a.p,v:x});a.v-=x;d.v-=x;if(a.v<1)cr.shift();if(d.v<1)db.shift()}
-  return{ppl,bal,total,pay};
+  return{ppl,bal,paid,owe,total,pay,skipped};
 }
 function settleCard(t){
   const S2=settle(t),ppl=S2.ppl;
   return`<div class="card"><div class="h">${ic("user")}<h2>Split & settle up</h2></div>
    <label>Who's sharing costs? (comma separated)</label><input data-people value="${esc(ppl.join(", "))}" placeholder="Arjun, Riya, Meera">
-   <div class="small dim" style="margin:4px 0 8px">Pick “Paid by” when you log an expense. Costs are split equally between these people.</div>
+   <div class="small dim" style="margin:4px 0 8px">Pick “Paid by” when you log an expense. Each expense is shared equally by everyone, unless you open it and untick who it wasn't for.</div>
    ${ppl.length<2?`<div class="small muted">Add at least two people to split costs.</div>`:S2.total?`<div class="small muted">${fmtM(S2.total)} of logged expenses shared by ${ppl.length}</div>
+    <div class="mt">${ppl.map(p=>`<div class="catbar"><div class="nm" style="width:auto;flex:1">${esc(p)}</div><div class="small muted">paid ${fmtM(S2.paid[p])} · share ${fmtM(S2.owe[p])}</div></div>`).join("")}</div>
+    ${S2.skipped?`<div class="small" style="color:var(--warn)">${S2.skipped} expense${S2.skipped>1?"s":""} not counted: set the exchange rate above.</div>`:""}
     ${S2.pay.length?S2.pay.map(x=>`<div class="li"><div class="b"><div class="t">${esc(x.from)} <span class="dim">pays</span> ${esc(x.to)}</div></div><div class="r serif" style="font-size:18px;font-weight:700">${fmtM(x.v)}</div></div>`).join(""):`<div class="note ok mt">${ic("check")}<div>Everyone is square.</div></div>`}`:`<div class="small muted">No expenses with “Paid by” yet.</div>`}</div>`;
 }
 
@@ -64,7 +68,7 @@ function costRows(t){
   return tripItems(t.id).filter(i=>i.kind!=="doc").map(it=>({it,p:payInfo(it)})).filter(x=>x.p.cost>0).map(({it,p})=>{
     const st=it.kind==="expense"?{d:it.date||"",t:it.time||""}:splitLT(it.dep||it.start||it.checkIn);
     return{it,date:st.d||"",time:st.t||"",type:KINDS[it.kind].n,title:itemTitle(it),cat:it.kind==="expense"?(it.cat||"Misc"):KINDS[it.kind].n,
-      amt:p.cost,cur:p.cur,home:toINR(t,p.cost,p.cur),paid:p.paid,pend:p.pend,by:it.paidBy||"",
+      amt:p.cost,cur:p.cur,home:toINR(t,p.cost,p.cur),paid:p.paid,pend:p.pend,by:it.paidBy||"",split:it.kind==="expense"&&it.paidBy?(it.splitWith?.length?it.splitWith.join(" / "):"Everyone"):"",
       via:it.kind==="expense"?(it.method||""):[...new Set((it.payments||[]).filter(x=>x.status==="paid").map(x=>x.method).filter(Boolean))].join(" / "),
       ref:it.ref||"",notes:it.notes||""}}).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
 }
@@ -72,8 +76,8 @@ function costRows(t){
 const csvCell=v=>{if(typeof v==="number")return String(Math.round(v*100)/100);let s=String(v??"");if(/^[=+\-@\t\r]/.test(s))s="'"+s;return/[",\r\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s};
 function exportCSV(){
   const t=curTrip();if(!t)return;const R=costRows(t);if(!R.length){toast("No costs to export yet","bad");return}
-  const H=["Date","Time","Type","Title","Category","Amount","Currency",`Amount (${HC()})`,"Paid","Pending","Paid by","Paid via","Reference","Notes"];
-  const rows=[H,...R.map(r=>[r.date,r.time,r.type,r.title,r.cat,r.amt,r.cur,r.home??"",r.paid,r.pend,r.by,r.via,r.ref,r.notes])];
+  const H=["Date","Time","Type","Title","Category","Amount","Currency",`Amount (${HC()})`,"Paid","Pending","Paid by","Split between","Paid via","Reference","Notes"];
+  const rows=[H,...R.map(r=>[r.date,r.time,r.type,r.title,r.cat,r.amt,r.cur,r.home??"",r.paid,r.pend,r.by,r.split,r.via,r.ref,r.notes])];
   dl(new Blob(["\ufeff"+rows.map(a=>a.map(csvCell).join(",")).join("\r\n")+"\r\n"],{type:"text/csv"}),`tripvault-${slug(t.name)}-costs.csv`);
   toast(`${R.length} rows exported`)}
 function printExpenseReport(){
@@ -93,3 +97,12 @@ function exportCard(t){
   return`<div class="card"><div class="h">${ic("download")}<h2>Export costs</h2></div>
    <div class="small muted">Every booking and expense with its amount, ${esc(HC())} value, who paid and how. Use it for reimbursement claims or a spreadsheet.</div>
    <div class="row wrap mt"><button class="btn" data-a="expCSV">${ic("download","sm")} CSV for Excel / Sheets</button><button class="btn" data-a="expPrint">${ic("printer","sm")} Printable report with receipts</button></div></div>`}
+
+/* ---------- per-category spending limits (home currency, saved on the trip) ---------- */
+function openCatBudgets(){
+  const t=curTrip();if(!t)return;const B=budgetOf(t),lim=t.catBudgets||{};
+  const keys=[...new Set([...EXP_CATS,...Object.keys(B.cats),...Object.keys(lim)])];
+  const ov=sheet({title:`${ic("sliders")} Category limits`,body:`<p class="small muted">Set a ${esc(HC())} limit for any category, or leave it blank for no limit. Bars turn amber near a limit and red over it, and Trip readiness flags anything over.</p>
+   <div class="fg mt">${keys.map(k=>`<div><label>${esc(k)} <span class="dim">· ${fmtM(B.cats[k]||0)} so far</span></label><input type="number" inputmode="decimal" min="0" step="1" data-cb="${esc(k)}" value="${lim[k]||""}" placeholder="No limit"></div>`).join("")}</div>`,
+   foot:`<button class="btn" data-close>Cancel</button><button class="btn pri" id="cbSv">${ic("check","sm")} Save limits</button>`});
+  $("#cbSv",ov).onclick=async()=>{const n={};$$("[data-cb]",ov).forEach(i=>{const v=+i.value;if(v>0)n[i.dataset.cb]=v});t.catBudgets=n;await saveTrip(t);ov.remove();render();toast(Object.keys(n).length?"Limits saved":"Limits cleared")}}

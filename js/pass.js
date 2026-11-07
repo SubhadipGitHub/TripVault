@@ -20,7 +20,7 @@ function openPass(id){
 }
 function paintPass(){
   const it=PASS.list[PASS.i];if(!it||!PASS.ov)return;const ev=itemEvents(it),m=ev.find(e=>e.main),b=ev[0];
-  const fl=it.kind==="flight",a=splitLT(it.dep),z=splitLT(it.arr),city=c=>AP[c]?.city||"";
+  const fl=it.kind==="flight",L=RIDE_L[it.kind]||{},a=splitLT(it.dep),z=splitLT(it.arr),city=c=>AP[c]?.city||"";
   const files=S.files.filter(f=>(f.itemIds||[]).includes(it.id)),imgs=files.filter(f=>/^image\//.test(f.type)),docs=files.filter(f=>!/^image\//.test(f.type));
   const cell=(l,v)=>v?`<div><small>${l}</small><b>${esc(v)}</b></div>`:"";
   const n=PASS.list.length;
@@ -28,13 +28,13 @@ function paintPass(){
    <div class="pv-top"><button class="pv-btn" data-pclose aria-label="Close pass">${ic("x")}</button><span class="pv-pos">${n>1?`${PASS.i+1} of ${n}`:""}</span>
     ${n>1?`<button class="pv-btn" data-pnav="-1" aria-label="Previous" ${PASS.i?"":"disabled"}>${ic("back")}</button><button class="pv-btn" data-pnav="1" aria-label="Next" ${PASS.i<n-1?"":"disabled"}>${ic("arrow")}</button>`:""}</div>
    <div class="pv-card">
-    <div class="pv-k">${ic(fl?"plane":"train","sm")} ${esc(fl?[it.flightNo,it.airline].filter(Boolean).join(" · "):[it.trainNo,it.trainName].filter(Boolean).join(" · "))}</div>
-    <div class="pv-route"><b>${esc(it.from||"—")}</b><span class="pv-ln"></span><b>${esc(it.to||"—")}</b></div>
+    <div class="pv-k">${ic(KINDS[it.kind].i,"sm")} ${esc(fl?[it.flightNo,it.airline].filter(Boolean).join(" · "):[it.trainNo,it.trainName].filter(Boolean).join(" · "))}</div>
+    <div class="pv-route ${((it.from||"")+(it.to||"")).length>8?"long":""}"><b>${esc(it.from||"—")}</b><span class="pv-ln"></span><b>${esc(it.to||"—")}</b></div>
     <div class="pv-cities"><span>${esc(fl?city(it.from):it.fromName||"")}</span><span>${esc(fl?city(it.to):it.toName||"")}</span></div>
-    <div class="pv-grid">${cell("Date",fmtD(a.d,1))}${cell("Departs",a.t)}${cell("Arrives",z.t?z.t+(z.d&&z.d!==a.d?` (+${dayDiff(a.d,z.d)})`:""):"")}${cell(fl?"Terminal":"Class",fl?it.terminal:it.cls)}${cell(fl?"Seat":"Coach / berth",it.seat)}</div>
-    ${it.ref?`<div class="pv-pnr"><small>${fl?"PNR / booking ref":"PNR"} · tap to copy</small><b class="mono" data-copy="${esc(it.ref)}">${esc(it.ref)}</b></div>`:`<div class="pv-pnr pv-miss"><small>No PNR saved for this booking</small></div>`}
+    <div class="pv-grid">${cell("Date",fmtD(a.d,1))}${cell("Departs",a.t)}${cell("Arrives",z.t?z.t+(z.d&&z.d!==a.d?` (+${dayDiff(a.d,z.d)})`:""):"")}${cell(fl?"Terminal":L.cls,fl?it.terminal:it.cls)}${cell(fl?"Seat":L.seat,it.seat)}</div>
+    ${it.ref?`<div class="pv-pnr"><small>${fl?"PNR / booking ref":esc(L.ref.replace(/ \(.*\)/,""))} · tap to copy</small><b class="mono" data-copy="${esc(it.ref)}">${esc(it.ref)}</b></div>`:`<div class="pv-pnr pv-miss"><small>No PNR saved for this booking</small></div>`}
     ${it.names?.length?`<div class="pv-names">${ic("user","sm")} ${esc(it.names.join(", "))}</div>`:""}
-    ${b?.buf&&m.su>Date.now()?`<div class="pv-be">${ic("clock","sm")} Be at ${esc(fl?(it.from||"the airport")+(it.terminal?" T"+it.terminal:""):(it.fromName||it.from||"the station"))} by <b>${b.s.slice(11)}</b> ${esc(tzShort(b.tz))} time</div>`:""}
+    ${b?.buf&&m.su>Date.now()?`<div class="pv-be">${ic("clock","sm")}<span>Be at ${esc(fl?(it.from||"the airport")+(it.terminal?" T"+it.terminal:""):(it.fromName||it.from||"the "+L.reach))} by <b>${b.s.slice(11)}</b> ${esc(tzShort(b.tz))} time</span></div>`:""}
    </div>
    ${imgs.map(f=>`<img class="pv-img" src="${photoUrl(f.id)}" alt="${esc(f.name)}">`).join("")}
    ${docs.map(f=>`<button class="pv-file" data-pfile="${f.id}">${ic("file","sm")} Open ${esc(f.name)}</button>`).join("")}

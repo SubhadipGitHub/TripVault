@@ -12,10 +12,28 @@ const CURS=["INR","USD","EUR","GBP","AED","MYR","SGD","THB","IDR","VND","LKR","N
 const HOME_CURS=CURS;
 const TZS=[...new Set(["Asia/Kolkata",...Object.values(AP).map(a=>a.tz)])].sort();
 const KINDS={
-  flight:{n:"Flight",i:"plane"},hotel:{n:"Stay",i:"bed"},train:{n:"Train",i:"train"},transfer:{n:"Transfer",i:"car"},
+  flight:{n:"Flight",i:"plane"},hotel:{n:"Stay",i:"bed"},train:{n:"Train",i:"train"},bus:{n:"Bus",i:"bus"},ferry:{n:"Ferry",i:"ship"},
+  car:{n:"Car rental",i:"key"},transfer:{n:"Transfer",i:"car"},
   activity:{n:"Activity",i:"flag"},expense:{n:"Expense",i:"tag"},doc:{n:"Document",i:"shield"}
 };
 /* Approximate web check-in windows (hours before departure). Default is 48h; always confirm with the airline. */
 const CHECKIN_H={AK:336,FD:336,QZ:336,D7:336,Z2:336};
+/* Scheduled rides share the train data model: dep/arr, from/to (codes for trains, place names for
+   bus and ferry), fromName/toName (station, boarding point or jetty), trainNo = service no.,
+   trainName = train name or operator, cls, seat, tz. RIDE_L holds the per-kind form labels. */
+const RIDES=["train","bus","ferry"];
+const isRide=k=>RIDES.includes(k);
+const isTransport=k=>k==="flight"||isRide(k);
+const RIDE_L={
+  train:{no:"Train no.",noPh:"12658",nm:"Train name",from:"From (stn code)",to:"To (stn code)",fromN:"From station",toN:"To station",cls:"Class",clsPh:"3A / SL / CC",seat:"Coach/berth",seatPh:"CNF/B2/45",ref:"PNR (10 digit)",reach:"station"},
+  bus:{no:"Bus / service no.",noPh:"7720",nm:"Operator",nmPh:"VRL Travels, KSRTC…",from:"From (city)",to:"To (city)",fromN:"Boarding point",toN:"Drop point",cls:"Bus type",clsPh:"AC sleeper / Volvo",seat:"Seat(s)",seatPh:"L4, L5",ref:"Ticket no. / PNR",reach:"boarding point"},
+  ferry:{no:"Sailing / vessel",noPh:"Langkawi Ferry Line",nm:"Operator",nmPh:"Operator",from:"From (port / town)",to:"To (port / town)",fromN:"Departure jetty",toN:"Arrival jetty",cls:"Class",clsPh:"Economy / Premier",seat:"Seat / cabin",seatPh:"",ref:"Ticket / booking ref",reach:"jetty"}};
+/* Packing presets added on top of any list (duplicates skipped). */
+const PACK_TPL={
+  beach:{n:"Beach",i:"sun",L:[["Clothing","Swimwear"],["Clothing","Flip-flops"],["Clothing","Sun hat and sunglasses"],["Toiletries","Reef-safe sunscreen SPF 50"],["Toiletries","After-sun / aloe gel"],["Tech","Waterproof phone pouch"],["Other","Quick-dry towel"],["Health","Insect repellent"],["Other","Dry bag for boat trips"]]},
+  trek:{n:"Trek / hiking",i:"flag",L:[["Clothing","Broken-in hiking shoes"],["Clothing","Rain jacket / poncho"],["Clothing","Warm fleece layer"],["Clothing","Quick-dry socks (extra pairs)"],["Other","Daypack with rain cover"],["Other","Refillable water bottle"],["Health","Blister plasters"],["Health","Altitude / motion-sickness tablets (if advised)"],["Tech","Head torch with spare batteries"],["Other","Trail snacks"]]},
+  business:{n:"Business",i:"bag",L:[["Clothing","Formal outfits (one per meeting day)"],["Clothing","Formal shoes and belt"],["Tech","Laptop and charger"],["Tech","Presentation clicker / HDMI-USB-C adapter"],["Documents","Business cards"],["Documents","Invitation letter / meeting agenda"],["Money","Corporate card and expense receipts pouch"],["Clothing","Iron-free shirts"]]},
+  kids:{n:"With kids",i:"heart",L:[["Health","Kids' medicines and thermometer"],["Health","Wet wipes and sanitiser"],["Other","Snacks and sipper bottle"],["Other","Favourite toy / comfort item"],["Tech","Tablet with downloaded shows and headphones"],["Clothing","Extra change of clothes in the cabin bag"],["Documents","Kids' ID / passports and birth certificate copy"],["Other","Foldable stroller or carrier"]]},
+  winter:{n:"Cold weather",i:"moon",L:[["Clothing","Thermal innerwear"],["Clothing","Down jacket"],["Clothing","Gloves, beanie and scarf"],["Clothing","Waterproof boots"],["Clothing","Wool socks"],["Toiletries","Lip balm and moisturiser"],["Tech","Hand warmers"],["Health","Cold and flu tablets"]]}};
 const EXP_CATS=["Food","Local transport","Shopping","Sightseeing","SIM & data","Tips","Forex fee","Misc"];
 const DOC_TYPES=["Passport","Visa","Travel insurance","ID card","Vaccination","Forex card","Other"];

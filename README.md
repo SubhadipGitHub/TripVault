@@ -6,7 +6,7 @@ A private, offline-first home for everything about a trip: bookings, tickets, pa
 
 ## What it does
 
-- **Smart import**: drop PDF e-tickets, `.eml`, HTML or pasted SMS (airlines, Booking.com/Agoda, IRCTC). Fields are extracted on-device and you confirm them. Duplicate files and duplicate bookings are flagged.
+- **Smart import**: drop PDF e-tickets, `.eml`, HTML or pasted SMS (airlines, Booking.com/Agoda, IRCTC, redBus-style bus tickets, ferries, car rentals). Fields are extracted on-device and you confirm them. Duplicate files and duplicate bookings are flagged.
 - **Plan**: per-day timelines with airport/station buffers, check-ins, time zones and tappable free slots.
 - **Vault**: bookings, documents (passport/visa/insurance expiry checked against trip dates), money (paid vs pending, multi-currency, per-trip exchange rates), packing lists (domestic or international) and emergency notes.
 - **Ideas, spend by day, duplicate trip**: a wish-list board that schedules into the plan, a daily spend chart, and copy a trip as a template.
@@ -15,6 +15,10 @@ A private, offline-first home for everything about a trip: bookings, tickets, pa
 - **Share to Trip Vault**: once installed, share an e-ticket PDF, email or SMS from any app straight into Smart import. Home-screen shortcuts for Log expense, Import, Pass and Search.
 - **Export costs**: CSV for Excel/Sheets and a printable expense report with receipt photos, from the Money tab.
 - **Map links** on hotels, activities, transfers and departure airports (opens your maps app; nothing is fetched by Trip Vault).
+- **Buses, ferries and car rentals** alongside flights, trains and stays, with boarding-point buffers, pick-up/drop-off events and pass view.
+- **Fair splits and limits**: mark who paid and who each expense was for; set per-category spending limits that flag in Trip readiness.
+- **Emergency card**: an opt-in medical-ID style card (blood group, allergies, emergency contact, insurer) viewable from the lock screen. It is stored unencrypted so it can be shown while locked.
+- **Packing sets**: add beach, trek, business, with-kids or cold-weather items to any list, or copy items from another trip.
 - **Search everything** (`Ctrl/Cmd+K` or `/`): trips, PNRs, names, notes, memories and the text inside imported PDFs.
 - **Memories**: a photo journal with moods and highlights.
 - **Wrapped**: story cards for a trip, a year or all time. Save as PNG, ZIP, share, or print a trip book. "Hide amounts" for safe sharing.

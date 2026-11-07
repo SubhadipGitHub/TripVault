@@ -16,18 +16,18 @@ const pill=(t,c="")=>`<span class="pill ${c}">${t}</span>`;
 const mapUrl=q=>"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q);
 /* Outbound "open in maps" link. Plain navigation, so the CSP's connect-src 'none' is untouched. */
 const mapLink=(q,lbl)=>q?`<a class="${lbl?"btn xs":"mapl"}" href="${esc(mapUrl(q))}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(q)} in Maps" title="Open in Maps">${ic("pin","sm")}${lbl?" "+lbl:""}</a>`:"";
-const itemPlace=it=>it.kind==="hotel"?[it.name,it.address].filter(Boolean).join(", "):(it.kind==="activity"||it.kind==="transfer")?(it.location||""):"";
+const itemPlace=it=>it.kind==="hotel"?[it.name,it.address].filter(Boolean).join(", "):(it.kind==="activity"||it.kind==="transfer")?(it.location||""):it.kind==="car"?(it.pickup||it.name||""):(it.kind==="bus"||it.kind==="ferry")?[it.fromName,it.from].filter(Boolean).join(", "):"";
 const airportQ=c=>c?`${AP[c]?.names?.slice(-1)[0]||c} airport ${AP[c]?.city||""}`.trim():"";
 const refChip=r=>r?`<span class="mono copy small" data-copy="${esc(r)}" title="Copy">${esc(r)}</span>`:"";
 
 /* ===================== Trip model helpers ===================== */
 function itemDates(it){const o=[];const p=s=>s&&o.push(s.slice(0,10));
-  if(it.kind==="flight"||it.kind==="train"){p(it.dep);p(it.arr)}else if(it.kind==="hotel"){p(it.checkIn);p(it.checkOut)}else if(it.kind==="expense")p(it.date);else if(it.kind!=="doc"){p(it.start);p(it.end)}return o}
+  if(isTransport(it.kind)){p(it.dep);p(it.arr)}else if(it.kind==="hotel"){p(it.checkIn);p(it.checkOut)}else if(it.kind==="expense")p(it.date);else if(it.kind!=="doc"){p(it.start);p(it.end)}return o}
 function tripRange(t){let s=t.start,e=t.end;if(!s||!e){const ds=tripItems(t.id).flatMap(itemDates).sort();s=s||ds[0];e=e||ds[ds.length-1]}if(s&&e&&e<s)e=s;return{s,e}}
 function tripDays(t){const{s,e}=tripRange(t);if(!s)return[];const n=Math.min(90,dayDiff(s,e));return Array.from({length:n+1},(_,i)=>addDays(s,i))}
 const hotels=t=>tripItems(t.id).filter(i=>i.kind==="hotel"&&i.checkIn);
 const stayOn=(t,d)=>hotels(t).find(h=>h.checkIn.slice(0,10)<=d&&(h.checkOut||h.checkIn).slice(0,10)>d);
-const transports=t=>tripItems(t.id).filter(i=>(i.kind==="flight"||i.kind==="train")&&i.dep).sort((a,b)=>sortKey(a)-sortKey(b));
+const transports=t=>tripItems(t.id).filter(i=>isTransport(i.kind)&&i.dep).sort((a,b)=>sortKey(a)-sortKey(b));
 function dayTz(t,d){const s=stayOn(t,d);if(s?.tz)return s.tz;const co=hotels(t).find(h=>h.checkOut?.slice(0,10)===d);if(co?.tz)return co.tz;
   const tr=transports(t).filter(x=>(x.arr||x.dep).slice(0,10)<=d).pop();if(tr)return tr.kind==="flight"?(tr.arrTz||apTz(tr.to)||t.tz):(tr.tz||t.tz);return t.tz||S.settings.homeTz}
 function tripMeta(t){const{s,e}=tripRange(t);if(!s)return"no dates yet";const n=dayDiff(s,e)+1;return`${fmtDs(s)} – ${fmtDs(e)} · ${n}d`}
@@ -67,6 +67,7 @@ function readiness(t){
   const B=budgetOf(t);
   if(B.pending>0){const od=B.dues.filter(x=>x.p.due&&x.p.due<todayIn(t.tz||"Asia/Kolkata"));add(od.length?"bad":"warn",`${fmtM(B.pending)} still to pay across ${B.dues.length} booking${B.dues.length>1?"s":""}${od.length?` · ${od.length} overdue`:""}`,`<button class="btn xs" data-a="go" data-v="money">Review</button>`)}
   else if(B.committed>0)add("ok","All bookings paid");
+  for(const[k,b]of Object.entries(t.catBudgets||{})){const v=B.cats[k]||0;if(b>0&&v>b)add("warn",`${esc(k)} is over its limit by ${fmtM(v-b)} (${fmtM(v)} of ${fmtM(b)})`,`<button class="btn xs" data-a="go" data-v="money">Review</button>`)}
   if(B.unconv.length)add("warn",`Set exchange rate for ${[...new Set(B.unconv.map(x=>x.p.cur))].join(", ")} to include ${B.unconv.length} amount${B.unconv.length>1?"s":""} in the budget`,`<button class="btn xs" data-a="go" data-v="money">Set rate</button>`);
   if(intl){const pp=its.filter(i=>i.kind==="doc"&&i.docType==="Passport");
     if(!pp.length)add("warn","Add your passport (expiry) to check validity",`<button class="btn xs" data-a="add" data-k="doc" data-dt="Passport">+ Passport</button>`);
@@ -85,11 +86,11 @@ function alerts(t,horizonDays=60){
   const now=Date.now(),lim=now+horizonDays*864e5,htz=S.settings.homeTz,out=[],{e}=tripRange(t);
   const add=(at,o)=>{if(at<=lim)out.push({at,...o})};
   for(const it of transports(t)){const ev=itemEvents(it),m=ev.find(x=>x.main);if(!m||m.su<=now)continue;
-    const tag=esc(it.kind==="flight"?`${it.flightNo||"Flight"} ${it.from||""}→${it.to||""}`:`${it.trainNo||"Train"} ${it.from||""}→${it.to||""}`);
+    const tag=esc(it.kind==="flight"?`${it.flightNo||"Flight"} ${it.from||""}→${it.to||""}`:`${it.trainNo||KINDS[it.kind].n} ${it.from||""}→${it.to||""}`);
     if(it.kind==="flight"){const h=checkinHours(it),open=m.su-h*36e5,lbl=h>=72?Math.round(h/24)+" days":h+"h";
       if(open<=now)add(now,{kind:"checkin",lv:"warn",txt:`Web check-in is open for ${tag}`,sub:`Usually closes about an hour before departure${it.airline?" · "+esc(it.airline):""}`,item:it});
       else add(open,{when:open,kind:"checkin",lv:"info",txt:`Web check-in opens for ${tag}`,sub:`About ${lbl} before departure. Confirm the window with ${esc(it.airline||"the airline")}`,item:it})}
-    const b=ev[0];if(b.buf&&b.su>now&&b.su-now<36*36e5){const where=it.kind==="flight"?`${esc(it.from||"the airport")}${it.terminal?" T"+esc(it.terminal):""}`:esc(it.fromName||it.from||"the station");
+    const b=ev[0];if(b.buf&&b.su>now&&b.su-now<36*36e5){const where=it.kind==="flight"?`${esc(it.from||"the airport")}${it.terminal?" T"+esc(it.terminal):""}`:esc(it.fromName||it.from||"the "+RIDE_L[it.kind].reach);
       add(b.su,{kind:"leave",lv:"warn",txt:`Be at ${where} by ${b.s.slice(11)} for ${tag}`,sub:`${tzShort(b.tz)} time`,item:it})}}
   const today=todayIn(htz);
   for(const it of tripItems(t.id)){if(it.kind==="doc"||it.kind==="expense")continue;const p=payInfo(it);if(!(p.pend>0&&p.due))continue;const od=p.due<today;

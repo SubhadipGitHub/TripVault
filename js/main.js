@@ -6,7 +6,7 @@ function addMenuSheet(){
   const ov=sheet({title:"Add to your trip",body:`
    <button class="btn pri lg" style="width:100%;justify-content:center;white-space:normal;text-align:center" data-a="import">${ic("zap")} Smart import — drop a ticket, email or PDF</button>
    <div class="eyebrow" style="margin:16px 0 8px">Or add by hand</div>
-   <div class="grid g2">${tile("newMem","","camera","Memory","Photos and a few words")}${tile("add","expense","tag","Expense","Spend on the road")}${tile("add","activity","flag","Activity","Plan something")}${tile("add","flight","plane","Flight","")}${tile("add","hotel","bed","Stay","")}${tile("add","train","train","Train","")}${tile("add","transfer","car","Transfer","")}${tile("add","doc","shield","Document","Passport, visa, insurance")}</div>`});
+   <div class="grid g2">${tile("newMem","","camera","Memory","Photos and a few words")}${tile("add","expense","tag","Expense","Spend on the road")}${tile("add","activity","flag","Activity","Plan something")}${tile("add","flight","plane","Flight","")}${tile("add","hotel","bed","Stay","")}${tile("add","train","train","Train","")}${tile("add","bus","bus","Bus","")}${tile("add","ferry","ship","Ferry","")}${tile("add","car","key","Car rental","")}${tile("add","transfer","car","Transfer","Cab, airport rail…")}${tile("add","doc","shield","Document","Passport, visa, insurance")}</div>`});
   ov.addEventListener("click",e=>{if(e.target.closest("[data-a]"))ov.remove()});
 }
 const A={
@@ -37,7 +37,9 @@ const A={
   ideaDel:async el=>{const t=curTrip();t.ideas=(t.ideas||[]).filter(i=>i.id!==el.dataset.id);await saveTrip(t);render()},
   ideaSched:async el=>{const t=curTrip(),i=(t.ideas||[]).find(x=>x.id===el.dataset.id);if(!i)return;i.scheduled=true;await saveTrip(t);const d=S.day||tripDays(t)[0];newItem("activity",{d,title:i.text,location:i.place||t.dest||""});render()},
   ics:()=>exportICS(),shareItin:()=>shareItinerary(),
-  pass:el=>openPass(el.dataset.id),expCSV:()=>exportCSV(),expPrint:()=>printExpenseReport(),
+  pass:el=>openPass(el.dataset.id),catBud:()=>openCatBudgets(),emgView:()=>openEmgCard(),
+  packTpl:async el=>{const t=curTrip(),T=PACK_TPL[el.dataset.k];if(!t||!T)return;const n=mergePack(t,T.L.map(([cat,text])=>({cat,text})));await saveTrip(t);render();toast(n?`Added ${n} ${T.n.toLowerCase()} item${n>1?"s":""}`:"Those items are already on your list","info")},
+  packCopy:async()=>{const t=curTrip(),src=S.trips.find(x=>x.id===$("#pkFrom")?.value);if(!t||!src?.pack)return;const n=mergePack(t,src.pack);await saveTrip(t);render();toast(n?`Copied ${n} item${n>1?"s":""} from ${esc(src.name)}`:"Nothing new to copy","info")},expCSV:()=>exportCSV(),expPrint:()=>printExpenseReport(),
   copyItin:()=>{const t=curTrip();if(t)copyTxt(itinText(t))},
   /* memories & wrapped */
   newMem:()=>{$$(".ov").forEach(o=>o.remove());newMemory()},
