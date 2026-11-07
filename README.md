@@ -10,6 +10,11 @@ A private, offline-first home for everything about a trip: bookings, tickets, pa
 - **Plan**: per-day timelines with airport/station buffers, check-ins, time zones and tappable free slots.
 - **Vault**: bookings, documents (passport/visa/insurance expiry checked against trip dates), money (paid vs pending, multi-currency, per-trip exchange rates), packing lists (domestic or international) and emergency notes.
 - **Ideas, spend by day, duplicate trip**: a wish-list board that schedules into the plan, a daily spend chart, and copy a trip as a template.
+- **Coming up**: web check-in opening, leave-for-the-airport, payment due dates and document expiry on Today. *Add to calendar* puts them in your phone's calendar with alarms, so reminders work without a server.
+- **Show-at-gate pass**: a full-screen, high-contrast view of the next flight or train (PNR, seat, terminal, travellers, attached ticket image) that keeps the screen awake.
+- **Share to Trip Vault**: once installed, share an e-ticket PDF, email or SMS from any app straight into Smart import. Home-screen shortcuts for Log expense, Import, Pass and Search.
+- **Export costs**: CSV for Excel/Sheets and a printable expense report with receipt photos, from the Money tab.
+- **Map links** on hotels, activities, transfers and departure airports (opens your maps app; nothing is fetched by Trip Vault).
 - **Search everything** (`Ctrl/Cmd+K` or `/`): trips, PNRs, names, notes, memories and the text inside imported PDFs.
 - **Memories**: a photo journal with moods and highlights.
 - **Wrapped**: story cards for a trip, a year or all time. Save as PNG, ZIP, share, or print a trip book. "Hide amounts" for safe sharing.

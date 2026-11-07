@@ -37,6 +37,7 @@ const A={
   ideaDel:async el=>{const t=curTrip();t.ideas=(t.ideas||[]).filter(i=>i.id!==el.dataset.id);await saveTrip(t);render()},
   ideaSched:async el=>{const t=curTrip(),i=(t.ideas||[]).find(x=>x.id===el.dataset.id);if(!i)return;i.scheduled=true;await saveTrip(t);const d=S.day||tripDays(t)[0];newItem("activity",{d,title:i.text,location:i.place||t.dest||""});render()},
   ics:()=>exportICS(),shareItin:()=>shareItinerary(),
+  pass:el=>openPass(el.dataset.id),expCSV:()=>exportCSV(),expPrint:()=>printExpenseReport(),
   copyItin:()=>{const t=curTrip();if(t)copyTxt(itinText(t))},
   /* memories & wrapped */
   newMem:()=>{$$(".ov").forEach(o=>o.remove());newMemory()},
@@ -57,13 +58,15 @@ const A={
 };
 document.addEventListener("click",e=>{
   const c=e.target.closest("[data-copy]");if(c){e.stopPropagation();copyTxt(c.dataset.copy);return}
+  const lk=e.target.closest("a[href]");if(lk&&!lk.dataset.a)return;
   const v=e.target.closest("#nav [data-v]");if(v){go(v.dataset.v);return}
   const a=e.target.closest("[data-a]");if(a&&A[a.dataset.a]){if(a.tagName==="A")return;e.preventDefault();A[a.dataset.a](a,e)}},true);
 document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"&&PASS.ov){closePass();return}
   if(e.key==="Escape"&&!SEARCH.ov&&!WR.ov)topSheet()?.close();
   const typing=/^(input|textarea|select)$/i.test(e.target.tagName)||e.target.isContentEditable;
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();if(!Vault.locked&&S.settings)SEARCH.ov?closeSearch():openSearch()}
-  else if(e.key==="/"&&!typing&&!Vault.locked&&S.settings&&!$(".ov")&&!WR.ov){e.preventDefault();openSearch()}
+  else if(e.key==="/"&&!typing&&!Vault.locked&&S.settings&&!$(".ov")&&!WR.ov&&!PASS.ov){e.preventDefault();openSearch()}
   else if((e.key==="Enter"||e.key===" ")&&e.target.matches?.(".pk,.mem,.wrapcta")){e.preventDefault();e.target.click()}
 });
 document.addEventListener("change",async e=>{
@@ -78,6 +81,27 @@ document.addEventListener("input",e=>{
 document.addEventListener("dragover",e=>{if(!$(".ov")&&!Vault.locked&&e.dataTransfer?.types?.includes("Files"))e.preventDefault()});
 document.addEventListener("drop",e=>{if(!$(".ov")&&!Vault.locked&&S.settings&&e.dataTransfer?.files?.length){e.preventDefault();startFiles([...e.dataTransfer.files],S.cur||"__new")}});
 
+/* ===================== Launch: share target & home-screen shortcuts =====================
+   The service worker stores files shared to the installed app in Cache Storage (tv-share) and
+   redirects here with ?share=1. Shortcuts open ./?a=<action>. Runs after boot, or after unlock. */
+async function consumeLaunch(){
+  const q=new URLSearchParams(location.search),act=q.get("a");if(!q.has("share")&&!act)return;
+  if(Vault.locked||!S.settings)return; // picked up again after unlock
+  history.replaceState(null,"",location.pathname+location.hash);
+  if(q.has("share")){let files=[],text="";
+    try{if(window.caches&&await caches.has("tv-share")){const c=await caches.open("tv-share"),base=location.href,mr=await c.match(new URL("__share/meta",base).href);
+      if(mr){const m=await mr.json();text=m.text||"";for(const f of m.files||[]){const r=await c.match(new URL(f.key,base).href);if(r)files.push(new File([await r.blob()],f.name,{type:f.type||r.headers.get("content-type")||""}))}}
+      await caches.delete("tv-share")}}catch(e){}
+    if(files.length){toast(`Reading ${files.length} shared file${files.length>1?"s":""}…`,"info");startFiles(files,S.cur||"__new")}
+    else if(text.trim()){openImport();const ta=$("#impText");if(ta)ta.value=text.trim()}
+    else toast("Nothing came through from the share. Try Import instead","bad");
+    return}
+  if(act==="import")openImport();
+  else if(act==="search")openSearch();
+  else if(act==="pass")openPass();
+  else if(act==="expense"){if(curTrip())newItem("expense");else toast("Start a trip first","bad")}
+}
+
 /* ===================== Boot ===================== */
 (async()=>{
   S.settings={...DEF_SET};
@@ -88,7 +112,7 @@ document.addEventListener("drop",e=>{if(!$(".ov")&&!Vault.locked&&S.settings&&e.
   if(Vault.locked){const m=await DB.get("meta","state");S.meta=m?.v||{};showLock();return}
   await loadAll();applyTheme();S.view=({book:"vault",money:"vault",docs:"vault"}[S.meta.view])||S.meta.view||"today";S.sub=S.meta.sub||({book:"bookings",money:"money",docs:"docs"})[S.meta.view]||"bookings";
   if(!["today","plan","vault","memories"].includes(S.view))S.view="today";
-  render();armIdle();
+  render();armIdle();consumeLaunch();
 })();
 setInterval(()=>{if(S.cur&&(S.view==="today"||S.view==="plan")&&!$(".ov")&&!SEARCH.ov&&!WR.ov&&!Vault.locked&&document.visibilityState==="visible"&&!document.activeElement?.matches("input,select,textarea"))render()},60000);
 if("serviceWorker"in navigator&&location.protocol.startsWith("http"))addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));

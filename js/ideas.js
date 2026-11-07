@@ -1,7 +1,6 @@
 "use strict";
 /* ===================== Ideas board, spend by day, duplicate trip ===================== */
 const IDEA_CATS=["See","Eat","Do","Shop","Stay","Other"];
-const mapUrl=q=>"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q);
 
 /* Places to see / eat / do. Schedule one and it becomes an activity in the plan. */
 function viewIdeas(t){
