@@ -155,7 +155,7 @@ const IMP={q:[],sh:null};
 function openImport(){
   const ov=sheet({title:`${ic("zap")} Smart import`,body:`
    <div class="row" style="margin-bottom:10px"><label style="margin:0;white-space:nowrap">Add to</label><select id="impTrip">${S.trips.map(t=>`<option value="${t.id}" ${t.id===S.cur?"selected":""}>${esc(t.name)}</option>`).join("")}<option value="__new" ${!S.cur?"selected":""}>+ New trip from this booking</option></select></div>
-   <label class="drop" id="impDrop">${ic("upload","lg")}<div style="font-weight:650;margin-top:6px">Drop tickets & confirmations</div><div class="small muted">PDF e-tickets · email (.eml) · HTML · text — several at once is fine<br>Images/screenshots are stored as attachments (no OCR offline)</div><input type="file" id="impFile" multiple accept=".pdf,.eml,.txt,.html,.htm,image/*,application/pdf,message/rfc822,text/plain,text/html" hidden></label>
+   <label class="drop" id="impDrop">${ic("upload","lg")}<div style="font-weight:650;margin-top:6px">Drop tickets & confirmations</div><div class="small muted">PDF e-tickets · email (.eml) · HTML · text — several at once is fine<br>Screenshots and photos of tickets are read on this device too</div><input type="file" id="impFile" multiple accept=".pdf,.eml,.txt,.html,.htm,image/*,application/pdf,message/rfc822,text/plain,text/html" hidden></label>
    <div class="mt"><label>…or paste the confirmation email / SMS / ticket text</label><textarea id="impText" placeholder="Paste here — IndiGo / Air India / airline e-ticket, MakeMyTrip, Booking.com, Agoda, IRCTC ERS…"></textarea></div>
    <div class="row wrap mt small"><span class="dim">Try a sample:</span><button class="btn xs" data-smp="flight">${ic("plane","sm")} Flight</button><button class="btn xs" data-smp="hotel">${ic("bed","sm")} Hotel</button><button class="btn xs" data-smp="train">${ic("train","sm")} IRCTC</button></div>
    <div class="note info mt">${ic("info")}<div>Everything is read on this device. You confirm every field before saving. The <b>same file</b> is blocked; the <b>same booking</b> arriving another way (email vs PDF) is flagged.</div></div>`,
@@ -175,8 +175,9 @@ async function nextFile(){const j=IMP.q.shift();if(!j)return;const{f,tid}=j;cons
       foot:`<button class="btn" id="dOpen">${ic("eye","sm")} Open existing</button><button class="btn pri" id="dSkip">${IMP.q.length?"Skip · next file":"OK"}</button>`});
     $("#dOpen",ov).onclick=()=>openBlob(ex);$("#dSkip",ov).onclick=()=>{ov.remove();nextFile()};return}
   let r;try{r=await fileToText(new File([buf],f.name,{type:f.type}))}catch(e){r={text:"",method:"Unreadable: "+e.message}}
+  if(r.image&&!r.text){const tx=await ocrWithSheet(new Blob([buf],{type:f.type}),f.name);if(tx)r={...r,text:tx,method:"Text read from image",ocr:true};else if(tx===null)r={...r,ocrFailed:true}}
   const texts=[r.text,r.alt].filter(Boolean);
-  openReview({texts,method:r.method,file:{name:f.name,type:f.type,size:f.size,hash,buf},encrypted:r.encrypted,image:r.image,tripId:tid,textHash:r.text?await textHash(r.text):null,pos:IMP.total>1?`${idx} of ${IMP.total}`:""})}
+  openReview({texts,method:r.method,file:{name:f.name,type:f.type,size:f.size,hash,buf},encrypted:r.encrypted,image:r.image,ocr:r.ocr,tripId:tid,textHash:r.text?await textHash(r.text):null,pos:IMP.total>1?`${idx} of ${IMP.total}`:""})}
 function openReview(R,kind){
   apDatalist();const ref=todayIn("Asia/Kolkata");
   const P=R.texts.length?parseBest(R.texts,kind||R.kind,ref):{kind:kind||"flight",names:[],segments:[],_score:0};R.kind=P.kind;
@@ -186,7 +187,8 @@ function openReview(R,kind){
   const segs=P.kind==="flight"?P.segments:[P];
   const found=P.kind==="flight"?P.segments.reduce((a,s)=>a+Object.values(s._f||{}).filter(Boolean).length,0):Object.values(P._f||{}).filter(Boolean).length;
   let notes="";
-  if(R.image)notes+=`<div class="note warn">${ic("eye")}<div>Images can't be read offline. The image will be attached — fill in the key fields below (pick the type first).</div></div>`;
+  if(R.ocr)notes+=`<div class="note info">${ic("eye")}<div>Text was read from the image on this device. OCR can mix up similar characters (0/O, 1/I, 5/S), so check the PNR, dates and times.</div></div>`;
+  else if(R.image)notes+=`<div class="note warn">${ic("eye")}<div>No text could be read from this image. It will be attached; fill in the key fields below (pick the type first).</div></div>`;
   if(R.encrypted&&!R.texts.length)notes+=`<div class="note warn">${ic("alert")}<div>This PDF is password-protected/encrypted. Open it, copy the text and paste it instead — the PDF will still be attached if you import it after.</div></div>`;
   else if(R.texts.length&&found<3)notes+=`<div class="note warn">${ic("alert")}<div>Couldn't find much. This may be a scanned/image PDF or an unusual layout — check the raw text below, switch the type, or fill in manually.</div></div>`;
   else if(found)notes+=`<div class="note ok">${ic("sparkle")}<div>Found <b>${found}</b> fields${P.names.length?` and ${P.names.length} traveller name${P.names.length>1?"s":""}`:""}. <span style="color:var(--ok)">Green</span> = extracted, <span style="color:var(--warn)">amber</span> = please check.</div></div>`;
@@ -195,7 +197,7 @@ function openReview(R,kind){
    <div class="tabs" style="margin-bottom:10px">${["flight","hotel","train","bus","ferry","car","transfer","activity","doc"].map(k=>`<button class="${k===P.kind?"on":""}" data-rk="${k}">${ic(KINDS[k].i,"sm")} ${KINDS[k].n}</button>`).join("")}</div>
    ${notes}<div id="segs">${segs.map(segHtml).join("")}</div>
    ${P.kind==="flight"?`<button class="btn xs mt" id="addSeg">${ic("plus","sm")} Add segment</button>`:""}
-   <div class="seg"><div class="fg f4">${P.kind==="flight"?F("PNR / booking ref","ref",P.ref,{up:1,cls:P.ref?"found":"miss"})+F("Booking ID (OTA)","bookingId",P.bookingId):P.kind==="hotel"||isRide(P.kind)||P.kind==="car"||P.kind==="transfer"||P.kind==="activity"?F(isRide(P.kind)?RIDE_L[P.kind].ref:"Confirmation / ref","ref",P.ref,{cls:P.ref?"found":"miss"}):""}
+   <div class="seg"><div class="fg f4">${P.kind==="flight"?F("PNR / booking ref","ref",P.ref,{up:1,cls:P.ref&&!R.ocr?"found":"miss"})+F("Booking ID (OTA)","bookingId",P.bookingId):P.kind==="hotel"||isRide(P.kind)||P.kind==="car"||P.kind==="transfer"||P.kind==="activity"?F(isRide(P.kind)?RIDE_L[P.kind].ref:"Confirmation / ref","ref",P.ref,{cls:P.ref&&!R.ocr?"found":"miss"}):""}
      ${F("Traveller names","names",(P.names||[]).join(", "),{full:1,ph:"Comma separated",cls:P.names?.length?"found":"miss"})}
      ${F("Total cost","cost",P.cost,{type:"number",step:"0.01",cls:P.cost?"found":"miss"})}${Sel("Currency","cur",P.cur||HC(),CURS)}
      ${Sel("Payment","pay",P.pay||"",[["","Not sure"],["paid","Fully paid"],["pending","Pending / pay later"]],{cls:P.pay?"found":""})}${F("Due by (if pending)","due",P.kind==="hotel"?(P.checkIn||"").slice(0,10):"",{type:"date"})}</div></div>

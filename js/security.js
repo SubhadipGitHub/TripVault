@@ -67,6 +67,9 @@ function openSettings(){
    <div class="small dim mt">Trip Vault makes no network requests: it has no server, analytics or accounts. A browser extension, malware or someone with your unlocked device can still see what's on screen.</div>
    <div class="fg mt">${Sel("Auto-lock after idle","autoLock",s.autoLock,[[0,"Never"],[1,"1 minute"],[5,"5 minutes"],[15,"15 minutes"],[60,"1 hour"]])}${Sel("Home currency","homeCur",s.homeCur||"INR",CURS)}${Sel("Appearance","theme",s.theme,[["auto","Match my device"],["dark","Midnight"],["light","Parchment"]])}</div>
    <label class="row mt" style="cursor:pointer"><input type="checkbox" name="optimizePhotos" ${s.optimizePhotos?"checked":""}> <span style="font-size:12.5px;color:var(--tx)">Resize memory photos to 1600px when saving (saves lots of space)</span></label>
+   <div class="sep"></div><div class="h">${ic("eye")}<h2>Reading screenshots</h2></div>
+   <div class="small muted">Smart import reads text from screenshots and photos of tickets on this device. The text reader (${OCR_SIZE}) loads the first time you import an image. Download it now if you'll be offline later.</div>
+   <div class="row mt"><button class="btn" id="ocrDl" type="button">${ic("download","sm")} ${S.meta.ocrReady?"Downloaded · refresh":"Download for offline use"}</button></div>
    <div class="sep"></div><div class="h">${ic("heart")}<h2>Emergency card</h2></div>
    <div class="small muted">For first responders or anyone helping you: a short medical-ID style card. ${Vault.protected?"It can be opened from the lock screen without your passphrase.":"Once you set a passphrase, it can also be opened from the lock screen."}</div>
    <label class="row mt" style="cursor:pointer"><input type="checkbox" name="emgOn" ${s.emgOn?"checked":""}> <span style="font-size:12.5px;color:var(--tx)">Show an <b>Emergency info</b> button on the lock screen</span></label>
@@ -81,7 +84,7 @@ function openSettings(){
    <div class="sep"></div><div class="h">${ic("alert")}<h2 style="color:var(--bad)">Danger zone</h2></div><button class="btn bad" id="wipe">${ic("trash","sm")} Erase everything on this device</button>
    <div class="small dim mt">Trip Vault 1.0 · private by design · <a href="https://github.com/SubhadipGitHub/TripVault" target="_blank" rel="noopener noreferrer">source</a></div>`,
    foot:`<button class="btn" data-close>Cancel</button><button class="btn pri" id="stSv">Save</button>`});
-  $("[name=homeTz]",ov).options[0].remove();
+  $("[name=homeTz]",ov).options[0].remove();$("#ocrDl",ov).onclick=e=>ocrPrepare(e.currentTarget);
   $("#onPass",ov)?.addEventListener("click",()=>setupLock());$("#chPass",ov)?.addEventListener("click",()=>changeLock());$("#offPass",ov)?.addEventListener("click",()=>removeLock());$("#lockNow",ov)?.addEventListener("click",()=>Vault.lock());
   $("#stSv",ov).onclick=async()=>{const g=gather(ov);const n={...S.settings,...g};["minGap","preIntl","preDom","postIntl","postDom","trainPre","autoLock"].forEach(k=>n[k]=Math.max(0,+n[k]||0));n.minGap=Math.max(15,n.minGap);
     if(hm(n.sleep)<=hm(n.wake)){toast("Day end must be after start","bad");return}
