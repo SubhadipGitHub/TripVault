@@ -481,3 +481,8 @@ html.pass-open{overflow:hidden}
 .emg-r:first-child{border-top:0}
 .emg-r small{font:700 10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--tx3)}
 .emg-r b{font-size:17px;font-weight:650}
+
+/* ---------- हिन्दी: Devanagari needs no letter-spacing (it breaks the headline bar) ---------- */
+:root[lang=hi] .h h2,:root[lang=hi] .eyebrow,:root[lang=hi] .kpi .l,:root[lang=hi] .pv-k,:root[lang=hi] .pv-grid small,:root[lang=hi] .pv-pnr small,
+:root[lang=hi] .qrcode-box small,:root[lang=hi] .emg-r small,:root[lang=hi] .dchip .w,:root[lang=hi] .stamp,:root[lang=hi] .bp .meta div,:root[lang=hi] .bp .stub .u,:root[lang=hi] .pal .grp{letter-spacing:0}
+:root[lang=hi] .h h2{font-size:13px}

@@ -19,6 +19,7 @@ A private, offline-first home for everything about a trip: bookings, tickets, pa
 - **Fair splits and limits**: mark who paid and who each expense was for; set per-category spending limits that flag in Trip readiness.
 - **Emergency card**: an opt-in medical-ID style card (blood group, allergies, emergency contact, insurer) viewable from the lock screen. It is stored unencrypted so it can be shown while locked.
 - **Packing sets**: add beach, trek, business, with-kids or cold-weather items to any list, or copy items from another trip.
+- **हिन्दी interface (beta)**: switch in Settings or on the welcome screen. Navigation, headings, buttons, forms, settings, reminders and readiness checks are translated; booking details and anything you type stay as entered.
 - **Search everything** (`Ctrl/Cmd+K` or `/`): trips, PNRs, names, notes, memories and the text inside imported PDFs.
 - **Memories**: a photo journal with moods and highlights.
 - **Wrapped**: story cards for a trip, a year or all time. Save as PNG, ZIP, share, or print a trip book. "Hide amounts" for safe sharing.
