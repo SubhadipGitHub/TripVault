@@ -1,10 +1,10 @@
 /* Trip Vault service worker: caches the app shell so it works offline.
    It never touches your data (that lives in IndexedDB) and never makes third-party requests. */
-const VERSION = "tv-v4";
+const VERSION = "tv-v5";
 const SHARE = "tv-share"; // short-lived inbox for files shared to the installed app
 const SHELL = [
   "./", "index.html", "manifest.webmanifest", "css/app.css",
-  "js/data.js", "js/core.js", "js/store.js", "js/parsers.js", "js/model.js", "js/forms.js", "js/backup.js",
+  "js/data.js", "js/core.js", "js/i18n.js", "js/store.js", "js/parsers.js", "js/model.js", "js/forms.js", "js/backup.js",
   "js/security.js", "js/memories.js", "js/wrapped.js", "js/search.js", "js/extras.js", "js/pass.js", "js/ocr.js", "js/transfer.js", "js/ideas.js", "js/views.js", "js/main.js",
   "assets/icon.svg", "assets/icon-192.png", "assets/icon-512.png", "assets/apple-touch-icon.png"
 ];

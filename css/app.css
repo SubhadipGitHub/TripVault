@@ -493,3 +493,7 @@ html.pass-open{overflow:hidden}
 .qrv-frame{position:absolute;inset:14%;border:3px solid rgba(255,255,255,.85);border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.25);pointer-events:none}
 .qrdots{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;margin-top:8px}
 .qrdots i{width:8px;height:8px;border-radius:50%;background:var(--line2)}.qrdots i.on{background:var(--ok)}
+/* ---------- हिन्दी: Devanagari needs no letter-spacing (it breaks the headline bar) ---------- */
+:root[lang=hi] .h h2,:root[lang=hi] .eyebrow,:root[lang=hi] .kpi .l,:root[lang=hi] .pv-k,:root[lang=hi] .pv-grid small,:root[lang=hi] .pv-pnr small,
+:root[lang=hi] .qrcode-box small,:root[lang=hi] .emg-r small,:root[lang=hi] .dchip .w,:root[lang=hi] .stamp,:root[lang=hi] .bp .meta div,:root[lang=hi] .bp .stub .u,:root[lang=hi] .pal .grp{letter-spacing:0}
+:root[lang=hi] .h h2{font-size:13px}
