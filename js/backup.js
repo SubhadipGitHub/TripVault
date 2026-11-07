@@ -14,16 +14,25 @@ function openBackup(){const mb=(S.files.reduce((a,f)=>a+(f.size||0),0)/1048576).
     <button class="btn pri" id="bAll" style="justify-content:center">${ic("download")} Export everything · ${S.trips.length} trips, ${S.items.length} entries, ${S.memories.length} memories, ${S.files.length} files (${mb} MB)</button>
     ${t?`<button class="btn" id="bTrip" style="justify-content:center">${ic("download")} Export only “${esc(t.name)}”</button>`:""}
    </div><div class="sep"></div>
+   <div class="h">${ic("phone")}<h2>Phone to phone, no internet</h2></div>
+   <div class="small muted">Move trips to another phone with Trip Vault open: this screen shows a stream of QR codes, the other phone reads them with its camera. Encrypted with a one-time code.</div>
+   <div class="row wrap mt"><button class="btn" id="qrSend">${ic("share","sm")} Send by QR</button><button class="btn" id="qrRecv">${ic("camera","sm")} Receive by QR</button></div><div class="sep"></div>
    <div class="h">${ic("upload")}<h2>Restore from a backup</h2></div>
    <label class="drop" style="padding:16px">${ic("upload")} <b>Choose a Trip Vault backup (.tvault or .json)</b><div class="small muted">You'll see what changes before anything is written</div><input type="file" id="bIn" accept=".json,.tvault,application/json,application/octet-stream" hidden></label>`});
+  $("#qrSend",ov).onclick=()=>{ov.remove();openSendQR()};$("#qrRecv",ov).onclick=()=>{ov.remove();openReceiveQR()};
   $("#bAll",ov).onclick=()=>exportVault(null,ov);$("#bTrip",ov)?.addEventListener("click",()=>exportVault(t.id,ov));
   $("#bIn",ov).onchange=e=>{const f=e.target.files[0];if(f){ov.remove();previewImport(f)}}}
+/* The backup object shared by file export and phone-to-phone transfer.
+   o.files=false leaves attachments and photos out; o.settings=false leaves settings out. */
+async function buildBackup(tripId,o={}){
+  const trips=tripId?S.trips.filter(t=>t.id===tripId):S.trips;const ids=new Set(trips.map(t=>t.id));const files=[];
+  if(o.files!==false)for(const f of S.files.filter(f=>ids.has(f.tripId))){const{blob,...m}=f;files.push({...m,data:blob?await toB64(blob):""})}
+  const memories=S.memories.filter(m=>ids.has(m.tripId)).map(m=>o.files===false?{...m,photoIds:[]}:m);
+  return{app:"TripVault",v:2,exportedAt:new Date().toISOString(),scope:tripId?"trip":"all",trips,items:S.items.filter(i=>ids.has(i.tripId)),memories,files,settings:tripId||o.settings===false?undefined:S.settings}}
 async function exportVault(tripId,ov){
   const enc=$("#bEnc",ov)?.checked;let pass=null;if(enc){pass=await promptNewPass({title:"Backup passphrase",ok:"Encrypt & download"});if(!pass)return}
   const btn=$(tripId?"#bTrip":"#bAll",ov);if(btn){btn.disabled=true;btn.innerHTML=`${ic("clock")} Packing files…`}
-  const trips=tripId?S.trips.filter(t=>t.id===tripId):S.trips;const ids=new Set(trips.map(t=>t.id));const files=[];
-  for(const f of S.files.filter(f=>ids.has(f.tripId))){const{blob,...m}=f;files.push({...m,data:blob?await toB64(blob):""})}
-  const out={app:"TripVault",v:2,exportedAt:new Date().toISOString(),scope:tripId?"trip":"all",trips,items:S.items.filter(i=>ids.has(i.tripId)),memories:S.memories.filter(m=>ids.has(m.tripId)),files,settings:tripId?undefined:S.settings};
+  const out=await buildBackup(tripId),trips=out.trips;
   const n=new Date(),stamp=`${n.getFullYear()}${pad(n.getMonth()+1)}${pad(n.getDate())}-${pad(n.getHours())}${pad(n.getMinutes())}`,json=JSON.stringify(out);
   const base=`tripvault-${tripId?slug(trips[0].name):"all"}-${stamp}`;
   if(enc){toast("Encrypting backup…","info");dl(await encryptBackup(json,pass),base+".tvault")}else dl(new Blob([json],{type:"application/json"}),base+".json");
