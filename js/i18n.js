@@ -99,12 +99,24 @@ const HI={
   "Download for offline use":"ऑफ़लाइन इस्तेमाल के लिए डाउनलोड करें","Downloaded · refresh":"डाउनलोड हो चुका · रीफ़्रेश","Ready for offline use":"ऑफ़लाइन इस्तेमाल के लिए तैयार","Downloading…":"डाउनलोड हो रहा है…","Try again":"फिर कोशिश करें",
   "Loading the text reader":"टेक्स्ट रीडर लोड हो रहा है","Starting the text reader":"टेक्स्ट रीडर शुरू हो रहा है","Loading English":"अंग्रेज़ी लोड हो रही है","Getting ready":"तैयारी हो रही है","Text read from image":"इमेज से पढ़ा गया टेक्स्ट",
   "Text reader ready. Screenshots can now be read offline":"टेक्स्ट रीडर तैयार। अब स्क्रीनशॉट ऑफ़लाइन पढ़े जा सकते हैं",
+  /* phone to phone (QR transfer) */
+  "Move trips to another phone with Trip Vault open: this screen shows a stream of QR codes, the other phone reads them with its camera. Encrypted with a one-time code.":"ट्रिप्स दूसरे फ़ोन पर भेजें जिसमें ट्रिप वॉल्ट खुला हो: यह स्क्रीन QR कोड की एक धारा दिखाती है, दूसरा फ़ोन उन्हें कैमरे से पढ़ता है। एक बार के कोड से एन्क्रिप्टेड।",
+  "On the other phone open Trip Vault → Backup →":"दूसरे फ़ोन पर ट्रिप वॉल्ट → बैकअप →",", then point its camera at this screen.":" खोलें, फिर उसका कैमरा इस स्क्रीन की ओर करें।",
+  "Include attachments and photos":"अटैचमेंट और फ़ोटो भी भेजें","(much slower: a 1 MB photo takes several minutes)":"(बहुत धीमा: 1 MB की फ़ोटो में कई मिनट लगते हैं)",
+  "Encrypting…":"एन्क्रिप्ट हो रहा है…","Slower":"धीमा","Faster":"तेज़","Pause":"रोकें","Resume":"फिर चलाएँ","Code to type on the other phone":"दूसरे फ़ोन पर डालने का कोड",
+  "Point the camera at the QR codes on the other phone. Frames can arrive in any order.":"कैमरा दूसरे फ़ोन के QR कोड की ओर करें। फ़्रेम किसी भी क्रम में आ सकते हैं।",
+  "Camera permission was denied. Allow it in the browser's site settings and try again.":"कैमरे की अनुमति नहीं मिली। ब्राउज़र की साइट सेटिंग्स में अनुमति दें और फिर कोशिश करें।",
+  "Enter the code":"कोड डालें","The code has 8 characters":"कोड में 8 अक्षर होते हैं","That code didn't work. Check it on the other phone":"यह कोड नहीं चला। दूसरे फ़ोन पर जाँचें",
+  "Not a Trip Vault transfer":"यह ट्रिप वॉल्ट ट्रांसफ़र नहीं है","Send trips to another phone (QR)":"ट्रिप्स दूसरे फ़ोन पर भेजें (QR)","Receive trips from another phone (QR)":"दूसरे फ़ोन से ट्रिप्स पाएँ (QR)",
   /* weekday & month abbreviations shown on their own (day strip) */
   "Sun":"रवि","Mon":"सोम","Tue":"मंगल","Wed":"बुध","Thu":"गुरु","Fri":"शुक्र","Sat":"शनि",
   "Jan":"जन","Feb":"फ़र","Mar":"मार्च","Apr":"अप्रै","May":"मई","Jun":"जून","Jul":"जुला","Aug":"अग","Sep":"सितं","Oct":"अक्टू","Nov":"नवं","Dec":"दिसं"
 };
 /* A few headings carry counts; translate the label and keep the numbers. */
-const HI_RX=[[/^Packing · (.+)$/,"पैकिंग · $1"],[/^Ideas · (.+)$/,"आइडिया · $1"],[/^Getting started · (.+)$/,"शुरुआत · $1"],[/^Day (\d+) · (.+)$/,"दिन $1 · $2"],[/^Received (\d+) of (\d+) frames$/,"$2 में से $1 फ़्रेम मिले"],[/^Frame (\d+) of (\d+)$/,"फ़्रेम $1 / $2"],[/^Reading the image · (\d+)%$/,"इमेज पढ़ी जा रही है · $1%"],[/^Loading English · (\d+)%$/,"अंग्रेज़ी लोड हो रही है · $1%"],
+const HI_RX=[[/^Packing · (.+)$/,"पैकिंग · $1"],[/^Ideas · (.+)$/,"आइडिया · $1"],[/^Getting started · (.+)$/,"शुरुआत · $1"],[/^Day (\d+) · (.+)$/,"दिन $1 · $2"],[/^Received (\d+) of (\d+) frames$/,"$2 में से $1 फ़्रेम मिले"],[/^Frame (\d+) of (\d+)$/,"फ़्रेम $1 / $2"],[/^Reading the image · (\d+)%$/,"इमेज पढ़ी जा रही है · $1%"],[/^Sending (\d+) trips?$/,"$1 ट्रिप भेजी जा रही है"],[/^This trip · (.+)$/,"यह ट्रिप · $1"],[/^All (\d+) trips$/,"सभी $1 ट्रिप्स"],
+  [/^About (\d+) QR frames\. Roughly (\d+) seconds if the camera catches each one first time\.$/,"लगभग $1 QR फ़्रेम। अगर कैमरा हर फ़्रेम पहली बार में पकड़ ले तो लगभग $2 सेकंड।"],
+  [/^(\d+) frames repeat until the other phone has them all\. Keep this screen bright and steady\.$/,"$1 फ़्रेम तब तक दोहराए जाएँगे जब तक दूसरे फ़ोन को सब न मिल जाएँ। स्क्रीन चमकदार और स्थिर रखें।"],
+  [/^All (\d+) frames received\. Type the code shown under the QR codes on the other phone\.$/,"सभी $1 फ़्रेम मिल गए। दूसरे फ़ोन पर QR कोड के नीचे दिखा कोड डालें।"],[/^Loading English · (\d+)%$/,"अंग्रेज़ी लोड हो रही है · $1%"],
   [/^in (\d+) days$/,"$1 दिन में"],[/^in (\d+h(?: \d+m)?|\d+m)$/,"$1 में"],[/^(\d+h(?: \d+m)?|\d+m) free$/,"$1 ख़ाली"],[/^Free · (.+)$/,"ख़ाली · $1"],[/^Now · ends (.+)$/,"अभी · $1 पर ख़त्म"],
   [/^Web check-in opens for (.+)$/,"$1 का वेब चेक-इन खुलेगा"],[/^Web check-in is open for (.+)$/,"$1 का वेब चेक-इन खुला है"],
   [/^About (.+) before departure\. Confirm the window with (.+)$/,"रवानगी से लगभग $1 पहले। समय $2 से पक्का करें"],[/^Usually closes about an hour before departure(.*)$/,"आम तौर पर रवानगी से लगभग एक घंटा पहले बंद$1"],
