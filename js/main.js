@@ -74,7 +74,7 @@ document.addEventListener("keydown",e=>{
 document.addEventListener("change",async e=>{
   const r=e.target.closest("[data-rate]");if(r){const t=curTrip();t.rates={...(t.rates||{})};const v=+r.value;if(v>0)t.rates[r.dataset.rate]=v;else delete t.rates[r.dataset.rate];await saveTrip(t);render();toast(`Rate saved: 1 ${r.dataset.rate} = ${sym(HC())}${v}`)}});
 let _emgT=null;
-document.addEventListener("change",async e=>{const hm2=e.target.closest("[data-home]");if(hm2){S.settings={...S.settings,[hm2.dataset.home]:hm2.value};await DB.put("meta",{k:"settings",v:S.settings});toast("Saved");return}
+document.addEventListener("change",async e=>{const hm2=e.target.closest("[data-home]");if(hm2){S.settings={...S.settings,[hm2.dataset.home]:hm2.value};await DB.put("meta",{k:"settings",v:S.settings});if(hm2.dataset.home==="lang"){location.reload();return}toast("Saved");return}
   const pp=e.target.closest("[data-people]");if(pp){const t=curTrip();t.people=pp.value.split(/\s*,\s*/).filter(Boolean);await saveTrip(t);render()}});
 document.addEventListener("input",e=>{
   const s=e.target.closest("[data-save=emergency]");if(s){clearTimeout(_emgT);_emgT=setTimeout(async()=>{const t=curTrip();if(t){t.emergency=s.value;await saveTrip(t)}},500)}

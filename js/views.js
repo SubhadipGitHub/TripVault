@@ -2,7 +2,7 @@
 /* ===================== Render root ===================== */
 const RV={last:""};
 function applyTheme(){
-  document.documentElement.dataset.theme=S.settings?.theme||"auto";
+  document.documentElement.dataset.theme=S.settings?.theme||"auto";i18nInit();
   const m=document.querySelector("meta[name=theme-color]");if(m)requestAnimationFrame(()=>{m.content=getComputedStyle(document.documentElement).getPropertyValue("--bg").trim()||"#0a0d14"});
 }
 function render(){
@@ -33,7 +33,7 @@ function viewWelcome(){return`<div class="card welcome rise">
     <div>${ic("check","sm")} Nothing is uploaded, ever</div>
     <div>${ic("check","sm")} Optional AES-256 passphrase lock</div>
     <div>${ic("check","sm")} Export backups and a shareable Wrapped</div></div>
-  <div class="row wrap" style="margin-top:16px"><div style="width:150px"><label>Home currency</label><select data-home="homeCur">${CURS.map(c=>`<option ${c===HC()?"selected":""}>${c}</option>`).join("")}</select></div><div style="min-width:200px;flex:1;max-width:280px"><label>Home timezone</label><select data-home="homeTz">${TZS.map(z=>`<option value="${z}" ${z===S.settings.homeTz?"selected":""}>${tzShort(z)} · ${offLabel(z)}</option>`).join("")}</select></div></div>
+  <div class="row wrap" style="margin-top:16px"><div style="width:150px"><label>Language</label><select data-home="lang"><option value="en">English</option><option value="hi" ${S.settings.lang==="hi"?"selected":""}>हिन्दी</option></select></div><div style="width:150px"><label>Home currency</label><select data-home="homeCur">${CURS.map(c=>`<option ${c===HC()?"selected":""}>${c}</option>`).join("")}</select></div><div style="min-width:200px;flex:1;max-width:280px"><label>Home timezone</label><select data-home="homeTz">${TZS.map(z=>`<option value="${z}" ${z===S.settings.homeTz?"selected":""}>${tzShort(z)} · ${offLabel(z)}</option>`).join("")}</select></div></div>
   <div class="row wrap" style="margin-top:16px"><button class="btn pri lg" data-a="import">${ic("zap")} Import a booking</button><button class="btn lg" data-a="newTrip">${ic("plus")} Start a trip</button><button class="btn lg ghost" data-a="loadSample">${ic("sparkle")} Explore a sample</button></div></div>
   <div class="steps">
    <div class="step"><div class="n">1</div><div><b>Drop your bookings</b><div class="small muted">PDF e-tickets, hotel emails, IRCTC slips or pasted SMS. Names, PNRs, dates and times are read for you to confirm.</div></div></div>
@@ -186,7 +186,7 @@ let BOOKF="all";
 function viewBook(t){
   const its=tripItems(t.id).filter(i=>i.kind!=="doc"&&(BOOKF==="all"||i.kind===BOOKF)).sort((a,b)=>sortKey(a)-sortKey(b));
   const cnt=k=>tripItems(t.id).filter(i=>k==="all"?i.kind!=="doc":i.kind===k).length;
-  let h=`<div class="row wrap" style="margin-bottom:10px"><div class="tabs">${["all","flight","hotel","train","bus","ferry","car","transfer","activity","expense"].filter(k=>!["bus","ferry","car"].includes(k)||cnt(k)).map(k=>`<button class="${BOOKF===k?"on":""}" data-a="bookf" data-k="${k}">${k==="all"?"All":k==="bus"?"Buses":k==="ferry"?"Ferries":k==="car"?"Car rentals":KINDS[k].n+"s"} <span class="dim">${cnt(k)}</span></button>`).join("")}</div><span class="sp"></span><button class="btn" data-a="addMenu">${ic("plus")} Add</button></div>`;
+  let h=`<div class="row wrap" style="margin-bottom:10px"><div class="tabs">${["all","flight","hotel","train","bus","ferry","car","transfer","activity","expense"].filter(k=>!["bus","ferry","car"].includes(k)||cnt(k)).map(k=>`<button class="${BOOKF===k?"on":""}" data-a="bookf" data-k="${k}">${k==="all"?"All":({bus:"Buses",ferry:"Ferries",car:"Car rentals",activity:"Activities",expense:"Expenses"})[k]||KINDS[k].n+"s"} <span class="dim">${cnt(k)}</span></button>`).join("")}</div><span class="sp"></span><button class="btn" data-a="addMenu">${ic("plus")} Add</button></div>`;
   if(!its.length)return h+`<div class="card empty">${kic("flight")}<b>No bookings here yet</b><div class="small">Import a ticket or confirmation, or add one manually.</div><div class="row mt" style="justify-content:center"><button class="btn pri" data-a="import">${ic("zap")} Smart import</button></div></div>`;
   let last="";h+=`<div class="card">`;
   for(const it of its){const s=itemStart(it);const d=s?.l.slice(0,10)||"";if(d!==last){h+=`<div class="small dim" style="padding:8px 0 2px;text-transform:uppercase;letter-spacing:.6px;font-weight:600">${d?fmtD(d,1):"Undated"}</div>`;last=d}h+=itemRow(it,t)}
