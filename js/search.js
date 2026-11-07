@@ -20,6 +20,8 @@ function searchActions(){return[
   {type:"action",id:"a:emg",title:"Emergency card",icon:"heart",text:"emergency medical id blood group allergy contact insurance helpline",run:()=>openEmgCard()},
   {type:"action",id:"a:ics",title:"Export itinerary to calendar (.ics)",icon:"cal",text:"calendar ics google apple outlook export reminders",run:()=>exportICS()},
   {type:"action",id:"a:share",title:"Share itinerary as a web page",icon:"share",text:"share itinerary html send family",run:()=>shareItinerary()},
+  {type:"action",id:"a:qrs",title:"Send trips to another phone (QR)",icon:"share",text:"transfer phone qr send move sync another device",run:()=>openSendQR()},
+  {type:"action",id:"a:qrr",title:"Receive trips from another phone (QR)",icon:"camera",text:"transfer phone qr receive scan move sync another device import",run:()=>openReceiveQR()},
   {type:"action",id:"a:backup",title:"Backup & restore",icon:"db",text:"backup restore export import json encrypted",run:()=>openBackup()},
   {type:"action",id:"a:set",title:"Settings",icon:"sliders",text:"settings theme lock passphrase buffers timezone",run:()=>openSettings()},
   ...(Vault.protected?[{type:"action",id:"a:lock",title:"Lock vault now",icon:"lock",text:"lock secure passphrase",run:()=>Vault.lock()}]:[{type:"action",id:"a:setlock",title:"Protect vault with a passphrase",icon:"lock",text:"lock encrypt passphrase password secure privacy",run:()=>openSettings()}])

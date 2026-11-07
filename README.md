@@ -36,7 +36,7 @@ Run locally: `python3 -m http.server 8000` then open http://localhost:8000. Ther
 
 ## Privacy model, honestly
 
-- Data lives in your browser's IndexedDB on each device. There is no sync; move data with **Backup → Export**.
+- Data lives in your browser's IndexedDB on each device. There is no sync; move data with **Backup → Export**, or **Backup → Send by QR** to hand trips to another phone with no internet (an encrypted stream of QR codes read by the other phone's camera, unlocked with a one-time code).
 - With a passphrase set, records and file blobs are encrypted before being written. The key is derived from the passphrase and never stored. **A forgotten passphrase cannot be recovered.**
 - It does not protect against malware, malicious browser extensions, or someone using your unlocked device.
 - Clearing site data deletes the vault. Take regular backups (the app reminds you).
