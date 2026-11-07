@@ -102,7 +102,7 @@ const Vault={
     try{const ok=new TextDecoder().decode(await Crypt.dec(key,info.chk));if(ok!==MAGIC)return false}catch(e){return false}
     Crypt.key=key;return true;
   },
-  lock(){if(!Crypt.info)return;Crypt.key=null;clearMemory();closeAllSheets();showLock()},
+  lock(){if(!Crypt.info)return;Crypt.key=null;closePass();closeSearch();wClose();clearMemory();closeAllSheets();showLock()},
   async change(oldP,newP){if(!(await this.unlock(oldP)))return false;await this.disable();await this.enable(newP);return true}
 };
 function closeAllSheets(){document.querySelectorAll(".ov").forEach(o=>o.remove())}

@@ -52,7 +52,7 @@ function showLock(){
   f.onsubmit=async e=>{e.preventDefault();if(!inp.value)return;const b=f.querySelector("button");b.disabled=true;$("#lke",d).textContent="";
     const ok=await Vault.unlock(inp.value);
     if(!ok){await new Promise(r=>setTimeout(r,500));$("#lke",d).textContent="That passphrase didn't work.";b.disabled=false;inp.select();return}
-    inp.value="";await loadAll();applyTheme();d.remove();S.view=S.meta.view||"today";S.sub=S.meta.sub||"bookings";armIdle();render()};
+    inp.value="";await loadAll();applyTheme();d.remove();S.view=S.meta.view||"today";S.sub=S.meta.sub||"bookings";armIdle();render();consumeLaunch()};
   $("#lkw",d).onclick=async()=>{if(confirm("Erase everything stored by Trip Vault in this browser? This cannot be undone. Restore later from a backup file."))await wipeAll()};
 }
 

@@ -15,5 +15,7 @@ const KINDS={
   flight:{n:"Flight",i:"plane"},hotel:{n:"Stay",i:"bed"},train:{n:"Train",i:"train"},transfer:{n:"Transfer",i:"car"},
   activity:{n:"Activity",i:"flag"},expense:{n:"Expense",i:"tag"},doc:{n:"Document",i:"shield"}
 };
+/* Approximate web check-in windows (hours before departure). Default is 48h; always confirm with the airline. */
+const CHECKIN_H={AK:336,FD:336,QZ:336,D7:336,Z2:336};
 const EXP_CATS=["Food","Local transport","Shopping","Sightseeing","SIM & data","Tips","Forex fee","Misc"];
 const DOC_TYPES=["Passport","Visa","Travel insurance","ID card","Vaccination","Forex card","Other"];

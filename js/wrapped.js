@@ -202,12 +202,16 @@ function wrappedCta(t){const ph=tripPhase(t),ms=tripMems(t.id).length,ready=ph.p
 function printTripBook(){
   const t=curTrip();if(!t)return;document.getElementById("book")?.remove();
   const ms=tripMems(t.id).sort((a,b)=>(a.date||"").localeCompare(b.date||""));
-  const b=document.createElement("div");b.id="book";
-  b.innerHTML=`<h1>${esc(t.name)}</h1><p class="bk-sub">${esc(t.dest||"")} · ${tripMeta(t)}</p>
+  printBook(`<h1>${esc(t.name)}</h1><p class="bk-sub">${esc(t.dest||"")} · ${tripMeta(t)}</p>
    <h2>Itinerary</h2><pre>${esc(itinText(t))}</pre>
    ${ms.length?`<h2>Memories</h2>${ms.map(m=>`<section class="bk-m"><h3>${esc(m.title||"Moment")}</h3><div class="bk-d">${fmtD(m.date,1)}${m.place?" · "+esc(m.place):""}</div>${m.text?`<p>${esc(m.text)}</p>`:""}<div class="bk-p">${memPhotos(m).map(id=>`<img src="${photoUrl(id)}" alt="">`).join("")}</div></section>`).join("")}`:""}
-   <p class="bk-f">Made privately with Trip Vault.</p>`;
+   <p class="bk-f">Made privately with Trip Vault.</p>`);
+}
+/* Print an HTML fragment on its own (everything else is hidden by the print stylesheet). */
+async function printBook(html){
+  document.getElementById("book")?.remove();const b=document.createElement("div");b.id="book";b.innerHTML=html;
   document.body.append(b);document.body.classList.add("printing");
   const done=()=>{document.body.classList.remove("printing");b.remove();removeEventListener("afterprint",done)};addEventListener("afterprint",done);
+  await Promise.all([...b.querySelectorAll("img")].map(i=>i.complete?0:new Promise(r=>{i.onload=i.onerror=r;setTimeout(r,4000)})));
   setTimeout(()=>print(),150);
 }

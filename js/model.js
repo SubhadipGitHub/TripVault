@@ -13,6 +13,11 @@ function gate({title,plan,irreversible,ok="Proceed",danger=true}){return new Pro
 async function copyTxt(t){try{await navigator.clipboard.writeText(t)}catch(e){const a=document.createElement("textarea");a.value=t;document.body.append(a);a.select();document.execCommand("copy");a.remove()}toast("Copied "+(t.length>24?"":"<b>"+esc(t)+"</b>"))}
 const ring=(pct,c="var(--ok)")=>{const r=26,C=2*Math.PI*r;return`<svg class="ring" viewBox="0 0 64 64"><circle cx="32" cy="32" r="${r}" fill="none" stroke="var(--line)" stroke-width="6"/><circle cx="32" cy="32" r="${r}" fill="none" stroke="${c}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${C*pct/100} ${C}" transform="rotate(-90 32 32)"/><text x="32" y="37" text-anchor="middle" fill="var(--tx)" font-size="15" font-weight="700">${Math.round(pct)}%</text></svg>`};
 const pill=(t,c="")=>`<span class="pill ${c}">${t}</span>`;
+const mapUrl=q=>"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q);
+/* Outbound "open in maps" link. Plain navigation, so the CSP's connect-src 'none' is untouched. */
+const mapLink=(q,lbl)=>q?`<a class="${lbl?"btn xs":"mapl"}" href="${esc(mapUrl(q))}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(q)} in Maps" title="Open in Maps">${ic("pin","sm")}${lbl?" "+lbl:""}</a>`:"";
+const itemPlace=it=>it.kind==="hotel"?[it.name,it.address].filter(Boolean).join(", "):(it.kind==="activity"||it.kind==="transfer")?(it.location||""):"";
+const airportQ=c=>c?`${AP[c]?.names?.slice(-1)[0]||c} airport ${AP[c]?.city||""}`.trim():"";
 const refChip=r=>r?`<span class="mono copy small" data-copy="${esc(r)}" title="Copy">${esc(r)}</span>`:"";
 
 /* ===================== Trip model helpers ===================== */
@@ -72,6 +77,28 @@ function readiness(t){
   const days=tripDays(t);const unpl=days.filter(d=>!its.some(i=>(i.kind==="activity"||i.kind==="transfer")&&i.start?.slice(0,10)===d));if(unpl.length)add("info",`${unpl.length} day${unpl.length>1?"s":""} with no activities planned yet — tap a green free slot in Itinerary`,`<button class="btn xs" data-a="go" data-v="plan">Plan</button>`);
   if(its.length&&(!S.meta.lastBackup||S.meta.dirty>S.meta.lastBackup))add("info",S.meta.lastBackup?`Changes since last backup (${new Date(S.meta.lastBackup).toLocaleDateString()})`:"Never backed up — export a copy before you travel",`<button class="btn xs" data-a="backup">Backup</button>`);
   return C}
+/* ===================== Coming up: time-based alerts =====================
+   Check-in windows, leave-for-the-airport, payment due dates and document expiry.
+   Each alert: {at (sort time), when (scheduled time, for calendar export), kind, lv, txt, sub, item} */
+const checkinHours=it=>CHECKIN_H[(it.flightNo||"").replace(/\s+/g,"").slice(0,2).toUpperCase()]||48;
+function alerts(t,horizonDays=60){
+  const now=Date.now(),lim=now+horizonDays*864e5,htz=S.settings.homeTz,out=[],{e}=tripRange(t);
+  const add=(at,o)=>{if(at<=lim)out.push({at,...o})};
+  for(const it of transports(t)){const ev=itemEvents(it),m=ev.find(x=>x.main);if(!m||m.su<=now)continue;
+    const tag=esc(it.kind==="flight"?`${it.flightNo||"Flight"} ${it.from||""}→${it.to||""}`:`${it.trainNo||"Train"} ${it.from||""}→${it.to||""}`);
+    if(it.kind==="flight"){const h=checkinHours(it),open=m.su-h*36e5,lbl=h>=72?Math.round(h/24)+" days":h+"h";
+      if(open<=now)add(now,{kind:"checkin",lv:"warn",txt:`Web check-in is open for ${tag}`,sub:`Usually closes about an hour before departure${it.airline?" · "+esc(it.airline):""}`,item:it});
+      else add(open,{when:open,kind:"checkin",lv:"info",txt:`Web check-in opens for ${tag}`,sub:`About ${lbl} before departure. Confirm the window with ${esc(it.airline||"the airline")}`,item:it})}
+    const b=ev[0];if(b.buf&&b.su>now&&b.su-now<36*36e5){const where=it.kind==="flight"?`${esc(it.from||"the airport")}${it.terminal?" T"+esc(it.terminal):""}`:esc(it.fromName||it.from||"the station");
+      add(b.su,{kind:"leave",lv:"warn",txt:`Be at ${where} by ${b.s.slice(11)} for ${tag}`,sub:`${tzShort(b.tz)} time`,item:it})}}
+  const today=todayIn(htz);
+  for(const it of tripItems(t.id)){if(it.kind==="doc"||it.kind==="expense")continue;const p=payInfo(it);if(!(p.pend>0&&p.due))continue;const od=p.due<today;
+    add(od?now:toUTC(p.due+"T09:00",htz),{when:od?null:p.due,kind:"pay",lv:od?"bad":"warn",txt:`${fmtM(p.pend,p.cur)} ${od?"overdue":"due"} · ${esc(itemTitle(it))}`,sub:`${od?"Was due":"Due"} ${fmtD(p.due)}${it.payments?.find(x=>x.status!=="paid")?.method?" · "+esc(it.payments.find(x=>x.status!=="paid").method):""}`,item:it})}
+  for(const d of tripItems(t.id).filter(i=>i.kind==="doc"&&i.expiry)){const nm=esc(d.title||d.docType||"Document"),before=e&&d.expiry<=e;
+    if(d.expiry<today){if(e&&today<=e)add(now,{kind:"doc",lv:"bad",txt:`${nm} has expired`,sub:`Expired ${fmtD(d.expiry,1)}`,item:d});continue}
+    const at=toUTC(d.expiry+"T09:00",htz);if(before||at-now<60*864e5)add(at,{when:d.expiry,kind:"doc",lv:before?"bad":"warn",txt:`${nm} expires ${fmtD(d.expiry,1)}`,sub:before?"That's before your trip ends":"Renew or replace it in time",item:d})}
+  return out.sort((a,b)=>a.at-b.at)}
+const relWhen=at=>{const m=(at-Date.now())/6e4;return m<=1?"now":m<48*60?"in "+dur(m):`in ${Math.ceil(m/1440)} days`};
 const isIntlTrip=t=>t.type==="international"||(t.type!=="domestic"&&(tripItems(t.id).some(i=>i.kind==="flight"&&isIntlFlight(i))||(t.tz&&t.tz!==S.settings.homeTz)));
 function budgetOf(t){const its=tripItems(t.id).filter(i=>i.kind!=="doc");let committed=0,paid=0,pending=0;const unconv=[],cats={},dues=[],curs={};
   for(const it of its){const p=payInfo(it);if(!p.cost)continue;curs[p.cur]=(curs[p.cur]||0)+p.cost;const r=rate(t,p.cur);if(r==null){unconv.push({it,p});continue}

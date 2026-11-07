@@ -77,7 +77,9 @@ function viewToday(t){
     h+=`<div class="card"><div class="h">${ic("camera")}<h2>Capture the moment</h2></div><textarea class="prose" id="qmT" style="min-height:64px" placeholder="${esc(PROMPTS[new Date().getDate()%PROMPTS.length])}"></textarea><div class="row mt"><label class="btn" style="margin:0">${ic("image","sm")} Photos<input type="file" id="qmF" accept="image/*" multiple hidden></label><span class="sp"></span><button class="btn pri" data-a="quickMem">${ic("check","sm")} Save</button></div></div>`;
     h+=`<div class="card"><div class="h">${ic("cal")}<h2>Today · ${fmtD(d)}</h2><span class="sp"></span><span class="small" style="color:var(--ok)">${dur(m.free)} free</span></div>${tlBar(m,d)}${dayList(m,d,t)}</div>`;
     if(m.stay)h+=`<div class="card"><div class="h">${ic("moon")}<h2>Tonight</h2></div>${stayCard(m.stay)}</div>`}
-  if(nx.length)h+=`<div class="card"><div class="h">${ic("clock")}<h2>Next up</h2></div>${nx.map(evCard).join("")}</div>`;
+  const hasPass=ph.p!=="after"&&nextPassIdx(passList(t))>=0;
+  if(nx.length)h+=`<div class="card"><div class="h">${ic("clock")}<h2>Next up</h2><span class="sp"></span>${hasPass?`<button class="btn xs" data-a="pass">${ic("phone","sm")} Show pass</button>`:""}</div>${nx.map(evCard).join("")}</div>`;
+  h+=comingUp(t);
   h+=`<div class="grid g2 mt"><div class="kpi" style="--c:var(--ok)"><div class="l">${ic("check","sm")} Paid</div><div class="v">${fmtM(B.paid)}</div><div class="s">of ${fmtM(B.committed)} committed</div></div><div class="kpi" style="--c:var(--warn)"><div class="l">${ic("clock","sm")} Pending</div><div class="v">${fmtM(B.pending)}</div><div class="s">${B.dues[0]?.p.due?"next due "+fmtDs(B.dues[0].p.due):B.dues.length+" open"}</div></div></div>`;
   if(ph.p!=="after"){const lab=pct>=90?"Cleared":pct>=60?"Almost":"Check",col=pct>=90?"var(--ok)":pct>=60?"var(--warn)":"var(--bad)";
     h+=`<div class="card"><div class="ready"><div class="stampbox" style="--c:${col}"><div><b>${Math.round(pct)}%</b><small>${lab}</small></div></div><div><div class="serif" style="font-weight:700;font-size:20px">Trip readiness</div><div class="small muted">${okN} of ${sc.length} checks passed${chk.length-sc.length?` · ${chk.length-sc.length} tips`:""}</div></div></div>
@@ -93,7 +95,7 @@ function viewVault(t){
   if(!["bookings","docs","money","pack","ideas"].includes(S.sub))S.sub="bookings";
   const nb=tripItems(t.id).filter(i=>i.kind!=="doc"&&i.kind!=="expense").length,nd=tripItems(t.id).filter(i=>i.kind==="doc").length+S.files.filter(f=>f.tripId===t.id&&!f.memId).length;
   const tabs=[["bookings","list","Bookings",nb],["docs","shield","Documents",nd],["money","wallet","Money",""],["ideas","compass","Ideas",(t.ideas||[]).length||""],["pack","bag","Packing",(t.pack||[]).length?`${t.pack.filter(p=>p.done).length}/${t.pack.length}`:""]];
-  const body={bookings:viewBook,docs:viewDocs,money:t=>viewMoney(t)+dailySpend(t)+settleCard(t),pack:viewPacking,ideas:viewIdeas}[S.sub](t);
+  const body={bookings:viewBook,docs:viewDocs,money:t=>viewMoney(t)+dailySpend(t)+exportCard(t)+settleCard(t),pack:viewPacking,ideas:viewIdeas}[S.sub](t);
   return`<div class="subtabs" role="tablist">${tabs.map(([k,i,l,n])=>`<button role="tab" aria-selected="${S.sub===k}" class="${S.sub===k?"on":""}" data-a="vsub" data-s="${k}">${ic(i,"sm")} ${l}${n!==""?` <span class="dim">${n}</span>`:""}</button>`).join("")}</div>${body}`;
 }
 
@@ -126,15 +128,22 @@ function clocks(t){const td=todayIn(t.tz||"Asia/Kolkata");const ltz=dayTz(t,td)|
   const now=Date.now(),f=tz=>{const p=tzParts(tz,now);return`${pad(p.h)}:${pad(p.mi)}`};const df=tzOff(ltz,now)-tzOff(home,now);
   return`<div class="sep"></div><div class="clock"><div><span class="small dim">${ic("pin","sm")} ${esc(tzShort(ltz))} · ${offLabel(ltz)}</span><b>${f(ltz)}</b></div><div><span class="small dim">${ic("user","sm")} Home · ${esc(tzShort(home))}</span><b>${f(home)}</b></div><div class="small muted" style="align-self:center">Local is ${df===0?"same as home":dur(Math.abs(df))+(df>0?" ahead":" behind")}</div></div>`}
 function nextUp(t,n=3){const now=Date.now();return tripItems(t.id).flatMap(it=>itemEvents(it).filter(e=>e.main&&e.eu>now)).sort((a,b)=>a.su-b.su).slice(0,n)}
+const AL_IC={checkin:"plane",leave:"clock",pay:"wallet",doc:"shield"};
+function comingUp(t){const L=alerts(t).slice(0,6);if(!L.length)return"";
+  return`<div class="card"><div class="h">${ic("alert")}<h2>Coming up</h2><span class="sp"></span><button class="btn xs ghost" data-a="ics" title="Add these reminders to your phone's calendar">${ic("cal","sm")} Add to calendar</button></div>
+   ${L.map(a=>`<div class="li"><span class="kic sm" style="--c:var(--${a.lv==="bad"?"bad":a.lv==="warn"?"warn":"acc"})">${ic(AL_IC[a.kind]||"info","sm")}</span><div class="b ${a.item?"tap":""}" ${a.item?`data-a="item" data-id="${a.item.id}"`:""}><div class="t">${a.txt}</div><div class="d">${a.sub||""}</div></div>
+    <div class="r">${a.kind==="pay"?`<button class="btn xs ok" data-a="markPaid" data-id="${a.item.id}">${ic("check","sm")} Paid</button>`:pill(relWhen(a.at),a.lv==="bad"?"bad":a.lv==="warn"?"warn":"info")}</div></div>`).join("")}
+   <div class="small dim" style="margin-top:6px">Check-in windows are typical for the airline; confirm on its site.</div></div>`}
 function evCard(ev,big){const it=ev.it,now=Date.now();const mins=(ev.su-now)/6e4;const when=mins<=0?`<span class="pill ok">Now · ends ${ev.e.slice(11)}</span>`:mins<48*60?pill("in "+dur(mins),"info"):pill(`in ${Math.ceil(mins/1440)} days`,"info");
   let extra="";if(it.kind==="flight"&&ev.label.startsWith(it.flightNo||"Flight")){const b=itemEvents(it)[0];extra=`<div class="small" style="color:var(--warn);margin-top:3px">${ic("clock","sm")} Be at ${esc(it.from)}${it.terminal?" T"+esc(it.terminal):""} by ${b.s.slice(11)} (${tzShort(b.tz)})</div>`}
   if(it.kind==="train")extra=`<div class="small" style="color:var(--warn);margin-top:3px">${ic("clock","sm")} Reach ${esc(it.fromName||it.from)} by ${itemEvents(it)[0].s.slice(11)}${it.seat?" · "+esc(it.seat):""}</div>`;
   if(it.kind==="hotel"&&it.address)extra=`<div class="small muted" style="margin-top:3px">${ic("pin","sm")} <span class="copy" data-copy="${esc(it.address)}">${esc(it.address)}</span></div>`;
+  const mq=it.kind==="flight"?airportQ(it.from):itemPlace(it);if(mq)extra+=`<div class="row wrap" style="margin-top:6px">${mapLink(mq,it.kind==="flight"?esc(it.from)+" airport":"Map")}</div>`;
   return`<div class="li tap" data-a="item" data-id="${it.id}">${kic(it.kind)}<div class="b"><div class="t">${esc(ev.label)} ${when}</div><div class="d">${fmtD(ev.s.slice(0,10))} · ${ev.s.slice(11)}${ev.e!==ev.s?" – "+ev.e.slice(11)+(ev.etz!==ev.tz?" "+tzShort(ev.etz):""):""} ${tzShort(ev.tz)!==tzShort(S.settings.homeTz)?`<span class="dim">(${tzShort(ev.tz)})</span>`:""}</div>${extra}</div><div class="r">${refChip(it.ref)}</div></div>`}
-function stayCard(st){const q=encodeURIComponent((st.name||"")+" "+(st.address||""));
+function stayCard(st){
   return`<div class="li" style="border:0">${kic("hotel")}<div class="b"><div class="t tap" data-a="item" data-id="${st.id}">${esc(st.name)}</div><div class="d">${itemSub(st)}</div>
   ${st.address?`<div class="small mt" style="margin-top:4px">${ic("pin","sm")} <span class="copy" data-copy="${esc(st.address)}">${esc(st.address)}</span></div>`:""}
-  <div class="row wrap small" style="margin-top:6px">${st.ref?`<span class="dim">Conf.</span> ${refChip(st.ref)}`:""}${st.pin?` <span class="dim">PIN</span> ${refChip(st.pin)}`:""}${st.phone?` <a href="tel:${esc(st.phone.replace(/[^\d+]/g,""))}">${ic("user","sm")} ${esc(st.phone)}</a>`:""}<a class="btn xs" href="https://www.google.com/maps/search/?api=1&query=${q}" target="_blank" rel="noopener">${ic("pin","sm")} Map</a></div></div></div>`}
+  <div class="row wrap small" style="margin-top:6px">${st.ref?`<span class="dim">Conf.</span> ${refChip(st.ref)}`:""}${st.pin?` <span class="dim">PIN</span> ${refChip(st.pin)}`:""}${st.phone?` <a href="tel:${esc(st.phone.replace(/[^\d+]/g,""))}">${ic("user","sm")} ${esc(st.phone)}</a>`:""}${mapLink(itemPlace(st),"Map")}</div></div></div>`}
 function tlBar(m,d){const set=S.settings,W0=hm(set.wake),W1=hm(set.sleep),P=x=>(x/1440*100).toFixed(3)+"%";
   let h=`<div class="tl"><div class="night" style="left:0;width:${P(W0)}"></div><div class="night" style="left:${P(W1)};right:0"></div>`;
   for(const s of m.segs)h+=`<div class="blk k-${s.ev.kind} ${s.ev.buf?"buf":""}" style="left:${P(s.a)};width:${P(Math.max(8,s.b-s.a))}" title="${esc(s.ev.label)}"></div>`;
@@ -153,7 +162,7 @@ function dayList(m,d,t){
     else if(s.cont){sm="→ next day "+ev.e.slice(11)}
     if(s.mid)return`<div class="ev"><div class="tm">All day</div><div class="sp small">${esc(ev.label)}</div></div>`;
     if(it.kind==="flight"&&!s.from&&ev.etz!==ev.tz&&!s.cont)sm=`→ ${ev.e.slice(11)} ${esc(it.to||"")} time`;
-    return`<div class="ev tap" data-a="item" data-id="${it.id}"><div class="tm">${tm}<small>${sm}</small></div>${kic(it.kind,1)}<div class="sp" style="min-width:0"><div style="font-weight:600">${title}</div><div class="small muted">${it.kind==="flight"||it.kind==="train"?itemTitle(it)+" · ":""}${it.kind==="hotel"?esc(it.address||""):esc(it.location||it.airline||it.cls||"")}</div></div><div class="evref">${refChip(it.ref)}</div></div>`}).join("")}
+    return`<div class="ev tap" data-a="item" data-id="${it.id}"><div class="tm">${tm}<small>${sm}</small></div>${kic(it.kind,1)}<div class="sp" style="min-width:0"><div style="font-weight:600">${title}</div><div class="small muted">${it.kind==="flight"||it.kind==="train"?itemTitle(it)+" · ":""}${it.kind==="hotel"?esc(it.address||""):esc(it.location||it.airline||it.cls||"")}</div></div><div class="evref">${refChip(it.ref)}${mapLink(it.kind==="flight"&&ev.label.startsWith(it.flightNo||"Flight")?airportQ(it.from):itemPlace(it))}</div></div>`}).join("")}
 function viewPlan(t){
   const days=tripDays(t);if(!days.length)return`<div class="card empty">${kic("activity")}<b>No dates yet</b><div class="small">Import a booking or set trip dates to see the day-by-day plan.</div><div class="row mt" style="justify-content:center"><button class="btn pri" data-a="import">${ic("zap")} Import</button><button class="btn" data-a="editTrip">Set dates</button></div></div>`;
   const td=todayIn(t.tz||"Asia/Kolkata");if(!S.day||!days.includes(S.day))S.day=days.includes(td)?td:days[0];
@@ -180,7 +189,7 @@ function viewBook(t){
 function itemRow(it,t){const p=payInfo(it);const nf=S.files.filter(f=>(f.itemIds||[]).includes(it.id)).length;
   let pay="";if(it.kind==="expense")pay=pill(fmtM(p.cost,p.cur));else if(p.cost)pay=p.pend>0?pill(`${fmtM(p.pend,p.cur)} due${p.due?" "+fmtDs(p.due):""}`,p.due&&p.due<todayIn("Asia/Kolkata")?"bad":"warn"):pill(`${ic("check","sm")} ${fmtM(p.cost,p.cur)}`,"ok");else if(it.groupId)pay=pill("same booking");
   const dup=dupCheck(it,it.id);
-  return`<div class="li tap" data-a="item" data-id="${it.id}">${kic(it.kind)}<div class="b"><div class="t">${esc(itemTitle(it))}${dup.lvl==="dup"?pill(ic("layers","sm")+" duplicate?","bad"):""}${it.refundable?pill("refundable","info"):""}</div><div class="d">${esc(itemSub(it))}</div>${it.names?.length?`<div class="small dim">${ic("user","sm")} ${esc(it.names.join(", "))}</div>`:""}</div><div class="r"><div>${pay}</div><div style="margin-top:4px">${refChip(it.ref)}${nf?` <span class="small dim">${ic("clip","sm")}${nf}</span>`:""}</div></div></div>`}
+  return`<div class="li tap" data-a="item" data-id="${it.id}">${kic(it.kind)}<div class="b"><div class="t">${esc(itemTitle(it))}${dup.lvl==="dup"?pill(ic("layers","sm")+" duplicate?","bad"):""}${it.refundable?pill("refundable","info"):""}</div><div class="d">${esc(itemSub(it))}</div>${it.names?.length?`<div class="small dim">${ic("user","sm")} ${esc(it.names.join(", "))}</div>`:""}</div><div class="r"><div>${pay}</div><div style="margin-top:4px">${refChip(it.ref)}${nf?` <span class="small dim">${ic("clip","sm")}${nf}</span>`:""}${mapLink(itemPlace(it))}</div></div></div>`}
 function viewMoney(t){
   const B=budgetOf(t),bud=+t.budget||0;const tot=Math.max(bud,B.committed,1);
   let h=`<div class="grid g2 gk">

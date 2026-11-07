@@ -11,6 +11,15 @@ function buildICS(t){
       "LOCATION:"+icsEsc(it.address||it.location||""),"DESCRIPTION:"+icsEsc(desc));
     if(it.kind==="flight"||it.kind==="train")L.push("BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+icsEsc(e.label),"TRIGGER:-PT"+(it.kind==="flight"?"4":"2")+"H","END:VALARM");
     L.push("END:VEVENT");n++});
+  // Reminders: check-in opening (timed), payments due and document expiry (all-day)
+  const dDate=d=>d.replace(/-/g,"");
+  for(const a of alerts(t,3650)){if(!a.when||(typeof a.when==="number"&&a.when<=Date.now()))continue;const uid=`${a.item.id}-${a.kind}@tripvault`;
+    const plain=s=>String(s).replace(/<[^>]+>/g,"").replace(/&amp;/g,"&").replace(/&lt;/g,"<").replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&#39;/g,"'");
+    L.push("BEGIN:VEVENT","UID:"+uid,"DTSTAMP:"+stamp);
+    if(typeof a.when==="number")L.push("DTSTART:"+icsDt(a.when),"DTEND:"+icsDt(a.when+15*6e4));
+    else L.push("DTSTART;VALUE=DATE:"+dDate(a.when),"DTEND;VALUE=DATE:"+dDate(addDays(a.when,1)));
+    L.push("SUMMARY:"+icsEsc(plain(a.txt)),"DESCRIPTION:"+icsEsc(plain(a.sub||"")),"TRANSP:TRANSPARENT",
+      "BEGIN:VALARM","ACTION:DISPLAY","DESCRIPTION:"+icsEsc(plain(a.txt)),"TRIGGER:"+(typeof a.when==="number"?"PT0M":a.kind==="doc"?"-P7D":"-PT15H"),"END:VALARM","END:VEVENT");n++}
   L.push("END:VCALENDAR");return{text:L.map(icsFold).join("\r\n")+"\r\n",n};
 }
 function exportICS(){const t=curTrip();if(!t)return;const{text,n}=buildICS(t);if(!n){toast("Nothing to export yet — add bookings first","bad");return}
@@ -49,3 +58,38 @@ function shareItinerary(){
     const html=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(t.name)}</title><style>body{font:16px/1.55 Georgia,serif;max-width:640px;margin:0 auto;padding:24px;background:#faf6ec;color:#1d2232}h1{font-size:32px;margin:0}h3{font-size:15px;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid #d9ccae;padding-bottom:4px;margin:26px 0 6px;color:#8f650f}p{margin:6px 0}.m{color:#6b6657}code{background:#efe6d0;padding:1px 5px;border-radius:4px}footer{margin-top:36px;color:#8a8573;font-size:12px}</style><h1>${esc(t.name)}</h1><p class="m">${esc(t.dest||"")} · ${esc(tripMeta(t))}</p>${rows}<footer>Made with Trip Vault</footer></html>`;
     dl(new Blob([html],{type:"text/html"}),`itinerary-${slug(t.name)}.html`);ov.remove();toast("Itinerary file downloaded")};
 }
+
+/* ---------- cost export: CSV and printable expense report ---------- */
+function costRows(t){
+  return tripItems(t.id).filter(i=>i.kind!=="doc").map(it=>({it,p:payInfo(it)})).filter(x=>x.p.cost>0).map(({it,p})=>{
+    const st=it.kind==="expense"?{d:it.date||"",t:it.time||""}:splitLT(it.dep||it.start||it.checkIn);
+    return{it,date:st.d||"",time:st.t||"",type:KINDS[it.kind].n,title:itemTitle(it),cat:it.kind==="expense"?(it.cat||"Misc"):KINDS[it.kind].n,
+      amt:p.cost,cur:p.cur,home:toINR(t,p.cost,p.cur),paid:p.paid,pend:p.pend,by:it.paidBy||"",
+      via:it.kind==="expense"?(it.method||""):[...new Set((it.payments||[]).filter(x=>x.status==="paid").map(x=>x.method).filter(Boolean))].join(" / "),
+      ref:it.ref||"",notes:it.notes||""}}).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+}
+/* Spreadsheet-safe cell: quotes when needed, and neutralises formula injection (=, +, -, @). */
+const csvCell=v=>{if(typeof v==="number")return String(Math.round(v*100)/100);let s=String(v??"");if(/^[=+\-@\t\r]/.test(s))s="'"+s;return/[",\r\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s};
+function exportCSV(){
+  const t=curTrip();if(!t)return;const R=costRows(t);if(!R.length){toast("No costs to export yet","bad");return}
+  const H=["Date","Time","Type","Title","Category","Amount","Currency",`Amount (${HC()})`,"Paid","Pending","Paid by","Paid via","Reference","Notes"];
+  const rows=[H,...R.map(r=>[r.date,r.time,r.type,r.title,r.cat,r.amt,r.cur,r.home??"",r.paid,r.pend,r.by,r.via,r.ref,r.notes])];
+  dl(new Blob(["\ufeff"+rows.map(a=>a.map(csvCell).join(",")).join("\r\n")+"\r\n"],{type:"text/csv"}),`tripvault-${slug(t.name)}-costs.csv`);
+  toast(`${R.length} rows exported`)}
+function printExpenseReport(){
+  const t=curTrip();if(!t)return;const R=costRows(t);if(!R.length){toast("No costs to export yet","bad");return}
+  const tot=R.reduce((a,r)=>a+(r.home||0),0),unc=R.filter(r=>r.home==null).length,cats={};R.forEach(r=>{if(r.home!=null)cats[r.cat]=(cats[r.cat]||0)+r.home});
+  const att=R.flatMap(r=>S.files.filter(f=>(f.itemIds||[]).includes(r.it.id)).map(f=>({f,r}))),imgs=att.filter(x=>/^image\//.test(x.f.type)),other=att.filter(x=>!/^image\//.test(x.f.type));
+  printBook(`<h1>Expense report</h1><p class="bk-sub">${esc(t.name)}${t.dest?" · "+esc(t.dest):""} · ${tripMeta(t)}</p>
+   <h2>All costs</h2><table><thead><tr><th>Date</th><th>Item</th><th>Category</th><th class="num">Amount</th><th class="num">${esc(HC())}</th><th>Paid by / via</th></tr></thead><tbody>
+   ${R.map(r=>`<tr><td>${esc(r.date?fmtDs(r.date):"")}</td><td>${esc(r.title)}${r.ref?`<div class="bk-d">${esc(r.ref)}</div>`:""}</td><td>${esc(r.cat)}</td><td class="num">${fmtM(r.amt,r.cur)}${r.pend>0?`<div class="bk-d">${fmtM(r.pend,r.cur)} pending</div>`:""}</td><td class="num">${r.home==null?"no rate":fmtM(r.home)}</td><td>${esc([r.by,r.via].filter(Boolean).join(" · "))}</td></tr>`).join("")}</tbody>
+   <tfoot><tr><th colspan="4">Total${unc?` (${unc} without an exchange rate not counted)`:""}</th><th class="num">${fmtM(tot)}</th><th></th></tr></tfoot></table>
+   <h2>By category</h2><table><tbody>${Object.entries(cats).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${esc(k)}</td><td class="num">${fmtM(v)}</td></tr>`).join("")}</tbody></table>
+   ${imgs.length?`<h2>Receipts</h2><div class="bk-r">${imgs.map(x=>`<figure><img src="${photoUrl(x.f.id)}" alt=""><figcaption>${esc(x.r.title)} · ${esc(x.r.date?fmtDs(x.r.date):"")}</figcaption></figure>`).join("")}</div>`:""}
+   ${other.length?`<h2>Other attachments</h2><ul>${other.map(x=>`<li>${esc(x.f.name)} (${esc(x.r.title)})</li>`).join("")}</ul>`:""}
+   <p class="bk-f">Generated by Trip Vault on ${esc(new Date().toLocaleDateString())}. Amounts in ${esc(HC())} use the exchange rates saved in the trip.</p>`)}
+function exportCard(t){
+  if(!tripItems(t.id).some(i=>i.kind!=="doc"&&payInfo(i).cost>0))return"";
+  return`<div class="card"><div class="h">${ic("download")}<h2>Export costs</h2></div>
+   <div class="small muted">Every booking and expense with its amount, ${esc(HC())} value, who paid and how. Use it for reimbursement claims or a spreadsheet.</div>
+   <div class="row wrap mt"><button class="btn" data-a="expCSV">${ic("download","sm")} CSV for Excel / Sheets</button><button class="btn" data-a="expPrint">${ic("printer","sm")} Printable report with receipts</button></div></div>`}
