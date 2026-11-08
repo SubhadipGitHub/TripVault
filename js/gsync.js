@@ -49,6 +49,8 @@ const GDrive={
   async create(name,bytes,props,parents){return gUpload("POST",`${GDU}/files?uploadType=multipart&fields=id,version`,{name,mimeType:"application/octet-stream",appProperties:props||{},...(parents?{parents}:{})},bytes)},
   async write(id,bytes){return(await gfetch(`${GDU}/files/${id}?uploadType=media&fields=id,version`,{method:"PATCH",headers:{"Content-Type":"application/octet-stream"},body:bytes})).json()},
   async share(id,email,msg){return(await gfetch(`${GD}/files/${id}/permissions?sendNotificationEmail=true&emailMessage=${encodeURIComponent(msg||"")}&fields=id`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"user",role:"writer",emailAddress:email})})).json()},
+  async revisions(id){return(await gfetch(`${GD}/files/${id}/revisions?pageSize=200&fields=revisions(id,modifiedTime,lastModifyingUser(displayName,emailAddress))`)).json()},
+  async readRev(id,rev){return new Uint8Array(await(await gfetch(`${GD}/files/${id}/revisions/${rev}?alt=media`)).arrayBuffer())},
   async perms(id){return(await gfetch(`${GD}/files/${id}/permissions?fields=permissions(id,emailAddress,type)`)).json()},
   async unshare(id,permId){await gfetch(`${GD}/files/${id}/permissions/${permId}`,{method:"DELETE"})},
   async publicLink(id){await gfetch(`${GD}/files/${id}/permissions`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:"anyone",role:"reader"})})},
@@ -81,6 +83,56 @@ async function gsOpen(bytes,code){if(!GS_TRIP.every((v,i)=>bytes[i]===v))throw g
   return JSON.parse(new TextDecoder().decode(bytes[4]&1?await gz(p,false):p))}
 async function gsSealBlob(blob,code){const ct=new Uint8Array(await Crypt.enc(await gsKey(code),await blob.arrayBuffer())),o=new Uint8Array(4+ct.length);o.set(GS_FILE);o.set(ct,4);return o}
 async function gsOpenBlob(bytes,code,type){if(!GS_FILE.every((v,i)=>bytes[i]===v))throw gsErr("Shared file is damaged");return new Blob([await Crypt.dec(await gsKey(code),bytes.slice(4).buffer)],{type:type||"application/octet-stream"})}
+
+
+/* ---------- incoming data is untrusted: clean it before it is stored or shown ----------
+   Records from partners (sync, join, restore) and from backup files can hold anything. Keep ids to
+   plain tokens (they end up in HTML attributes), coerce text to strings and numbers to numbers, and
+   only accept known kinds, moods, ISO dates, real time zones, 3-letter currency codes and simple MIME
+   types, so bad data can neither inject markup nor crash the trip for everyone. */
+const CLEAN_ID=/^[A-Za-z0-9_.-]{1,80}$/,CLEAN_DATE=/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/,_tzOk={};
+const cStr=(v,max=100000)=>v==null?"":typeof v==="string"?v.slice(0,max):typeof v==="number"&&Number.isFinite(v)?String(v):typeof v==="boolean"?String(v):"";
+const cNum=v=>{const n=+v;return Number.isFinite(n)?n:0};
+const cDate=v=>{if(typeof v!=="string"||!CLEAN_DATE.test(v))return"";const[y,m,d]=v.slice(0,10).split("-").map(Number),h=+v.slice(11,13)||0,mi=+v.slice(14,16)||0,x=new Date(Date.UTC(y,m-1,d));
+  return x.getUTCMonth()===m-1&&x.getUTCDate()===d&&h<24&&mi<60?v:""};
+const cTz=(z,f)=>{if(typeof z!=="string"||!z)return f;if(!(z in _tzOk)){try{new Intl.DateTimeFormat("en-US",{timeZone:z});_tzOk[z]=true}catch(e){_tzOk[z]=false}}return _tzOk[z]?z:f};
+const cCur=v=>typeof v==="string"&&/^[A-Z]{3}$/.test(v)?v:HC();
+const cIds=a=>(Array.isArray(a)?a:[]).filter(x=>typeof x==="string"&&CLEAN_ID.test(x));
+const cList=(a,f,max=500)=>(Array.isArray(a)?a:[]).filter(x=>x&&typeof x==="object").slice(0,max).map(f);
+const KEEP_OBJ=new Set(["payments","names","itemIds","photoIds","splitWith","pack","ideas","people","rates","catBudgets","crew","sex"]);
+function cleanRecord(s,r,tz){
+  if(!r||typeof r!=="object"||typeof r.id!=="string"||!CLEAN_ID.test(r.id))return null;
+  const o={};for(const[k,v]of Object.entries(r)){if(k==="sync"||k==="blob")continue;if(KEEP_OBJ.has(k)){o[k]=v;continue}
+    if(typeof v==="number"||typeof v==="boolean")o[k]=v;else if(typeof v==="string")o[k]=k==="data"?v:v.slice(0,100000)} // nested objects other than the known ones are dropped
+  for(const k of["dep","arr","start","end","checkIn","checkOut","date","expiry","due"])if(k in o)o[k]=cDate(o[k]);
+  for(const k of["tz","depTz","arrTz"])if(k in o)o[k]=cTz(o[k],tz||"Asia/Kolkata");
+  for(const k of["cost","amount","size","createdAt","updatedAt","budget","w","h"])if(k in o)o[k]=cNum(o[k]);
+  // a timestamp from the future would win every merge and could never be deleted: cap it at now
+  for(const k of["createdAt","updatedAt"])if(k in o)o[k]=Math.min(o[k],Date.now());
+  if("cur"in o)o.cur=cCur(o.cur);if("tripId"in o&&!CLEAN_ID.test(o.tripId))return null;
+  if(s==="items"){if(!KINDS[o.kind])return null;o.names=(Array.isArray(r.names)?r.names:[]).map(x=>cStr(x,200)).filter(Boolean).slice(0,20);
+    o.payments=cList(r.payments,p=>({id:CLEAN_ID.test(p.id||"")?p.id:uid(),status:p.status==="paid"?"paid":"pending",amount:cNum(p.amount),due:cDate(p.due),method:cStr(p.method,200)}),50);
+    if("splitWith"in r)o.splitWith=(Array.isArray(r.splitWith)?r.splitWith:[]).map(x=>cStr(x,200));
+    if(r.sex&&typeof r.sex==="object")o.sex=Object.fromEntries(Object.entries(r.sex).filter(([,v])=>v==="m"||v==="f").map(([k,v])=>[cStr(k,200),v]));else delete o.sex}
+  if(s==="memories"){if(o.mood&&!MOODS[o.mood])o.mood="";o.photoIds=cIds(r.photoIds);o.fav=!!r.fav}
+  if(s==="files"){if(!/^[\w.+-]+\/[\w.+-]+$/.test(o.type||""))o.type="application/octet-stream";o.itemIds=cIds(r.itemIds);if(o.memId&&!CLEAN_ID.test(o.memId))delete o.memId;if(o.driveId&&!/^[\w-]{10,200}$/.test(o.driveId))delete o.driveId}
+  if(s==="trips"){o.tz=cTz(o.tz,S.settings?.homeTz||"Asia/Kolkata");if("localCur"in o)o.localCur=cCur(o.localCur);if(!["domestic","international",""].includes(o.type||""))o.type="";
+    const num=x=>x&&typeof x==="object"&&!Array.isArray(x)?Object.fromEntries(Object.entries(x).filter(([k,v])=>Number.isFinite(+v)).slice(0,100).map(([k,v])=>[cStr(k,60),+v])):{};
+    o.rates=Object.fromEntries(Object.entries(num(r.rates)).filter(([k])=>/^[A-Z]{3}$/.test(k)));if("catBudgets"in r)o.catBudgets=num(r.catBudgets);
+    if("pack"in r)o.pack=cList(r.pack,x=>({id:CLEAN_ID.test(x.id||"")?x.id:uid(),cat:cStr(x.cat,80),text:cStr(x.text,500),done:!!x.done}),1000);
+    if("ideas"in r)o.ideas=cList(r.ideas,x=>({id:CLEAN_ID.test(x.id||"")?x.id:uid(),text:cStr(x.text,500),cat:cStr(x.cat,80),place:cStr(x.place,300),note:cStr(x.note,2000),...(x.scheduled?{scheduled:true}:{})}),1000);
+    if("people"in r)o.people=(Array.isArray(r.people)?r.people:[]).map(x=>cStr(x,200)).filter(Boolean).slice(0,30);
+    if("crew"in r)o.crew=(Array.isArray(r.crew)?r.crew:[]).filter(x=>x==="m"||x==="f").slice(0,6);if(o.party&&!["solo","couple","group"].includes(o.party))delete o.party}
+  return o}
+/* A trip bundle (shared-trip file or backup): trip(s), items, memories, files and deletions. */
+function cleanBundle(d){const out={...d},tz=t=>t?.tz;
+  if(d.trip)out.trip=cleanRecord("trips",d.trip);if(Array.isArray(d.trips))out.trips=d.trips.map(t=>cleanRecord("trips",t)).filter(Boolean);
+  const ttz=(out.trip||out.trips?.[0])?.tz;
+  for(const s of["items","memories","files"])out[s]=(Array.isArray(d[s])?d[s]:[]).map(r=>cleanRecord(s,r,ttz)).filter(Boolean);
+  if("tomb"in d)out.tomb=cList(d.tomb,x=>({s:["items","memories","files"].includes(x.s)?x.s:"",id:cStr(x.id,80),at:cNum(x.at)}),5000).filter(x=>x.s&&CLEAN_ID.test(x.id));
+  if("members"in d)out.members=cList(d.members,m=>({email:cStr(m.email,200).toLowerCase()}),100).filter(m=>m.email);
+  if("owner"in d)out.owner=cStr(d.owner,200).toLowerCase();
+  return out}
 
 /* ---------- merge ---------- */
 const gsStable=v=>Array.isArray(v)?"["+v.map(gsStable).join(",")+"]":v&&typeof v==="object"?"{"+Object.keys(v).filter(k=>v[k]!==undefined).sort().map(k=>JSON.stringify(k)+":"+gsStable(v[k])).join(",")+"}":JSON.stringify(v??null);
@@ -131,7 +183,7 @@ async function syncTrip(t,o={}){
     for(let a=0;;a++){
       let m0;try{m0=await GDrive.meta(t.sync.fileId)}catch(e){if(e.status===404||e.status===403)throw gsErr(t.sync.role==="owner"?"The trip file is missing from your Drive":"You no longer have access to this shared trip",{code:"gone"});throw e}
       if(m0.trashed)throw gsErr("The trip file was moved to the bin in Google Drive",{code:"gone"});
-      const R=await gsOpen(await GDrive.read(t.sync.fileId),t.sync.code),{P,out}=gsPlan(t,R);
+      const R=cleanBundle(await gsOpen(await GDrive.read(t.sync.fileId),t.sync.code)),{P,out}=gsPlan(t,R);
       if(gsCanon(R)!==gsCanon(out)){const m1=await GDrive.meta(t.sync.fileId);if(m1.version!==m0.version&&a<2)continue; // someone saved in between: merge again
         await GDrive.write(t.sync.fileId,await gsSeal({app:"TripVault",kind:"shared-trip",v:1,...out,savedAt:Date.now()},t.sync.code))}
       await gsApply(t,P);if(t.sync.role!=="owner")t.sync.members=out.members;
@@ -185,12 +237,37 @@ async function gsJoin(inv){
   await GAuth.token(true);await gsMe();let bytes;
   try{bytes=await GDrive.read(inv.fileId)}catch(e){if(e.status!==404&&e.status!==403)throw e;
     toast("Choose the shared trip file in the Google window","info");const id=await GPicker.pick();if(!id)throw gsErr("No trip file chosen");inv.fileId=id;bytes=await GDrive.read(id)}
-  const R=await gsOpen(bytes,inv.code);if(R.kind!=="shared-trip"||!R.trip?.id)throw gsErr("That isn't a Trip Vault shared trip");
+  const R0=await gsOpen(bytes,inv.code);if(R0.kind!=="shared-trip")throw gsErr("That isn't a Trip Vault shared trip");
+  const R=cleanBundle(R0);if(!R.trip?.id)throw gsErr("That shared trip is damaged");
   let t=S.trips.find(x=>x.id===R.trip.id);
   if(!t){t={...R.trip};S.trips.push(t)}
   t.sync={fileId:inv.fileId,code:inv.code,role:t.sync?.role==="owner"&&t.sync.fileId===inv.fileId?"owner":"member",owner:R.owner||"",members:R.members||[],tomb:t.sync?.tomb||[],lastSync:0};
   await DB.put("trips",t);S.cur=t.id;S.meta.cur=t.id;S.day=null;S.calM=null;saveMeta();
   await syncTrip(t,{interactive:true});return t}
+
+/* ---------- undo a bad sync: bring back an earlier version of the trip file ----------
+   Drive keeps earlier versions of the trip file (for binary files, about 30 days or 100 versions).
+   Restoring makes every record of that version newer than anything since, and records a deletion for
+   whatever was added after it, then syncs, so every phone ends up with that version. */
+async function gsVersions(t){const l=await GDrive.revisions(t.sync.fileId);return(l.revisions||[]).slice().reverse()}
+async function gsPeek(t,rev){return cleanBundle(await gsOpen(await GDrive.readRev(t.sync.fileId,rev),t.sync.code))}
+async function gsRestore(t,R0){
+  const now=Date.now(),keep={items:new Set(R0.items.map(x=>x.id)),memories:new Set(R0.memories.map(x=>x.id)),files:new Set(R0.files.map(x=>x.id))};
+  for(const s of["items","memories","files"])for(const r of S[s].filter(x=>x.tripId===t.id&&!keep[s].has(x.id)))(t.sync.tomb||=[]).push({s,id:r.id,at:now});
+  const bump=a=>a.map(x=>({...x,updatedAt:now+1}));
+  const R={...R0,trip:R0.trip?{...R0.trip,updatedAt:now+1}:null,items:bump(R0.items),memories:bump(R0.memories),files:bump(R0.files),tomb:(R0.tomb||[]).filter(x=>!keep[x.s]?.has(x.id))};
+  const{P}=gsPlan(t,R);await gsApply(t,P);await DB.put("trips",t);await gsFetchFiles(t,P.fetch);
+  return syncTrip(t,{interactive:true})}
+async function openVersions(t){
+  const ov=sheet({title:`${ic("clock")} Earlier versions`,body:`<div class="small muted">Loading versions from Google Drive…</div>`,foot:`<button class="btn" data-close>Close</button>`}),sb=$(".sb",ov);
+  let vs;try{await GAuth.token(true);vs=await gsVersions(t)}catch(e){sb.innerHTML=`<div class="note bad">${ic("alert")}<div>${esc(e.message)}</div></div>`;return}
+  sb.innerHTML=`<p class="small muted">If something went wrong (things deleted or overwritten by mistake), bring the trip back to how it was. Everyone gets that version on their next sync. Google keeps versions for about 30 days.</p>`+
+    (vs.length?vs.map((v,i)=>`<div class="li"><div class="b"><div class="t">${esc(new Date(v.modifiedTime).toLocaleString())}${i===0?" · current":""}</div><div class="d">${esc(v.lastModifyingUser?.displayName||v.lastModifyingUser?.emailAddress||"")}</div></div>${i?`<button class="btn xs" data-rev="${esc(v.id)}">${ic("clock","sm")} Restore…</button>`:""}</div>`).join(""):`<div class="small muted">No earlier versions yet.</div>`);
+  sb.addEventListener("click",async e=>{const b=e.target.closest("[data-rev]");if(!b)return;b.disabled=true;
+    try{const R0=await gsPeek(t,b.dataset.rev),now={i:tripItems(t.id).length,m:tripMems(t.id).length,f:S.files.filter(f=>f.tripId===t.id).length};
+      if(!(await gate({title:"Restore this version?",plan:[`Bookings and expenses: ${R0.items.length} (now ${now.i})`,`Memories: ${R0.memories.length} (now ${now.m}) · files: ${R0.files.length} (now ${now.f})`,"Anything added or changed after it is removed or undone, for everyone in the trip"],irreversible:"Changes made after this version are lost, unless you restore a later version again.",ok:"Restore",danger:true}))){b.disabled=false;return}
+      if(await gsRestore(t,R0)){ov.remove();render();toast("Trip restored to the earlier version")}else b.disabled=false}
+    catch(err){toast(esc(err.message),"bad");b.disabled=false}})}
 
 /* ---------- UI ---------- */
 const gsAgo=ms=>{const m=Math.round((Date.now()-ms)/6e4);return m<1?"just now":m<60?`${m} min ago`:m<1440?`${Math.round(m/60)} h ago`:fmtDs(new Date(ms).toISOString().slice(0,10))};
@@ -229,7 +306,7 @@ function gsSheetBody(t){
 function openShare(t=curTrip()){if(!t){toast("Create a trip first","bad");return}
   const s=t.sync,owner=s?.role==="owner";
   const ov=sheet({title:`${ic("share")} ${s?.fileId?"Shared trip":"Share this trip"}`,body:gsSheetBody(t),
-    foot:s?.fileId?`${owner?`<button class="btn bad" id="gsStop">Stop sharing</button>`:`<button class="btn bad" id="gsLeave">Leave</button>`}<span class="sp"></span><button class="btn" data-close>Close</button><button class="btn pri" id="gsNow">${ic("zap","sm")} Sync now</button>`:`<button class="btn" data-close>Close</button>`});
+    foot:s?.fileId?`${owner?`<button class="btn bad" id="gsStop">Stop sharing</button>`:`<button class="btn bad" id="gsLeave">Leave</button>`}<button class="btn" id="gsHist">${ic("clock","sm")} Versions</button><span class="sp"></span><button class="btn" data-close>Close</button><button class="btn pri" id="gsNow">${ic("zap","sm")} Sync now</button>`:`<button class="btn" data-close>Close</button>`});
   const sb=$(".sb",ov);sb.id="gsSheet";sb.dataset.trip=t.id;
   const busy=async(btn,fn)=>{if(btn){btn.disabled=true;btn.dataset.l=btn.innerHTML;btn.innerHTML=`${ic("clock","sm")} Working…`}
     try{await fn()}catch(e){toast(esc(e.message||String(e)),"bad")}finally{if(btn&&btn.isConnected){btn.disabled=false;btn.innerHTML=btn.dataset.l}}};
@@ -242,6 +319,7 @@ function openShare(t=curTrip()){if(!t){toast("Create a trip first","bad");return
       await busy(b,async()=>{await gsRemoveMember(t,em);$(".sb",ov).innerHTML=gsSheetBody(t);qr()})}
     else if(b.id==="gsRe")await busy(b,async()=>{await syncTrip(t,{interactive:true});qr()})
     else if(b.id==="gsShr")navigator.share({title:`Join “${t.name}” in Trip Vault`,text:`Join our trip “${t.name}” in Trip Vault`,url:gsLink(t)}).catch(()=>{})});
+  $("#gsHist",ov)?.addEventListener("click",()=>{ov.remove();openVersions(t)});
   $("#gsNow",ov)?.addEventListener("click",e=>busy(e.currentTarget,async()=>{if(await syncTrip(t,{interactive:true}))toast("Synced")}));
   $("#gsStop",ov)?.addEventListener("click",async()=>{if(!(await gate({title:"Stop sharing this trip?",plan:["Everyone you shared with loses access to the trip file and stops getting updates","Your trip stays on this phone; their copies stay on theirs"],ok:"Stop sharing"})))return;
     await busy(null,async()=>{await GAuth.token(true);await gsStopShare(t);ov.remove();render();toast("Stopped sharing")})});

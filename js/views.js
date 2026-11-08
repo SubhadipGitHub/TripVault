@@ -145,7 +145,7 @@ function evCard(ev,big){const it=ev.it,now=Date.now();const mins=(ev.su-now)/6e4
   const mq=it.kind==="flight"?airportQ(it.from):itemPlace(it);if(mq)extra+=`<div class="row wrap" style="margin-top:6px">${mapLink(mq,it.kind==="flight"?esc(it.from)+" airport":"Map")}</div>`;
   return`<div class="li tap" data-a="item" data-id="${it.id}">${kic(it.kind)}<div class="b"><div class="t">${esc(ev.label)} ${when}</div><div class="d">${fmtD(ev.s.slice(0,10))} · ${ev.s.slice(11)}${ev.e!==ev.s?" – "+ev.e.slice(11)+(ev.etz!==ev.tz?" "+tzShort(ev.etz):""):""} ${tzShort(ev.tz)!==tzShort(S.settings.homeTz)?`<span class="dim">(${tzShort(ev.tz)})</span>`:""}</div>${extra}</div><div class="r">${refChip(it.ref)}</div></div>`}
 function stayCard(st){
-  return`<div class="li" style="border:0">${kic("hotel")}<div class="b"><div class="t tap" data-a="item" data-id="${st.id}">${esc(st.name)}</div><div class="d">${itemSub(st)}</div>
+  return`<div class="li" style="border:0">${kic("hotel")}<div class="b"><div class="t tap" data-a="item" data-id="${st.id}">${esc(st.name)}</div><div class="d">${esc(itemSub(st))}</div>
   ${st.address?`<div class="small mt" style="margin-top:4px">${ic("pin","sm")} <span class="copy" data-copy="${esc(st.address)}">${esc(st.address)}</span></div>`:""}
   <div class="row wrap small" style="margin-top:6px">${st.ref?`<span class="dim">Conf.</span> ${refChip(st.ref)}`:""}${st.pin?` <span class="dim">PIN</span> ${refChip(st.pin)}`:""}${st.phone?` <a href="tel:${esc(st.phone.replace(/[^\d+]/g,""))}">${ic("user","sm")} ${esc(st.phone)}</a>`:""}${mapLink(itemPlace(st),"Map")}</div></div></div>`}
 function tlBar(m,d){const set=S.settings,W0=hm(set.wake),W1=hm(set.sleep),P=x=>(x/1440*100).toFixed(3)+"%";
@@ -166,7 +166,7 @@ function dayList(m,d,t){
     else if(s.cont){sm="→ next day "+ev.e.slice(11)}
     if(s.mid)return`<div class="ev"><div class="tm">All day</div><div class="sp small">${esc(ev.label)}</div></div>`;
     if(it.kind==="flight"&&!s.from&&ev.etz!==ev.tz&&!s.cont)sm=`→ ${ev.e.slice(11)} ${esc(it.to||"")} time`;
-    return`<div class="ev tap" data-a="item" data-id="${it.id}"><div class="tm">${tm}<small>${sm}</small></div>${kic(it.kind,1)}<div class="sp" style="min-width:0"><div style="font-weight:600">${title}</div><div class="small muted">${it.kind==="flight"||it.kind==="train"?itemTitle(it)+" · ":""}${it.kind==="hotel"?esc(it.address||""):esc(it.location||it.airline||it.cls||"")}</div></div><div class="evref">${refChip(it.ref)}${mapLink(it.kind==="flight"&&ev.label.startsWith(it.flightNo||"Flight")?airportQ(it.from):itemPlace(it))}</div></div>`}).join("")}
+    return`<div class="ev tap" data-a="item" data-id="${it.id}"><div class="tm">${tm}<small>${sm}</small></div>${kic(it.kind,1)}<div class="sp" style="min-width:0"><div style="font-weight:600">${title}</div><div class="small muted">${it.kind==="flight"||it.kind==="train"?esc(itemTitle(it))+" · ":""}${it.kind==="hotel"?esc(it.address||""):esc(it.location||it.airline||it.cls||"")}</div></div><div class="evref">${refChip(it.ref)}${mapLink(it.kind==="flight"&&ev.label.startsWith(it.flightNo||"Flight")?airportQ(it.from):itemPlace(it))}</div></div>`}).join("")}
 /* ---------- Plan calendar: month grid, only trip days selectable ---------- */
 const CAL_TRAVEL=["flight","train","bus","ferry","car"];
 const calWide=()=>matchMedia("(min-width:900px)").matches;

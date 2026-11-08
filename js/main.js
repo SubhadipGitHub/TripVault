@@ -131,4 +131,5 @@ async function consumeLaunch(){
   render();armIdle();if(!location.hash.startsWith("#join="))AV.intro(curTrip());gsBoot();consumeLaunch();
 })();
 setInterval(()=>{if(S.cur&&(S.view==="today"||S.view==="plan")&&!$(".ov")&&!SEARCH.ov&&!WR.ov&&!Vault.locked&&document.visibilityState==="visible"&&!document.activeElement?.matches("input,select,textarea"))render()},60000);
+addEventListener("hashchange",()=>{if(location.hash.startsWith("#join="))consumeLaunch()}); // invite opened while Trip Vault is already open
 if("serviceWorker"in navigator&&location.protocol.startsWith("http"))addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));

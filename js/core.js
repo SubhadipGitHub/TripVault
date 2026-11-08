@@ -37,7 +37,7 @@ function fromUTC(ms,tz){const p=tzParts(tz,ms);return`${p.y}-${pad(p.m)}-${pad(p
 const offLabel=(tz,ms=Date.now())=>{const o=tzOff(tz,ms);const s=o>=0?"+":"-";const a=Math.abs(o);return`UTC${s}${Math.floor(a/60)}${a%60?":"+pad(a%60):""}`};
 const tzShort=tz=>(tz||"").split("/").pop().replace(/_/g," ");
 /* ===== Money ===== */
-const sym=c=>CUR_SYM[c]??(c+" ");
+const sym=c=>CUR_SYM[c]??(esc(c)+" ");
 const HC=()=>S.settings?.homeCur||"INR";
 function fmtM(v,c=HC(),dec){if(v==null||isNaN(v))return"—";const n=Math.abs(v)>=1000||dec===0?Math.round(v):Math.round(v*100)/100;
   const s=c==="INR"?n.toLocaleString("en-IN",{maximumFractionDigits:2}):n.toLocaleString("en-US",{maximumFractionDigits:2});return(v<0?"-":"")+sym(c)+s.replace("-","")}

@@ -25,7 +25,7 @@ A private, offline-first home for everything about a trip: bookings, tickets, pa
 - **Share a trip (optional)**: share a trip with a partner or a group through Google Drive. Everyone can add bookings, expenses, packing, ideas, memories, attachments and photos, and changes sync both ways while the app is open. Everything is encrypted on the phone with the trip code before it reaches Google; the code travels in the invite link. Off until you share or join a trip, and it needs the one-time setup below.
 - **Memories**: a photo journal with moods and highlights.
 - **Wrapped**: story cards for a trip, a year or all time. Save as PNG, ZIP, share, or print a trip book. "Hide amounts" for safe sharing.
-- **Security**: optional passphrase encryption (AES-256-GCM, PBKDF2-SHA256 600k) of all data at rest, idle auto-lock, encrypted `.tvault` backups, and a Content-Security-Policy that blocks every network request except Google sign-in and Drive, which are used only for trips you share.
+- **Security**: optional passphrase encryption (AES-256-GCM, PBKDF2-SHA256 600k) of all data at rest, idle auto-lock, encrypted `.tvault` backups, and a Content-Security-Policy that stops injected scripts and blocks background network requests except Google sign-in and Drive (used only for trips you share). Everything shown on screen is escaped, and data from partners and backup files is cleaned before it is stored.
 
 ## Set it up (2 minutes)
 
@@ -44,6 +44,8 @@ Run locally: `python3 -m http.server 8000` then open http://localhost:8000. Ther
 - Clearing site data deletes the vault. Take regular backups (the app reminds you).
 
 - **Shared trips** go through the Google Drive of the people sharing them. A trip file (bookings, memories, file details) sits in the owner's Drive, and each attachment or photo sits in the Drive of whoever added it. All of it is gzip + AES-256-GCM encrypted on the phone with a key made from the trip code before upload. Google can see file sizes, timings and who a trip file is shared with, not what's in it. The code travels in the invite link's `#` part, which browsers never send to a server, so treat the link like a key. Attachments are shared as "anyone with the link" so the others can fetch them without extra Google permissions; the link only gives the encrypted bytes. Removing someone stops their access to the trip file, but they keep what they had already synced. Google sign-in is kept in memory for the session only.
+- **Members are trusted.** Anyone you share a trip with can change or delete anything in it, on everyone's phone. If that goes wrong, **Shared trip → Versions** brings back an earlier version of the trip file for everyone (Google keeps versions for about 30 days). Data that arrives from members, and from backup or QR files, is checked and cleaned before it is stored: unexpected kinds, dates, time zones, currencies and IDs are rejected, so it can't break the app or inject markup.
+- **What the security policy can and can't do.** It blocks inline scripts and scripts from anywhere except Trip Vault itself and Google's sign-in and Picker files, so text in a ticket or from a partner can't run as code. It does not stop a page from navigating elsewhere; no browser policy can. That is why the real protection is that nothing in the app turns data into code: all text is escaped before it is shown, and the escaping is tested with hostile input in every field.
 
 ## Set up Google sharing (once, about 10 minutes)
 
