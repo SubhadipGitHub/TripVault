@@ -52,7 +52,7 @@ function showLock(){
   f.onsubmit=async e=>{e.preventDefault();if(!inp.value)return;const b=f.querySelector("button");b.disabled=true;$("#lke",d).textContent="";
     const ok=await Vault.unlock(inp.value);
     if(!ok){await new Promise(r=>setTimeout(r,500));$("#lke",d).textContent="That passphrase didn't work.";b.disabled=false;inp.select();return}
-    inp.value="";await loadAll();applyTheme();d.remove();S.view=S.meta.view||"today";S.sub=S.meta.sub||"bookings";armIdle();render();AV.intro(curTrip());consumeLaunch()};
+    inp.value="";await loadAll();applyTheme();d.remove();S.view=S.meta.view||"today";S.sub=S.meta.sub||"bookings";armIdle();render();AV.intro(curTrip());gsBoot();consumeLaunch()};
   $("#lkEmg",d)?.addEventListener("click",()=>openEmgCard());
   $("#lkw",d).onclick=async()=>{if(confirm("Erase everything stored by Trip Vault in this browser? This cannot be undone. Restore later from a backup file."))await wipeAll()};
 }
@@ -81,10 +81,10 @@ function openSettings(){
    <div class="h mt">${ic("plane")}<h2>Travel buffers (minutes)</h2></div><div class="fg f4">${F("Before intl flight","preIntl",s.preIntl,{type:"number"})}${F("Before domestic","preDom",s.preDom,{type:"number"})}${F("After intl arrival","postIntl",s.postIntl,{type:"number"})}${F("After domestic","postDom",s.postDom,{type:"number"})}${F("Before train","trainPre",s.trainPre,{type:"number"})}</div>
    <div class="small dim mt">Home currency is what budgets and totals are shown in. Exchange rates are saved per trip as “home currency per 1 unit”, so re-enter them after changing it.</div>
    <div class="small dim mt">Buffers appear as striped blocks so free slots stay realistic. Many airlines close international check-in 60 min before departure.</div>
-   <div class="sep"></div><div class="h">${ic("alert")}<h2 style="color:var(--bad)">Danger zone</h2></div><button class="btn bad" id="wipe">${ic("trash","sm")} Erase everything on this device</button>
+   ${gsSettingsBlock()}<div class="sep"></div><div class="h">${ic("alert")}<h2 style="color:var(--bad)">Danger zone</h2></div><button class="btn bad" id="wipe">${ic("trash","sm")} Erase everything on this device</button>
    <div class="small dim mt">Trip Vault 1.0 · private by design · <a href="https://github.com/SubhadipGitHub/TripVault" target="_blank" rel="noopener noreferrer">source</a></div>`,
    foot:`<button class="btn" data-close>Cancel</button><button class="btn pri" id="stSv">Save</button>`});
-  $("[name=homeTz]",ov).options[0].remove();$("#ocrDl",ov).onclick=e=>ocrPrepare(e.currentTarget);
+  $("[name=homeTz]",ov).options[0].remove();$("#gsOut",ov)?.addEventListener("click",()=>{GAuth.revoke();ov.remove();render();toast("Disconnected from Google. Shared trips pause until you connect again","info")});$("#ocrDl",ov).onclick=e=>ocrPrepare(e.currentTarget);
   $("#onPass",ov)?.addEventListener("click",()=>setupLock());$("#chPass",ov)?.addEventListener("click",()=>changeLock());$("#offPass",ov)?.addEventListener("click",()=>removeLock());$("#lockNow",ov)?.addEventListener("click",()=>Vault.lock());
   $("#stSv",ov).onclick=async()=>{const g=gather(ov);const n={...S.settings,...g};["minGap","preIntl","preDom","postIntl","postDom","trainPre","autoLock"].forEach(k=>n[k]=Math.max(0,+n[k]||0));n.minGap=Math.max(15,n.minGap);
     if(hm(n.sleep)<=hm(n.wake)){toast("Day end must be after start","bad");return}

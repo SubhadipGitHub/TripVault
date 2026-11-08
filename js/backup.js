@@ -17,9 +17,9 @@ function openBackup(){const mb=(S.files.reduce((a,f)=>a+(f.size||0),0)/1048576).
    <div class="h">${ic("phone")}<h2>Phone to phone, no internet</h2></div>
    <div class="small muted">Move trips to another phone with Trip Vault open: this screen shows a stream of QR codes, the other phone reads them with its camera. Encrypted with a one-time code.</div>
    <div class="row wrap mt"><button class="btn" id="qrSend">${ic("share","sm")} Send by QR</button><button class="btn" id="qrRecv">${ic("camera","sm")} Receive by QR</button></div><div class="sep"></div>
-   <div class="h">${ic("upload")}<h2>Restore from a backup</h2></div>
+   ${gsBackupBlock()}<div class="h">${ic("upload")}<h2>Restore from a backup</h2></div>
    <label class="drop" style="padding:16px">${ic("upload")} <b>Choose a Trip Vault backup (.tvault or .json)</b><div class="small muted">You'll see what changes before anything is written</div><input type="file" id="bIn" accept=".json,.tvault,application/json,application/octet-stream" hidden></label>`});
-  $("#qrSend",ov).onclick=()=>{ov.remove();openSendQR()};$("#qrRecv",ov).onclick=()=>{ov.remove();openReceiveQR()};
+  $("#qrSend",ov).onclick=()=>{ov.remove();openSendQR()};$("#gsJoinB",ov).onclick=()=>{ov.remove();openJoin()};$("#qrRecv",ov).onclick=()=>{ov.remove();openReceiveQR()};
   $("#bAll",ov).onclick=()=>exportVault(null,ov);$("#bTrip",ov)?.addEventListener("click",()=>exportVault(t.id,ov));
   $("#bIn",ov).onchange=e=>{const f=e.target.files[0];if(f){ov.remove();previewImport(f)}}}
 /* The backup object shared by file export and phone-to-phone transfer.
@@ -46,6 +46,7 @@ async function readBackup(file){
 }
 async function previewImport(file){let d;try{d=await readBackup(file)}catch(e){toast("That isn't a valid backup file","bad");return}
   if(!d)return;if(d.app!=="TripVault"||!Array.isArray(d.trips)){toast("Not a Trip Vault backup","bad");return}
+  d=cleanBundle(d); // a backup file or QR transfer can come from anyone: same rules as shared trips
   const cmp=(arr,cur)=>{let nw=0,up=0,same=0;for(const x of arr||[]){const e=cur.find(c=>c.id===x.id);if(!e)nw++;else if((x.updatedAt||0)>(e.updatedAt||0))up++;else same++}return{nw,up,same}};
   const ct=cmp(d.trips,S.trips),ci=cmp(d.items,S.items),cm=cmp(d.memories,S.memories);const fNew=(d.files||[]).filter(f=>!S.files.some(x=>x.id===f.id||x.hash===f.hash)).length;
   const ov=sheet({title:"Restore backup",body:`<div class="note info">${ic("info")}<div><b>${esc(file.name)}</b><div class="small muted">Exported ${new Date(d.exportedAt).toLocaleString()} · ${d.trips.length} trips · ${(d.items||[]).length} entries · ${(d.memories||[]).length} memories · ${(d.files||[]).length} files</div></div></div>
