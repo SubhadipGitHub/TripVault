@@ -11,7 +11,7 @@
      it with the API key, so no per-file grants are needed. Google only ever stores ciphertext.
    Sync merges record by record (newer updatedAt wins) and passes deletions on as tombstones.
    The Google token is kept in memory only. */
-const GS={tok:null,exp:0,email:"",name:"",folder:null,keys:new Map(),busy:new Set(),st:{}};
+const GS={tok:null,exp:0,email:"",name:"",folder:null,keys:new Map(),busy:new Set(),st:{},lastCh:{},told:false};
 const GS_SCOPE="https://www.googleapis.com/auth/drive.file",GS_NAME="Trip Vault shared trip",GS_FOLDER="Trip Vault files";
 const GD="https://www.googleapis.com/drive/v3",GDU="https://www.googleapis.com/upload/drive/v3";
 const gsReady=()=>typeof GSYNC==="object"&&!!(GSYNC.clientId&&GSYNC.apiKey&&GSYNC.appId);
@@ -30,7 +30,7 @@ const GAuth={
       callback:r=>{if(r.error){rej(gsErr(r.error_description||r.error,{code:"auth"}));return}GS.tok=r.access_token;GS.exp=Date.now()+(+r.expires_in||3600)*1000;res(GS.tok)},
       error_callback:e=>rej(gsErr(e?.type==="popup_closed"?"Google sign-in was closed":"Google sign-in didn't finish (pop-ups blocked?)",{code:"auth"}))});
       c.requestAccessToken()})},
-  revoke(){try{if(GS.tok&&window.google?.accounts?.oauth2)google.accounts.oauth2.revoke(GS.tok,()=>{})}catch(e){}GS.tok=null;GS.exp=0;GS.email="";GS.name="";GS.folder=null}
+  revoke(){try{if(GS.tok&&window.google?.accounts?.oauth2)google.accounts.oauth2.revoke(GS.tok,()=>{})}catch(e){}GS.tok=null;GS.exp=0;GS.email="";GS.name="";GS.folder=null;for(const k in GS.st)if(GS.st[k].state==="ok")GS.st[k].state="paused"}
 };
 
 /* ---------- Drive REST (only the calls sharing needs) ---------- */
@@ -69,7 +69,8 @@ const GPicker={ // lets a member open the trip file someone shared with them (th
       new google.picker.PickerBuilder().addView(v).setOAuthToken(tok).setDeveloperKey(GSYNC.apiKey).setAppId(GSYNC.appId).setTitle("Choose the shared trip file")
         .setCallback(d=>{if(d.action===google.picker.Action.PICKED)res(d.docs[0].id);else if(d.action===google.picker.Action.CANCEL)res(null)}).build().setVisible(true)})}
 };
-async function gsMe(){if(!GS.email){const a=await GDrive.about();GS.email=(a.user?.emailAddress||"").toLowerCase();GS.name=a.user?.displayName||""}return GS.email}
+async function gsMe(){if(!GS.email){const a=await GDrive.about();GS.email=(a.user?.emailAddress||"").toLowerCase();GS.name=a.user?.displayName||"";GS.told=false;if(GS.email)toast(`Connected as ${esc(GS.email)}`,"info");gsPillPaint()}return GS.email}
+const gsOn=()=>!!GS.tok&&Date.now()<GS.exp-60000;
 
 /* ---------- trip code and encryption ---------- */
 function gsNewCode(){const out=[];while(out.length<20){for(const x of crypto.getRandomValues(new Uint8Array(32)))if(x<248&&out.length<20)out.push(QR_CODE_ABC[x%31])}return out.join("").replace(/(.{4})(?=.)/g,"$1-")}
@@ -117,6 +118,7 @@ function cleanRecord(s,r,tz){
   // a timestamp from the future would win every merge and could never be deleted: cap it at now
   for(const k of["createdAt","updatedAt"])if(k in o)o[k]=Math.min(o[k],Date.now());
   if("cur"in o)o.cur=cCur(o.cur);if("tripId"in o&&!CLEAN_ID.test(o.tripId))return null;
+  for(const k of["by","ed"])if(k in o){o[k]=cStr(o[k],200).toLowerCase();if(!o[k])delete o[k]}
   if(s==="items"){if(!KINDS[o.kind])return null;o.names=(Array.isArray(r.names)?r.names:[]).map(x=>cStr(x,200)).filter(Boolean).slice(0,20);
     o.payments=cList(r.payments,p=>({id:CLEAN_ID.test(p.id||"")?p.id:uid(),status:p.status==="paid"?"paid":"pending",amount:cNum(p.amount),due:cDate(p.due),method:cStr(p.method,200)}),50);
     if("splitWith"in r)o.splitWith=(Array.isArray(r.splitWith)?r.splitWith:[]).map(x=>cStr(x,200));
@@ -136,7 +138,7 @@ function cleanBundle(d){const out={...d},tz=t=>t?.tz;
   if(d.trip)out.trip=cleanRecord("trips",d.trip);if(Array.isArray(d.trips))out.trips=d.trips.map(t=>cleanRecord("trips",t)).filter(Boolean);
   const ttz=(out.trip||out.trips?.[0])?.tz;
   for(const s of["items","memories","files"])out[s]=(Array.isArray(d[s])?d[s]:[]).map(r=>cleanRecord(s,r,ttz)).filter(Boolean);
-  if("tomb"in d)out.tomb=cList(d.tomb,x=>({s:["items","memories","files"].includes(x.s)?x.s:"",id:cStr(x.id,80),at:cNum(x.at)}),5000).filter(x=>x.s&&CLEAN_ID.test(x.id));
+  if("tomb"in d)out.tomb=cList(d.tomb,x=>({s:["items","memories","files"].includes(x.s)?x.s:"",id:cStr(x.id,80),at:cNum(x.at),...(x.by?{by:cStr(x.by,200).toLowerCase()}:{})}),5000).filter(x=>x.s&&CLEAN_ID.test(x.id));
   if("members"in d)out.members=cList(d.members,m=>({email:cStr(m.email,200).toLowerCase()}),100).filter(m=>m.email);
   if("owner"in d)out.owner=cStr(d.owner,200).toLowerCase();
   if("keyring"in d)out.keyring=(Array.isArray(d.keyring)?d.keyring:[]).filter(x=>typeof x==="string"&&/^[A-Z0-9]{4}(-[A-Z0-9]{4}){4}$/.test(x)).slice(0,20);
@@ -187,7 +189,7 @@ async function gsFetchFiles(t,list){let n=0;
 function gsSt(t,state,msg){const o=GS.st[t.id]||{};GS.st[t.id]=state==="note"?{...o,note:msg}:{...o,state,msg:msg||"",at:Date.now()}}
 async function syncTrip(t,o={}){
   if(!t?.sync?.fileId||GS.busy.has(t.id))return false;GS.busy.add(t.id);gsSt(t,"syncing");gsPaint();let ok=false;
-  try{await GAuth.token(o.interactive);if(o.interactive)await gsMe();
+  try{await GAuth.token(o.interactive);if(o.interactive)await gsMe();if(GS.email&&t.sync.me!==GS.email)t.sync.me=GS.email;
     for(let a=0;;a++){
       let m0;try{m0=await GDrive.meta(t.sync.fileId)}catch(e){if(e.status===404||e.status===403)throw gsErr(t.sync.role==="owner"?"The trip file is missing from your Drive":"You no longer have access to this shared trip",{code:"gone"});throw e}
       if(m0.trashed)throw gsErr("The trip file was moved to the bin in Google Drive",{code:"gone"});
@@ -197,13 +199,36 @@ async function syncTrip(t,o={}){
       // stale: someone wrote with an older key (their sync overlapped a key change); rewrite under the current key
       if(opened.stale||gsCanon(R)!==gsCanon(out)){const m1=await GDrive.meta(t.sync.fileId);if(m1.version!==m0.version&&a<2)continue; // someone saved in between: merge again
         await GDrive.write(t.sync.fileId,await gsSeal({app:"TripVault",kind:"shared-trip",v:1,...out,savedAt:Date.now()},t.sync.code))}
+      const ch=t.sync.lastSync?gsChanges(t,P,R):[];
       await gsApply(t,P);if(t.sync.role!=="owner"){t.sync.members=out.members;t.sync.keyring=out.keyring}
+      if(ch.length)t.sync.recent=[...ch,...(t.sync.recent||[])].slice(0,30);GS.lastCh[t.id]=ch;
       t.sync.tomb=[];t.sync.lastSync=Date.now();await DB.put("trips",t);
-      await gsFetchFiles(t,P.fetch);gsSt(t,"ok");ok=true;break}
-  }catch(e){gsSt(t,e.code==="auth"?"paused":e.code==="gone"?"gone":e.code==="rekey"?"rekey":"error",e.message);if(o.interactive&&e.code!=="auth")toast(esc(e.message),"bad")}
+      await gsFetchFiles(t,P.fetch);gsSt(t,"ok");ok=true;
+      if(!o.quiet){const m=gsSumMsg(ch);if(m)toast(m);else if(o.manual)toast("Synced · up to date")}
+      break}
+  }catch(e){gsSt(t,e.code==="auth"?"paused":e.code==="gone"?"gone":e.code==="rekey"?"rekey":"error",e.message);if(o.interactive&&e.code!=="auth")toast(esc(e.message),"bad")
+    else if(e.code==="auth"&&!o.interactive&&!GS.told){GS.told=true;toast("Google sync paused · tap your account button to reconnect","info")}}
   finally{GS.busy.delete(t.id);gsPaint(true)}
   return ok}
 const gsLinked=()=>S.trips.filter(t=>t.sync?.fileId);
+/* What others changed in this pass (your own changes coming back from another phone are left out). */
+function gsChanges(t,P,R){const me=t.sync.me||GS.email,out=[],at=Date.now();
+  const add=(who,verb,what,kind)=>{if(who&&who===me)return;out.push({at,trip:t.id,who:who||"",verb,what:String(what||"").slice(0,120),kind})};
+  const title={items:r=>r.kind==="expense"?(r.title||r.cat||"an expense"):itemTitle(r),memories:r=>r.title||"a memory",files:r=>r.name||"a file"};
+  for(const s of["items","memories"]){const loc=new Set(S[s].filter(x=>x.tripId===t.id).map(x=>x.id));
+    for(const r of P.put[s])add(r.ed||r.by,loc.has(r.id)?"changed":"added",title[s](r),s==="items"?r.kind:"memory")}
+  for(const r of P.fetch)add(r.by,"added",r.type?.startsWith("image/")?"a photo":title.files(r),"file");
+  const tb=new Map((R?.tomb||[]).map(x=>[x.s+":"+x.id,x]));
+  for(const s of["items","memories","files"])for(const id of P.del[s]){const l=S[s].find(x=>x.id===id);if(l)add(tb.get(s+":"+id)?.by,"removed",title[s](l),s==="items"?l.kind:s==="memories"?"memory":"file")}
+  if(P.trip)add(P.trip.ed,"changed","trip details","trip");
+  return out}
+function gsSumMsg(ch){if(!ch?.length)return"";const who=[...new Set(ch.map(c=>c.who))],nm=who.map(w=>esc(gsName(w)));
+  if(ch.length===1){const c=ch[0];return`Synced · ${nm[0]} ${c.verb} “${esc(c.what)}”`}
+  return`Synced · ${ch.length} changes from ${who.length===1?nm[0]:who.length===2?`${nm[0]} and ${nm[1]}`:`${who.length} people`}`}
+/* Sync every shared trip now and say once how it went. */
+async function gsSyncNow(){await GAuth.token(true);await gsMe();const L=gsLinked();
+  const ok=await Promise.all(L.map(t=>syncTrip(t,{interactive:true,quiet:true})));if(!L.length||ok.some(x=>!x))return;
+  toast(gsSumMsg(L.flatMap(t=>GS.lastCh[t.id]||[]))||"Synced · up to date")}
 function gsSyncAll(o={}){if(!gsReady()||Vault.locked||!S.settings)return;for(const t of gsLinked())syncTrip(t,o)}
 let _gsDeb=null;
 function gsChanged(){if(!GS.tok||!gsLinked().length)return;clearTimeout(_gsDeb);_gsDeb=setTimeout(()=>gsSyncAll(),8000)}
@@ -212,7 +237,7 @@ setInterval(()=>{if(GS.tok&&document.visibilityState==="visible")gsSyncAll()},18
 document.addEventListener("visibilitychange",()=>{if(GS.tok&&document.visibilityState==="visible")gsSyncAll()});
 addEventListener("online",()=>{if(GS.tok)gsSyncAll()});
 /* Redraw after a sync without disturbing someone who is typing or has a sheet open. */
-function gsPaint(full){const st=$("#gsStat");if(st){const t=S.trips.find(x=>x.id===st.dataset.trip);if(t?.sync)st.innerHTML=gsStat(t)}
+function gsPaint(full){gsPillPaint();const hub=$("#gsHubBody");if(hub)hub.innerHTML=gsHubBody();const st=$("#gsStat");if(st){const t=S.trips.find(x=>x.id===st.dataset.trip);if(t?.sync)st.innerHTML=gsStat(t)}
   if(full&&!$(".ov")&&!document.activeElement?.matches?.("input,textarea,select")&&!Vault.locked&&S.settings)render();
   else $$(".syncchip").forEach(c=>{const t=S.trips.find(x=>x.id===c.dataset.trip);if(t)c.outerHTML=gsChip(t)})}
 
@@ -222,17 +247,18 @@ const gsEmails=s=>[...new Set(String(s||"").split(/[\s,;]+/).map(x=>x.trim().toL
 const gsInviteMsg=t=>`${GS.name||"A Trip Vault user"} shared a trip with you in Trip Vault. Open the invite link they send you separately to join (it carries the key, which Google never sees).`;
 async function gsStartShare(t,emails){
   await GAuth.token(true);const me=await gsMe();
-  t.sync={fileId:"",code:gsNewCode(),role:"owner",owner:me,members:[],tomb:[],lastSync:0};
+  t.sync={fileId:"",code:gsNewCode(),role:"owner",owner:me,me,members:[],tomb:[],lastSync:0};
+  for(const s of["items","memories","files"])for(const r of S[s])if(r.tripId===t.id&&!r.by){r.by=me;await DB.put(s,r)}
   try{const{out}=gsPlan(t,null);
     const r=await GDrive.create(`${GS_NAME} · ${[...crypto.getRandomValues(new Uint8Array(2))].map(x=>x.toString(16).padStart(2,"0")).join("")}`,await gsSeal({app:"TripVault",kind:"shared-trip",v:1,...out},t.sync.code),{tv:"trip"});
     t.sync.fileId=r.id;await DB.put("trips",t)}
   catch(e){delete t.sync;throw e}
   for(const e of emails)await gsAddMember(t,e,true);
-  await syncTrip(t,{interactive:true})}
+  await syncTrip(t,{interactive:true,quiet:true})}
 async function gsAddMember(t,email,quiet){email=email.toLowerCase();if(!gsEmailOk(email))throw gsErr(`“${esc(email)}” isn't an email address`);
   if(email===GS.email||(t.sync.members||[]).some(m=>m.email===email))return;
   const p=await GDrive.share(t.sync.fileId,email,gsInviteMsg(t));(t.sync.members||=[]).push({email,perm:p.id,at:Date.now()});await DB.put("trips",t);
-  if(!quiet)await syncTrip(t,{interactive:true})}
+  if(!quiet)await syncTrip(t,{interactive:true,quiet:true})}
 async function gsRemoveMember(t,email){const m=(t.sync.members||[]).find(x=>x.email===email);if(!m)return;
   let id=m.perm;if(!id){const l=await GDrive.perms(t.sync.fileId);id=(l.permissions||[]).find(p=>(p.emailAddress||"").toLowerCase()===email)?.id}
   if(id){try{await GDrive.unshare(t.sync.fileId,id)}catch(e){if(e.status!==404)throw e}}
@@ -245,7 +271,7 @@ async function gsRotate(t,removed){
   try{const{P,out}=gsPlan(t,R1);await GDrive.write(t.sync.fileId,await gsSeal({app:"TripVault",kind:"shared-trip",v:1,...out,savedAt:Date.now()},t.sync.code));
     await gsApply(t,P);t.sync.tomb=[]}
   catch(e){Object.assign(t.sync,was);throw e}
-  await DB.put("trips",t);await syncTrip(t,{interactive:true})}
+  await DB.put("trips",t);await syncTrip(t,{interactive:true,quiet:true})}
 async function gsStopShare(t){for(const m of[...(t.sync.members||[])]){let id=m.perm;try{if(!id){const l=await GDrive.perms(t.sync.fileId);id=(l.permissions||[]).find(p=>(p.emailAddress||"").toLowerCase()===m.email)?.id}if(id)await GDrive.unshare(t.sync.fileId,id)}catch(e){}}
   gsUnlink(t)}
 async function gsUnlink(t){delete t.sync;delete GS.st[t.id];await DB.put("trips",t)}
@@ -261,9 +287,9 @@ async function gsJoin(inv){
   const R=cleanBundle(R0);if(!R.trip?.id)throw gsErr("That shared trip is damaged");
   let t=S.trips.find(x=>x.id===R.trip.id);const relink=!!(t?.sync?.fileId&&t.sync.fileId===inv.fileId);
   if(!t){t={...R.trip};S.trips.push(t)}
-  t.sync={fileId:inv.fileId,code:inv.code,role:t.sync?.role==="owner"&&t.sync.fileId===inv.fileId?"owner":"member",owner:R.owner||"",members:R.members||[],tomb:t.sync?.tomb||[],keyring:R.keyring||[],lastSync:t.sync?.lastSync||0};
+  t.sync={fileId:inv.fileId,code:inv.code,role:t.sync?.role==="owner"&&t.sync.fileId===inv.fileId?"owner":"member",owner:R.owner||"",members:R.members||[],tomb:t.sync?.tomb||[],keyring:R.keyring||[],lastSync:t.sync?.lastSync||0,me:GS.email,recent:t.sync?.recent||[]};
   await DB.put("trips",t);S.cur=t.id;S.meta.cur=t.id;S.day=null;S.calM=null;saveMeta();
-  await syncTrip(t,{interactive:true});return{t,relink}}
+  await syncTrip(t,{interactive:true,quiet:true});return{t,relink}}
 
 /* ---------- undo a bad sync: bring back an earlier version of the trip file ----------
    Drive keeps earlier versions of the trip file (for binary files, about 30 days or 100 versions).
@@ -277,7 +303,7 @@ async function gsRestore(t,R0){
   const bump=a=>a.map(x=>({...x,updatedAt:now+1}));
   const R={...R0,trip:R0.trip?{...R0.trip,updatedAt:now+1}:null,items:bump(R0.items),memories:bump(R0.memories),files:bump(R0.files),tomb:(R0.tomb||[]).filter(x=>!keep[x.s]?.has(x.id))};
   const{P}=gsPlan(t,R);await gsApply(t,P);await DB.put("trips",t);await gsFetchFiles(t,P.fetch);
-  return syncTrip(t,{interactive:true})}
+  return syncTrip(t,{interactive:true,quiet:true})}
 async function openVersions(t){
   const ov=sheet({title:`${ic("clock")} Earlier versions`,body:`<div class="small muted">Loading versions from Google Drive…</div>`,foot:`<button class="btn" data-close>Close</button>`}),sb=$(".sb",ov);
   let vs;try{await GAuth.token(true);vs=await gsVersions(t)}catch(e){sb.innerHTML=`<div class="note bad">${ic("alert")}<div>${esc(e.message)}</div></div>`;return}
@@ -315,9 +341,10 @@ function gsSheetBody(t){
   const owner=s.role==="owner",mem=s.members||[];
   return`<div id="gsStat" data-trip="${esc(t.id)}">${gsStat(t)}</div>
    <div class="h mt">${ic("user")}<h2>${owner?"People you shared with":"Shared with"}</h2></div>
-   ${owner?"":`<div class="li"><div class="b"><div class="t">${esc(s.owner||"Trip owner")}</div><div class="d">Owner</div></div></div>`}
-   ${mem.length?mem.map(m=>`<div class="li"><div class="b"><div class="t">${esc(m.email)}${m.email===GS.email?" (you)":""}</div></div>${owner?`<button class="btn xs ghost" data-gsrm="${esc(m.email)}">${ic("x","sm")} Remove</button>`:""}</div>`).join(""):`<div class="small muted">No one yet.</div>`}
+   ${owner?"":`<div class="li">${gsAv(s.owner)}<div class="b"><div class="t">${esc(s.owner||"Trip owner")}</div><div class="d">Owner</div></div></div>`}
+   ${mem.length?mem.map(m=>`<div class="li">${gsAv(m.email)}<div class="b"><div class="t">${esc(m.email)}${m.email===(s.me||GS.email)?" (you)":""}</div></div>${owner?`<button class="btn xs ghost" data-gsrm="${esc(m.email)}">${ic("x","sm")} Remove</button>`:""}</div>`).join(""):`<div class="small muted">No one yet.</div>`}
    ${owner?`<div class="row mt"><input id="gsEm" type="email" placeholder="Add a Gmail address" autocomplete="off"><button class="btn" id="gsAdd">${ic("plus","sm")} Add</button></div>`:""}
+   <div class="small dim mt">${ic("info","sm")} Entries the others add show their coloured initial, so you can tell who added what.</div>
    <div class="h mt">${ic("key")}<h2>Invite link</h2></div>
    ${owner&&s.rekey?`<div class="note warn">${ic("key")}<div><b>New trip key after removing ${esc(s.rekey.removed)}.</b> Send this new link to ${mem.length?esc(mem.map(m=>m.email).join(", ")):"anyone you add"}; the old link no longer opens the trip. <button class="btn xs" id="gsRekeyDone">${ic("check","sm")} Done, I've sent it</button></div></div>`:""}
    <div class="small muted">Send this to the people above (WhatsApp, SMS). It opens Trip Vault and holds the key to the trip, so share it only with them.</div>
@@ -340,14 +367,14 @@ function openShare(t=curTrip()){if(!t){toast("Create a trip first","bad");return
     else if(b.dataset.gsrm){const em=b.dataset.gsrm;if(!(await gate({title:`Remove ${esc(em)}?`,plan:["They lose access to the trip file in Google Drive and stop getting updates","A new trip key is made: send the new invite link to everyone still in the trip. The removed person can't open anything added from now on","What they already have on their phone stays with them"],ok:"Remove",danger:false})))return;
       await busy(b,async()=>{await gsRemoveMember(t,em);$(".sb",ov).innerHTML=gsSheetBody(t);qr();toast(`${esc(em)} removed. Send the new invite link to the others`)})}
     else if(b.id==="gsRekeyDone"){delete t.sync.rekey;await DB.put("trips",t);$(".sb",ov).innerHTML=gsSheetBody(t);qr()}
-    else if(b.id==="gsRe")await busy(b,async()=>{await syncTrip(t,{interactive:true});qr()})
+    else if(b.id==="gsRe")await busy(b,async()=>{await syncTrip(t,{interactive:true,manual:true});qr()})
     else if(b.id==="gsShr")navigator.share({title:`Join “${t.name}” in Trip Vault`,text:`Join our trip “${t.name}” in Trip Vault`,url:gsLink(t)}).catch(()=>{})});
   $("#gsHist",ov)?.addEventListener("click",()=>{ov.remove();openVersions(t)});
-  $("#gsNow",ov)?.addEventListener("click",e=>busy(e.currentTarget,async()=>{if(await syncTrip(t,{interactive:true}))toast("Synced")}));
+  $("#gsNow",ov)?.addEventListener("click",e=>busy(e.currentTarget,async()=>{await syncTrip(t,{interactive:true,manual:true})}));
   $("#gsStop",ov)?.addEventListener("click",async()=>{if(!(await gate({title:"Stop sharing this trip?",plan:["Everyone you shared with loses access to the trip file and stops getting updates","Your trip stays on this phone; their copies stay on theirs"],ok:"Stop sharing"})))return;
-    await busy(null,async()=>{await GAuth.token(true);await gsStopShare(t);ov.remove();render();toast("Stopped sharing")})});
+    await busy(null,async()=>{await GAuth.token(true);await gsStopShare(t);ov.remove();render();gsPillPaint();toast("Stopped sharing")})});
   $("#gsLeave",ov)?.addEventListener("click",async()=>{if(!(await gate({title:"Leave this shared trip?",plan:["You stop getting updates and your changes stop going to the others","The trip stays on this phone as your own copy"],ok:"Leave",danger:false})))return;
-    await gsUnlink(t);ov.remove();render();toast("You left the shared trip")})}
+    await gsUnlink(t);ov.remove();render();gsPillPaint();toast("You left the shared trip")})}
 function openJoin(pre){if(!gsReady()){sheet({title:`${ic("share")} Join a shared trip`,body:gsSheetBody({})});return}
   const ov=sheet({title:`${ic("share")} Join a shared trip`,body:`<p class="muted">Paste the invite link someone sent you. You'll sign in with the Google account they shared the trip with.</p>
     <label for="gsInv">Invite link</label><textarea id="gsInv" class="mono" style="min-height:70px" placeholder="https://…#join=…">${esc(pre||"")}</textarea>
@@ -364,3 +391,56 @@ function gsSettingsBlock(){if(!gsReady())return"";const n=gsLinked().length;
 function gsBackupBlock(){return`<div class="h">${ic("share")}<h2>Shared trips (Google Drive)</h2></div>
    <div class="small muted">Share a trip from its Trip settings, or join one someone shared with you.</div>
    <div class="row wrap mt"><button class="btn" id="gsJoinB">${ic("share","sm")} Join a shared trip</button></div><div class="sep"></div>`}
+
+/* ---------- who's who: a stable colour and initial per person ---------- */
+const gsHue=e=>{let h=7;for(const c of String(e||""))h=(h*31+c.charCodeAt(0))>>>0;return h%360};
+const gsColor=e=>e?`hsl(${gsHue(e)} 58% 46%)`:"var(--tx3)";
+function gsName(e){const l=String(e||"").split("@")[0].replace(/[._+-]+/g," ").replace(/\d+/g,"").trim().slice(0,40);return l?l.replace(/(^|\s)\S/g,c=>c.toUpperCase()):(e?String(e).slice(0,40):"Someone")}
+const gsIni=e=>e?(gsName(e).match(/\S/)?.[0]||"?").toUpperCase():"";
+const gsAv=(e,cls="")=>`<span class="gsav ${cls}" style="--bc:${gsColor(e)}" aria-hidden="true">${e?esc(gsIni(e)):ic("user","sm")}</span>`;
+/* Someone else's entry in a shared trip: their email, else "" (your own entries and unshared trips get no mark). */
+function gsWho(rec){const t=rec&&S.trips.find(x=>x.id===rec.tripId);if(!t?.sync?.fileId||!rec.by)return"";const me=t.sync.me||GS.email;return rec.by===me?"":rec.by}
+function byMark(rec){const w=gsWho(rec);if(!w)return"";const n=esc(`Added by ${gsName(w)}`);
+  return`<span class="bym" style="--bc:${gsColor(w)}" title="${n}" aria-label="${n}">${esc(gsIni(w))}</span>`}
+const byRow=rec=>{const w=gsWho(rec);return w?` data-by style="--bc:${gsColor(w)}"`:""};
+
+/* ---------- header account pill: are you connected, and did everything sync ---------- */
+function gsOverall(){const L=gsLinked(),st=L.map(t=>GS.st[t.id]?.state);
+  if(st.includes("syncing"))return["syncing","Syncing","Syncing your shared trips…"];
+  if(L.length&&!gsOn())return["paused","Reconnect","Google is not connected: shared trips are paused. Tap to connect"];
+  if(st.includes("error")||st.includes("gone"))return["bad","Problem","A shared trip didn't sync. Tap for details"];
+  if(st.includes("rekey"))return["warn","New key","A trip key changed: open the new invite link"];
+  if(!L.length)return["ok","Google","Connected to Google. No shared trips yet"];
+  const last=Math.max(...L.map(t=>t.sync.lastSync||0));return["ok","Synced",`All shared trips synced${last?" "+gsAgo(last):""}`]}
+function gsPillPaint(){const p=$("#gsPill");if(!p)return;const L=gsLinked();
+  if(!gsReady()||Vault.locked||!S.settings||(!L.length&&!gsOn())){p.classList.add("hide");return}
+  const[s,word,tip]=gsOverall(),who=GS.email||L.find(t=>t.sync.me)?.sync.me||"",lbl=`${who?who+" · ":""}${tip}`;
+  p.classList.remove("hide");p.dataset.s=s;p.title=lbl;p.setAttribute("aria-label",lbl);
+  p.innerHTML=`<span class="gsavw">${gsAv(gsOn()?who:"")}<span class="gsdot"></span></span><span class="gsw">${word}</span>`}
+
+/* ---------- sharing hub: account, shared trips, recent changes ---------- */
+function gsHubBody(){
+  if(!gsReady())return gsSheetBody({});
+  const L=gsLinked(),[s,,tip]=gsOverall(),on=gsOn(),me=GS.email||L.find(t=>t.sync.me)?.sync.me||"";
+  const acct=`<div class="gshub-acct" data-s="${s}">${gsAv(on?me:"","lg")}<div class="b"><div class="t">${on?esc(me||"Google account"):"Not connected"}</div><div class="small muted">${on?esc(tip):me?`Last signed in as ${esc(me)}. Connect to sync.`:"Connect Google to share and sync trips."}</div></div>
+    ${on?`<button class="btn xs ghost" id="gsHubOut">${ic("lock","sm")} Disconnect</button>`:`<button class="btn xs pri" id="gsHubIn">${ic("unlock","sm")} Connect</button>`}</div>`;
+  const rows=L.map(t=>{const st=GS.st[t.id]?.state||(on?"ok":"paused"),ppl=[t.sync.owner,...(t.sync.members||[]).map(m=>m.email)].filter(e=>e&&e!==(t.sync.me||GS.email));
+    const dot=st==="ok"?"ok":st==="syncing"?"syncing":st==="paused"||st==="rekey"?"warn":"bad",
+      sub=st==="syncing"?"Syncing…":st==="paused"?"Paused":st==="rekey"?"New trip key: open the new link":st==="gone"?"No longer shared":st==="error"?"Sync problem":t.sync.lastSync?`Synced ${gsAgo(t.sync.lastSync)}`:"Not synced yet";
+    return`<div class="li tap" data-hubtrip="${esc(t.id)}"><span class="gsst" data-s="${dot}"></span><div class="b"><div class="t">${esc(t.name)}${t.sync.role==="owner"?pill("owner","info"):""}</div><div class="d">${esc(sub)}</div></div>
+      <div class="gsppl">${ppl.slice(0,5).map(e=>gsAv(e,"sm")).join("")}${ppl.length>5?`<span class="small dim">+${ppl.length-5}</span>`:""}</div></div>`}).join("");
+  const rec=L.flatMap(t=>(t.sync.recent||[]).map(c=>({...c,tn:t.name}))).sort((a,b)=>b.at-a.at).slice(0,10);
+  return acct+`<div class="row wrap mt" style="gap:6px">${L.length&&on?`<button class="btn" id="gsHubSync">${ic("zap","sm")} Sync all now</button>`:""}${curTrip()&&!curTrip().sync?.fileId?`<button class="btn" id="gsHubShare">${ic("share","sm")} Share this trip</button>`:""}<button class="btn" id="gsHubJoin">${ic("plus","sm")} Join a shared trip</button></div>
+    <div class="h mt">${ic("share")}<h2>Shared trips</h2></div>${rows||`<div class="small muted">None yet. Share a trip from here or from its settings.</div>`}
+    <div class="h mt">${ic("clock")}<h2>Recent changes from others</h2></div>
+    ${rec.length?rec.map(c=>`<div class="li gsrec">${gsAv(c.who,"sm")}<div class="b"><div class="t" style="font-weight:500"><b>${esc(gsName(c.who))}</b> ${esc(c.verb)} ${esc(c.what)}</div><div class="d">${esc(c.tn)} · ${gsAgo(c.at)}</div></div></div>`).join(""):`<div class="small muted">Nothing yet. When someone else adds or changes something, it shows here and their entries get their coloured initial.</div>`}`}
+function openHub(){
+  const ov=sheet({title:`${ic("share")} Sharing &amp; sync`,body:`<div id="gsHubBody">${gsHubBody()}</div>`,foot:`<button class="btn" data-close>Close</button>`}),sb=$(".sb",ov);
+  sb.addEventListener("click",async e=>{const b=e.target.closest("button,[data-hubtrip]");if(!b)return;
+    const run=async fn=>{if(b.tagName==="BUTTON"){b.disabled=true}try{await fn()}catch(err){toast(esc(err.message||String(err)),"bad")}finally{if(b.isConnected)b.disabled=false;gsPaint()}};
+    if(b.dataset.hubtrip){const t=S.trips.find(x=>x.id===b.dataset.hubtrip);if(t){ov.remove();openShare(t)}}
+    else if(b.id==="gsHubIn")await run(async()=>{await GAuth.token(true);await gsMe();gsSyncAll()});
+    else if(b.id==="gsHubOut"){GAuth.revoke();gsPaint();render();toast("Disconnected from Google. Shared trips pause until you connect again","info")}
+    else if(b.id==="gsHubSync")await run(gsSyncNow);
+    else if(b.id==="gsHubShare"){ov.remove();openShare(curTrip())}
+    else if(b.id==="gsHubJoin"){ov.remove();openJoin()}})}

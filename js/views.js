@@ -6,7 +6,7 @@ function applyTheme(){
   const m=document.querySelector("meta[name=theme-color]");if(m)requestAnimationFrame(()=>{m.content=getComputedStyle(document.documentElement).getPropertyValue("--bg").trim()||"#0a0d14"});
 }
 function render(){
-  const t=curTrip();
+  const t=curTrip();if(typeof gsPillPaint==="function")gsPillPaint();
   $("#tsName").textContent=t?t.name:"No trip yet";$("#tsMeta").textContent=t?tripMeta(t):"tap to start";
   $$("#nav [data-v]").forEach(b=>b.classList.toggle("on",b.dataset.v===S.view));
   $("#lockBtn").classList.toggle("hide",!Vault.protected);
@@ -86,7 +86,7 @@ function viewToday(t){
   h+=`<div class="card"><div class="h">${ic("zap")}<h2>Quick actions</h2></div><div class="grid g2">
     <button class="btn" data-a="import">${ic("upload")} Import booking</button><button class="btn" data-a="add" data-k="expense">${ic("tag")} Log expense</button>
     <button class="btn" data-a="newMem">${ic("camera")} Capture memory</button><button class="btn" data-a="copyItin">${ic("copy")} Copy itinerary</button>
-    <button class="btn" data-a="ics">${ic("cal")} Add to calendar</button><button class="btn" data-a="shareItin">${ic("share")} Share itinerary</button></div></div>`;
+    <button class="btn" data-a="ics">${ic("cal")} Add to calendar</button><button class="btn" data-a="gsShare">${ic("share")} ${t.sync?.fileId?"Shared trip":"Share trip"}</button></div></div>`;
   return h}
 
 /* ===================== Vault (bookings · documents · money · packing) ===================== */
@@ -143,7 +143,7 @@ function evCard(ev,big){const it=ev.it,now=Date.now();const mins=(ev.su-now)/6e4
   if(isRide(it.kind))extra=`<div class="small" style="color:var(--warn);margin-top:3px">${ic("clock","sm")} Reach ${esc(it.fromName||it.from)} by ${itemEvents(it)[0].s.slice(11)}${it.seat?" · "+esc(it.seat):""}</div>`;
   if(it.kind==="hotel"&&it.address)extra=`<div class="small muted" style="margin-top:3px">${ic("pin","sm")} <span class="copy" data-copy="${esc(it.address)}">${esc(it.address)}</span></div>`;
   const mq=it.kind==="flight"?airportQ(it.from):itemPlace(it);if(mq)extra+=`<div class="row wrap" style="margin-top:6px">${mapLink(mq,it.kind==="flight"?esc(it.from)+" airport":"Map")}</div>`;
-  return`<div class="li tap" data-a="item" data-id="${it.id}">${kic(it.kind)}<div class="b"><div class="t">${esc(ev.label)} ${when}</div><div class="d">${fmtD(ev.s.slice(0,10))} · ${ev.s.slice(11)}${ev.e!==ev.s?" – "+ev.e.slice(11)+(ev.etz!==ev.tz?" "+tzShort(ev.etz):""):""} ${tzShort(ev.tz)!==tzShort(S.settings.homeTz)?`<span class="dim">(${tzShort(ev.tz)})</span>`:""}</div>${extra}</div><div class="r">${refChip(it.ref)}</div></div>`}
+  return`<div class="li tap"${byRow(it)} data-a="item" data-id="${it.id}">${kic(it.kind)}<div class="b"><div class="t">${esc(ev.label)}${byMark(it)} ${when}</div><div class="d">${fmtD(ev.s.slice(0,10))} · ${ev.s.slice(11)}${ev.e!==ev.s?" – "+ev.e.slice(11)+(ev.etz!==ev.tz?" "+tzShort(ev.etz):""):""} ${tzShort(ev.tz)!==tzShort(S.settings.homeTz)?`<span class="dim">(${tzShort(ev.tz)})</span>`:""}</div>${extra}</div><div class="r">${refChip(it.ref)}</div></div>`}
 function stayCard(st){
   return`<div class="li" style="border:0">${kic("hotel")}<div class="b"><div class="t tap" data-a="item" data-id="${st.id}">${esc(st.name)}</div><div class="d">${esc(itemSub(st))}</div>
   ${st.address?`<div class="small mt" style="margin-top:4px">${ic("pin","sm")} <span class="copy" data-copy="${esc(st.address)}">${esc(st.address)}</span></div>`:""}
@@ -166,7 +166,7 @@ function dayList(m,d,t){
     else if(s.cont){sm="→ next day "+ev.e.slice(11)}
     if(s.mid)return`<div class="ev"><div class="tm">All day</div><div class="sp small">${esc(ev.label)}</div></div>`;
     if(it.kind==="flight"&&!s.from&&ev.etz!==ev.tz&&!s.cont)sm=`→ ${ev.e.slice(11)} ${esc(it.to||"")} time`;
-    return`<div class="ev tap" data-a="item" data-id="${it.id}"><div class="tm">${tm}<small>${sm}</small></div>${kic(it.kind,1)}<div class="sp" style="min-width:0"><div style="font-weight:600">${title}</div><div class="small muted">${it.kind==="flight"||it.kind==="train"?esc(itemTitle(it))+" · ":""}${it.kind==="hotel"?esc(it.address||""):esc(it.location||it.airline||it.cls||"")}</div></div><div class="evref">${refChip(it.ref)}${mapLink(it.kind==="flight"&&ev.label.startsWith(it.flightNo||"Flight")?airportQ(it.from):itemPlace(it))}</div></div>`}).join("")}
+    return`<div class="ev tap"${byRow(it)} data-a="item" data-id="${it.id}"><div class="tm">${tm}<small>${sm}</small></div>${kic(it.kind,1)}<div class="sp" style="min-width:0"><div style="font-weight:600">${title}${byMark(it)}</div><div class="small muted">${it.kind==="flight"||it.kind==="train"?esc(itemTitle(it))+" · ":""}${it.kind==="hotel"?esc(it.address||""):esc(it.location||it.airline||it.cls||"")}</div></div><div class="evref">${refChip(it.ref)}${mapLink(it.kind==="flight"&&ev.label.startsWith(it.flightNo||"Flight")?airportQ(it.from):itemPlace(it))}</div></div>`}).join("")}
 /* ---------- Plan calendar: month grid, only trip days selectable ---------- */
 const CAL_TRAVEL=["flight","train","bus","ferry","car"];
 const calWide=()=>matchMedia("(min-width:900px)").matches;
@@ -214,7 +214,7 @@ function viewBook(t){
 function itemRow(it,t){const p=payInfo(it);const nf=S.files.filter(f=>(f.itemIds||[]).includes(it.id)).length;
   let pay="";if(it.kind==="expense")pay=pill(fmtM(p.cost,p.cur));else if(p.cost)pay=p.pend>0?pill(`${fmtM(p.pend,p.cur)} due${p.due?" "+fmtDs(p.due):""}`,p.due&&p.due<todayIn("Asia/Kolkata")?"bad":"warn"):pill(`${ic("check","sm")} ${fmtM(p.cost,p.cur)}`,"ok");else if(it.groupId)pay=pill("same booking");
   const dup=dupCheck(it,it.id);
-  return`<div class="li tap" data-a="item" data-id="${it.id}">${kic(it.kind)}<div class="b"><div class="t">${esc(itemTitle(it))}${dup.lvl==="dup"?pill(ic("layers","sm")+" duplicate?","bad"):""}${it.refundable?pill("refundable","info"):""}</div><div class="d">${esc(itemSub(it))}</div>${it.names?.length?`<div class="small dim">${ic("user","sm")} ${esc(it.names.join(", "))}</div>`:""}</div><div class="r"><div>${pay}</div><div style="margin-top:4px">${refChip(it.ref)}${nf?` <span class="small dim">${ic("clip","sm")}${nf}</span>`:""}${mapLink(itemPlace(it))}</div></div></div>`}
+  return`<div class="li tap"${byRow(it)} data-a="item" data-id="${it.id}">${kic(it.kind)}<div class="b"><div class="t">${esc(itemTitle(it))}${byMark(it)}${dup.lvl==="dup"?pill(ic("layers","sm")+" duplicate?","bad"):""}${it.refundable?pill("refundable","info"):""}</div><div class="d">${esc(itemSub(it))}</div>${it.names?.length?`<div class="small dim">${ic("user","sm")} ${esc(it.names.join(", "))}</div>`:""}</div><div class="r"><div>${pay}</div><div style="margin-top:4px">${refChip(it.ref)}${nf?` <span class="small dim">${ic("clip","sm")}${nf}</span>`:""}${mapLink(itemPlace(it))}</div></div></div>`}
 const CAT_COL={Flight:"flight",Stay:"hotel",Train:"train",Bus:"bus",Ferry:"ferry","Car rental":"car",Transfer:"transfer",Activity:"activity"};
 function catBars(t,B){const lim=t.catBudgets||{},keys=[...new Set([...Object.keys(B.cats),...Object.keys(lim).filter(k=>lim[k]>0)])];
   if(!keys.length)return`<div class="small muted">No costs yet.</div>`;const mx=Math.max(1,...keys.map(k=>B.cats[k]||0));
@@ -240,7 +240,7 @@ function viewMoney(t){
   h+=`<div class="card"><div class="h">${ic("tag")}<h2>Trip expenses</h2><span class="sp"></span><span class="small muted">${fmtM(exT)}${dd?` · ${fmtM(exT/dd)}/day`:""}</span></div>
    <div class="fg f4" id="qx"><div><label>Amount</label><input type="number" step="0.01" id="qxA" placeholder="0"></div><div><label>Currency</label><select id="qxC">${CURS.map(c=>`<option ${c===(isIntlTrip(t)&&t.localCur?t.localCur:HC())?"selected":""}>${c}</option>`).join("")}</select></div><div><label>Category</label><select id="qxK">${EXP_CATS.map(c=>`<option>${c}</option>`).join("")}</select></div><div><label>Note</label><input id="qxN" placeholder="Dinner at…"></div>${tripPeople(t).length>1?`<div><label>Paid by</label><select id="qxP"><option value="">—</option>${tripPeople(t).map(p=>`<option>${esc(p)}</option>`).join("")}</select></div>`:""}</div>
    <div class="row mt"><span class="sp"></span><button class="btn pri" data-a="quickExp">${ic("plus")} Log expense</button></div>
-   ${ex.slice(0,12).map(i=>`<div class="li tap" data-a="item" data-id="${i.id}"><div class="b"><div class="t">${esc(i.title||i.cat)}</div><div class="d">${esc(i.cat||"")} · ${fmtDs(i.date)}</div></div><div class="r">${fmtM(i.cost,i.cur)}${i.cur!==HC()&&rate(t,i.cur)?`<div class="small dim">≈ ${fmtM(toINR(t,i.cost,i.cur))}</div>`:""}</div></div>`).join("")}</div>`;
+   ${ex.slice(0,12).map(i=>`<div class="li tap"${byRow(i)} data-a="item" data-id="${i.id}"><div class="b"><div class="t">${esc(i.title||i.cat)}${byMark(i)}</div><div class="d">${esc(i.cat||"")} · ${fmtDs(i.date)}</div></div><div class="r">${fmtM(i.cost,i.cur)}${i.cur!==HC()&&rate(t,i.cur)?`<div class="small dim">≈ ${fmtM(toINR(t,i.cost,i.cur))}</div>`:""}</div></div>`).join("")}</div>`;
   return h}
 function viewDocs(t){
   const docs=tripItems(t.id).filter(i=>i.kind==="doc");const files=S.files.filter(f=>f.tripId===t.id&&!f.memId).sort((a,b)=>b.createdAt-a.createdAt);

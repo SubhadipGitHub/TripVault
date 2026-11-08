@@ -38,9 +38,9 @@ const memDefaultDate=t=>{const ph=tripPhase(t);if(ph.p==="during")return ph.toda
 function memCard(m){
   const ph=memPhotos(m),f0=S.files.find(f=>f.id===ph[0]);const ar=f0?.w&&f0?.h?Math.max(.75,Math.min(1.6,f0.w/f0.h)):4/3;
   const body=ph.length>1?`<div class="ph multi">${ph.slice(0,4).map(id=>`<img src="${photoUrl(id)}" alt="" loading="lazy">`).join("")}</div>`:ph.length?`<img class="ph" style="--ar:${ar}" src="${photoUrl(ph[0])}" alt="${esc(m.title||"Memory photo")}" loading="lazy">`:"";
-  return`<article class="mem ${ph.length?"":"noph"}" tabindex="0" role="button" data-a="memView" data-id="${m.id}" aria-label="${esc(m.title||"Memory")}">
+  return`<article class="mem ${ph.length?"":"noph"}"${byRow(m)} tabindex="0" role="button" data-a="memView" data-id="${m.id}" aria-label="${esc(m.title||"Memory")}">
     <span class="tape"></span>${m.fav?`<span class="fav">${ic("star","sm")}</span>`:""}${body}
-    <div class="cap"><h4>${esc(m.title||"Untitled moment")}</h4>${m.text?`<p>${esc(m.text)}</p>`:""}
+    <div class="cap"><h4>${esc(m.title||"Untitled moment")}${byMark(m)}</h4>${m.text?`<p>${esc(m.text)}</p>`:""}
     <div class="when"><span>${fmtDs(m.date)}${m.place?" · "+esc(m.place):""}</span>${moodTag(m.mood)}</div></div></article>`;
 }
 

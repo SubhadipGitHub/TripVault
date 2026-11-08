@@ -584,3 +584,31 @@ span.avsnap{display:contents}
 .gsinv canvas{width:116px;height:116px;flex:none;border-radius:8px;background:#fff;image-rendering:pixelated}
 .gslink{word-break:break-all;line-height:1.35;cursor:pointer;color:var(--tx2)}
 @media(max-width:420px){.gsinv{flex-direction:column;align-items:center}.gsinv .sp{width:100%}}
+
+/* Google account pill (header), people's colours, others' entries */
+.gspill{display:inline-flex;align-items:center;gap:7px;height:38px;padding:0 11px 0 4px;border-radius:999px;background:var(--card);border:1px solid var(--line);flex:none;font:600 12px/1 var(--sans);color:var(--tx2);cursor:pointer;transition:border-color .15s}
+.gspill:hover{border-color:var(--line2)}
+.gsavw{position:relative;display:grid}
+.gsav{width:22px;height:22px;border-radius:50%;display:inline-grid;place-items:center;background:var(--bc,var(--tx3));color:#fff;font:700 11px/1 var(--sans);flex:none;letter-spacing:0}
+.gsav .ic{width:13px;height:13px}
+.gsav.sm{width:20px;height:20px;font-size:10px}
+.gsav.lg{width:40px;height:40px;font-size:17px}.gsav.lg .ic{width:20px;height:20px}
+.gspill .gsav{width:28px;height:28px;font-size:13px}
+.gsdot{position:absolute;right:-2px;bottom:-2px;width:11px;height:11px;border-radius:50%;background:var(--ok);border:2px solid var(--card)}
+.gspill[data-s=paused] .gsdot,.gspill[data-s=warn] .gsdot{background:var(--warn)}
+.gspill[data-s=bad] .gsdot{background:var(--bad)}
+.gspill[data-s=syncing] .gsdot{background:var(--acc);animation:gspulse 1s ease-in-out infinite}
+.gspill[data-s=paused]{color:var(--warn)}.gspill[data-s=bad]{color:var(--bad)}.gspill[data-s=ok] .gsw{color:var(--ok)}
+@keyframes gspulse{50%{transform:scale(1.3);opacity:.55}}
+@media(max-width:760px){.gspill{width:38px;padding:0;justify-content:center}.gspill .gsw{display:none}}
+@media(max-width:466px){.gspill{width:34px;height:34px}.gspill .gsav{width:24px;height:24px;font-size:12px}}
+.gshub-acct{display:flex;gap:12px;align-items:center;padding:12px;border-radius:14px;background:var(--card);border:1px solid var(--line)}
+.gshub-acct .b{flex:1;min-width:0}.gshub-acct .t{font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gshub-acct[data-s=paused]{border-color:color-mix(in srgb,var(--warn) 45%,transparent)}
+.gshub-acct[data-s=bad]{border-color:color-mix(in srgb,var(--bad) 45%,transparent)}
+.gsst{width:10px;height:10px;border-radius:50%;background:var(--ok);flex:none;margin-top:5px}
+.gsst[data-s=warn]{background:var(--warn)}.gsst[data-s=bad]{background:var(--bad)}.gsst[data-s=syncing]{background:var(--acc);animation:gspulse 1s infinite}
+.gsppl{display:flex;align-items:center;gap:0}.gsppl .gsav{margin-left:-5px;border:2px solid var(--bg2,var(--card))}.gsppl .gsav:first-child{margin-left:0}
+.bym{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;background:var(--bc);color:#fff;font:700 9.5px/1 var(--sans);margin-left:6px;flex:none;vertical-align:2px;font-style:normal;letter-spacing:0}
+.li[data-by],.ev[data-by]{box-shadow:inset 3px 0 0 var(--bc);padding-left:10px;background:linear-gradient(90deg,color-mix(in srgb,var(--bc) 9%,transparent),transparent 45%)}
+.mem[data-by]{box-shadow:0 6px 18px rgba(0,0,0,.32),0 0 0 2px var(--bc)}

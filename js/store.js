@@ -61,15 +61,17 @@ const saveMeta=()=>DB.put("meta",{k:"state",v:S.meta});
 const curTrip=()=>S.trips.find(t=>t.id===S.cur);
 const tripItems=(id=S.cur)=>S.items.filter(i=>i.tripId===id);
 const tripMems=(id=S.cur)=>S.memories.filter(m=>m.tripId===id);
-async function saveTrip(t){t.updatedAt=Date.now();await DB.put("trips",t);const i=S.trips.findIndex(x=>x.id===t.id);i>=0?S.trips[i]=t:S.trips.push(t);markDirty()}
-async function saveItem(it){it.updatedAt=Date.now();it.createdAt??=Date.now();await DB.put("items",it);const i=S.items.findIndex(x=>x.id===it.id);i>=0?S.items[i]=it:S.items.push(it);markDirty()}
+/* Shared trips: remember who added (by) and who last changed (ed) each record, so others' entries can be told apart */
+function gsStamp(tripId,r){const t=S.trips.find(x=>x.id===tripId),me=t?.sync?.fileId?(t.sync.me||(typeof GS==="object"?GS.email:"")):"";if(me){r.by||=me;r.ed=me}}
+async function saveTrip(t){t.updatedAt=Date.now();if(t.sync?.fileId&&t.sync.me)t.ed=t.sync.me;await DB.put("trips",t);const i=S.trips.findIndex(x=>x.id===t.id);i>=0?S.trips[i]=t:S.trips.push(t);markDirty()}
+async function saveItem(it){it.updatedAt=Date.now();it.createdAt??=Date.now();gsStamp(it.tripId,it);await DB.put("items",it);const i=S.items.findIndex(x=>x.id===it.id);i>=0?S.items[i]=it:S.items.push(it);markDirty()}
 /* Shared trips (js/gsync.js): remember what was deleted so the next sync passes it on instead of bringing it back */
-async function tombstone(tripId,s,id){const t=S.trips.find(x=>x.id===tripId);if(!t?.sync)return;(t.sync.tomb||=[]).push({s,id,at:Date.now()});await DB.put("trips",t)}
+async function tombstone(tripId,s,id){const t=S.trips.find(x=>x.id===tripId);if(!t?.sync)return;(t.sync.tomb||=[]).push({s,id,at:Date.now(),...(t.sync.me?{by:t.sync.me}:{})});await DB.put("trips",t)}
 async function delItem(id){const it=S.items.find(i=>i.id===id);if(it)await tombstone(it.tripId,"items",id);await DB.del("items",id);S.items=S.items.filter(i=>i.id!==id);
   for(const f of S.files.filter(f=>(f.itemIds||[]).includes(id))){f.itemIds=f.itemIds.filter(x=>x!==id);await DB.put("files",f)}markDirty()}
-async function saveFile(f){f.updatedAt=Date.now();await DB.put("files",f);const i=S.files.findIndex(x=>x.id===f.id);i>=0?S.files[i]=f:S.files.push(f);markDirty()}
+async function saveFile(f){f.updatedAt=Date.now();gsStamp(f.tripId,f);await DB.put("files",f);const i=S.files.findIndex(x=>x.id===f.id);i>=0?S.files[i]=f:S.files.push(f);markDirty()}
 async function delFile(id){const f=S.files.find(x=>x.id===id);if(f)await tombstone(f.tripId,"files",id);await DB.del("files",id);S.files=S.files.filter(f=>f.id!==id);for(const it of S.items.filter(i=>(i.fileIds||[]).includes(id))){it.fileIds=it.fileIds.filter(x=>x!==id);await DB.put("items",it)}markDirty()}
-async function saveMem(m){m.updatedAt=Date.now();m.createdAt??=Date.now();await DB.put("memories",m);const i=S.memories.findIndex(x=>x.id===m.id);i>=0?S.memories[i]=m:S.memories.push(m);markDirty()}
+async function saveMem(m){m.updatedAt=Date.now();m.createdAt??=Date.now();gsStamp(m.tripId,m);await DB.put("memories",m);const i=S.memories.findIndex(x=>x.id===m.id);i>=0?S.memories[i]=m:S.memories.push(m);markDirty()}
 async function delMem(id){const m=S.memories.find(x=>x.id===id);if(m){await tombstone(m.tripId,"memories",id);for(const fid of m.photoIds||[])await tombstone(m.tripId,"files",fid)}await DB.del("memories",id);S.memories=S.memories.filter(x=>x.id!==id);
   for(const fid of m?.photoIds||[]){const u=PHOTO_URLS.get(fid);if(u){URL.revokeObjectURL(u);PHOTO_URLS.delete(fid)}await DB.del("files",fid);S.files=S.files.filter(f=>f.id!==fid)}markDirty()}
 function markDirty(){S.meta.dirty=Date.now();saveMeta();SEARCH.stale=true;if(typeof gsChanged==="function")gsChanged()}
