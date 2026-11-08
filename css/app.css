@@ -73,6 +73,9 @@ a{color:var(--acc)}
 .kbd{font:600 10px var(--mono);border:1px solid var(--line2);border-bottom-width:2px;border-radius:5px;padding:1px 5px;color:var(--tx3)}
 .srch{display:flex;align-items:center;gap:8px;height:38px;padding:0 12px;border-radius:12px;background:var(--card);border:1px solid var(--line);color:var(--tx3);font-size:12.5px;flex:none}
 .srch:hover{border-color:var(--line2);color:var(--tx2)}
+/* search and the icon buttons sit at the right end of the header; the trip picker keeps the left */
+.top .srch{margin-left:auto}
+.top .srch .kbd{margin-left:auto}
 
 /* ---------- nav dock ---------- */
 .nav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + var(--safe-b));z-index:20;width:min(460px,calc(100% - 20px - var(--safe-l) - var(--safe-r)));background:var(--glass2);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid var(--line2);border-radius:24px;box-shadow:var(--sh);display:flex;justify-content:space-around;align-items:center;padding:6px}
@@ -84,7 +87,10 @@ a{color:var(--acc)}
 .nav .fab:active{transform:scale(.94)}
 @media(min-width:900px){
   body{padding-bottom:30px}
-  .nav{position:sticky;top:57px;bottom:auto;left:auto;transform:none;width:auto;max-width:1100px;margin:10px auto 0;justify-content:center;gap:4px;border-radius:16px;background:var(--glass);padding:5px}
+  /* header content lines up with the nav bar and the page column instead of hugging the left edge */
+  .top{padding-left:max(14px,calc((100% - 1100px) / 2));padding-right:max(14px,calc((100% - 1100px) / 2));gap:12px}
+  .top .srch{min-width:260px}
+  .nav{position:sticky;top:57px;bottom:auto;left:auto;transform:none;width:auto;max-width:min(1100px,calc(100% - 28px));margin:10px auto 0;justify-content:center;gap:4px;border-radius:16px;background:var(--glass);padding:5px}
   .nav button{flex:none;flex-direction:row;font-size:13px;gap:7px;padding:8px 16px;min-height:0;border-radius:11px}
   .nav .fab{margin:0 6px;width:auto;height:auto;padding:8px 18px;border-radius:11px;border:0;box-shadow:none;flex-direction:row}
   .nav .fab::after{content:"Add";font-weight:700;font-size:13px}
