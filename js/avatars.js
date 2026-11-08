@@ -22,9 +22,17 @@ function avSlot(t,cls=""){
   return`<div class="avslot ${party==="solo"?"":"wide"} ${cls}" data-a="avPoke" role="img" aria-label="${lbl}" title="Tap to say hi">${crew.length>4?`<span class="avmore">+${crew.length-4}</span>`:""}</div>`;
 }
 
+/* A still picture of the crew for places that can't host the live canvas (empty states).
+   Uses the cached image when there is one, otherwise the fallback icon until AV.attach() fills it in. */
+const SNAP_W=240,SNAP_H=220;
+function crewArt(t,pose,fb){
+  if(!AV.can())return fb;const u=AV.cache.get(AV.snapKey(t,pose,SNAP_W,SNAP_H));
+  return u?`<img class="avsnap" src="${u}" alt="" aria-hidden="true">`:`<span class="avsnap" data-pose="${pose}" aria-hidden="true">${fb}</span>`;
+}
+
 /* ---------- engine ---------- */
 const AV={T:null,ld:null,dead:false,r:null,cv:null,sc:null,cam:null,root:null,crew:[],fx:[],key:"",act:null,
-  run:false,io:null,slot:null,introOn:false,frame:{W:1,H:1.8,cx:0},clock:0,lastT:0,
+  run:false,io:null,slot:null,introOn:false,frame:{W:1,H:1.8,cx:0},clock:0,lastT:0,cache:new Map(),
   rm:matchMedia("(prefers-reduced-motion: reduce)"),
   mode(){const m=S.settings?.anim||"full";if(m==="off")return"off";if(this.rm.matches)return"still";return m},
   can(){return!this.dead&&this.mode()!=="off"&&!!window.WebGLRenderingContext},
@@ -139,8 +147,8 @@ const AV={T:null,ld:null,dead:false,r:null,cv:null,sc:null,cam:null,root:null,cr
     const xs=this.crew.map(c=>c.home.x);this.frame={cx:(Math.min(...xs)+lx)/2,W:(lx+.3)-(Math.min(...xs)-.35),H:party==="group"?2.05:1.62};
     this.pose(0);
   },
-  fit(w,h,wide){this.r.setSize(w,h,false);const c=this.cam,f=this.frame,k=Math.tan(c.fov*Math.PI/360);c.aspect=w/h;
-    const W=f.W*(wide?1.9:1.12),H=f.H*(wide?1.55:1.16),d=Math.max(H/2/k,W/2/(k*c.aspect));
+  fit(w,h,wide,pad=1){this.r.setSize(w,h,false);const c=this.cam,f=this.frame,k=Math.tan(c.fov*Math.PI/360);c.aspect=w/h;
+    const W=f.W*(wide?1.9:1.12),H=f.H*(wide?1.55:1.16),d=Math.max(H/2/k,W/2/(k*c.aspect))*pad;
     c.position.set(f.cx,f.H*.56+.18,d);c.lookAt(f.cx,f.H*.47,0);c.updateProjectionMatrix()},
 
   /* ----- animation ----- */
@@ -183,6 +191,7 @@ const AV={T:null,ld:null,dead:false,r:null,cv:null,sc:null,cam:null,root:null,cr
   /* ----- hero slot: called after every render() ----- */
   attach(){
     if(this.introOn)return;
+    this.fillSnaps();
     const slot=$(".avslot:not(.gone)");
     if(!slot||!this.can()){this.stop();this.io?.disconnect();this.slot=null;return}
     if(!this.r){this.load().then(()=>this.attach(),()=>{});return}
@@ -197,6 +206,34 @@ const AV={T:null,ld:null,dead:false,r:null,cv:null,sc:null,cam:null,root:null,cr
     this.start()},
   cheer(){this.pendCheer=true},
   poke(){if(this.mode()==="still"||!this.r)return;this.play(this.party==="solo"?"wave":"cheer",this.party==="solo"?1.2:1.1)},
+
+  /* ----- still snapshots: render a crew once into a 2D canvas, then put the live crew back ----- */
+  snapKey(t,pose,w,h){const{crew}=crewOf(t);return[t?.id||"welcome",crew.join(""),t?isIntlTrip(t):"",pose,w,h,getComputedStyle(document.documentElement).getPropertyValue("--acc").trim()].join("|")},
+  async snap(t,pose,w,h){
+    if(!this.can())return null;try{await this.load()}catch(e){return null}if(this.dead||this.introOn)return null;
+    // everything below runs in one task, so the hero never shows the snapshot frame
+    const KEEP=["root","crew","party","intl","pennant","extra","mover","frame","act","fx"],sv={};KEEP.forEach(k=>sv[k]=this[k]);
+    const size=this.r.getSize(new this.T.Vector2()),pr=this.r.getPixelRatio();
+    if(sv.root)sv.root.visible=false;this.root=null;this.fx=[];
+    let out=null;
+    try{this.build(t,false);const tmp=this.root;
+      this.act=pose==="idle"?null:{type:pose,t0:0,dur:1};const at=pose==="cheer"?.25:.5;
+      for(let i=0;i<16;i++)this.pose(at); // let the eased arm angles settle on the frozen pose
+      this.crew.forEach(c=>c.eyes.forEach(e=>e.scale.y=1));
+      this.r.setPixelRatio(1);this.fit(w,h,false,1.3);this.r.render(this.sc,this.cam);
+      out=document.createElement("canvas");out.width=w;out.height=h;out.getContext("2d").drawImage(this.cv,0,0,w,h);
+      this.sc.remove(tmp)}
+    catch(e){out=null}
+    finally{KEEP.forEach(k=>this[k]=sv[k]);if(this.root)this.root.visible=true;
+      this.r.setPixelRatio(pr);this.r.setSize(size.x||1,size.y||1,false);
+      if(this.root&&size.x){this.fit(size.x,size.y,false);this.r.render(this.sc,this.cam)}}
+    return out},
+  async snapURL(t,pose,w,h){const k=this.snapKey(t,pose,w,h);if(this.cache.has(k))return this.cache.get(k);
+    const c=await this.snap(t,pose,w,h);if(!c)return null;const u=c.toDataURL("image/png");
+    this.cache.set(k,u);if(this.cache.size>12)this.cache.delete(this.cache.keys().next().value);return u},
+  fillSnaps(){const ph=$$("span.avsnap[data-pose]:not([data-busy])");if(!ph.length||!this.can())return;
+    const t=curTrip();ph.forEach(async el=>{el.dataset.busy="1";const u=await this.snapURL(t,el.dataset.pose,SNAP_W,SNAP_H);
+      if(u&&el.isConnected){const im=new Image();im.className="avsnap";im.alt="";im.setAttribute("aria-hidden","true");im.src=u;el.replaceWith(im)}})},
 
   /* ----- launch intro: crew walks in, cheers, then shrinks into the hero slot ----- */
   async intro(t){

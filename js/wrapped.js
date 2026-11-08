@@ -66,6 +66,9 @@ function wFoot(c,W,H,th,i,n){c.fillStyle=th.dim;c.font=`700 26px ${WF.mono}`;spa
 function eyebrow(c,th,txt,y=250){c.fillStyle=th.accent;c.font=`700 34px ${WF.mono}`;spacing(c,10);c.textAlign="left";c.fillText(txt.toUpperCase(),80,y);spacing(c,0)}
 function bigTitle(c,th,txt,y=380,size=92){c.fillStyle=th.ink;c.font=`700 ${size}px ${WF.serif}`;c.textAlign="left";return putLines(c,wrapLines(c,txt,920),80,y,size*1.12,3)}
 
+/* The travel crew, drawn from a still snapshot. Scaled down to fit above the footer; skipped if there's no room. */
+function wCrew(c,img,x,top,align){const room=1790-top;if(room<300)return;const s=Math.min(1,room/img.height),w=img.width*s,h=img.height*s;
+  c.drawImage(img,align==="right"?x-w:x,top+(room>img.height?room-img.height:0)*.5,w,h)}
 /* ---------- card builders: each returns a draw(ctx,W,H,th,D) or null if there is nothing to show ---------- */
 function wCards(D){
   const s=D.st,cards=[];
@@ -73,6 +76,7 @@ function wCards(D){
     eyebrow(c,th,D.multi?"Your travel year, wrapped":"Your trip, wrapped",300);
     c.fillStyle=th.ink;c.font=`700 168px ${WF.serif}`;let y=putLines(c,wrapLines(c,D.title,920),80,560,176,4);
     c.fillStyle=th.dim;c.font=`500 44px ${WF.sans}`;y+=30;c.fillText(D.range,80,y);if(D.sub){y+=64;c.fillText(D.sub,80,y)}
+    if(D.crewCheer)wCrew(c,D.crewCheer,60,Math.max(1160,y+40),"left");
     const cx=W-270,cy=H-470;c.save();c.translate(cx,cy);c.rotate(-.21);c.strokeStyle=th.accent;c.lineWidth=9;c.beginPath();c.arc(0,0,180,0,7);c.stroke();c.lineWidth=3;c.setLineDash([10,12]);c.beginPath();c.arc(0,0,158,0,7);c.stroke();c.setLineDash([]);
     c.fillStyle=th.accent;c.textAlign="center";c.font=`800 52px ${WF.mono}`;spacing(c,8);c.fillText("WRAPPED",0,-6);c.font=`700 36px ${WF.mono}`;c.fillText(D.year,0,52);spacing(c,0);c.restore();c.textAlign="left"}});
   const nums=[[s.days,"days"],[s.nights,"nights away"],[s.cities,s.cities===1?"place":"places"],s.countries.length?[s.countries.length,s.countries.length===1?"country":"countries"]:[s.mems.length,"memories"]].filter(x=>x[0]>0);
@@ -126,7 +130,8 @@ function wCards(D){
   cards.push({n:"outro",draw:(c,W,H,th)=>{
     eyebrow(c,th,"That's a wrap",330);c.fillStyle=th.ink;c.font=`700 150px ${WF.serif}`;let y=putLines(c,wrapLines(c,"Until the next one.",920),80,560,160,3)+40;
     c.fillStyle=th.dim;c.font=`500 44px ${WF.sans}`;if(s.places.length)y=putLines(c,wrapLines(c,s.places.slice(0,8).join("  ·  "),900),80,y,64,4)+40;
-    c.fillStyle=th.accent;c.font=`700 34px ${WF.mono}`;spacing(c,7);c.fillText("PLANNED & REMEMBERED PRIVATELY",80,y+30);c.fillText("IN TRIP VAULT",80,y+84);spacing(c,0)}});
+    c.fillStyle=th.accent;c.font=`700 34px ${WF.mono}`;spacing(c,7);c.fillText("PLANNED & REMEMBERED PRIVATELY",80,y+30);c.fillText("IN TRIP VAULT",80,y+84);spacing(c,0);
+    if(D.crewWave)wCrew(c,D.crewWave,W-80,Math.max(1180,y+140),"right")}});
   return cards;
 }
 
@@ -139,6 +144,8 @@ async function wBuild(){
   const st=wStats(sc.trips),multi=sc.trips.length>1,rg=sc.trips.map(tripRange).filter(r=>r.s),s0=rg.map(r=>r.s).sort()[0],e0=rg.map(r=>r.e).sort().pop();
   const D={st,multi,hide:WR.hide,title:multi?(sc.year?`${sc.year}, on the road`:"Every trip so far"):sc.trips[0].name,year:(s0||todayIn("Asia/Kolkata")).slice(0,4),
     range:s0?`${fmtDs(s0)} – ${fmtDs(e0)} ${(e0||"").slice(0,4)}`:"",sub:multi?`${sc.trips.length} trips`:sc.trips[0].dest};
+  // the current trip's crew cheers on the cover and waves goodbye on the last card (none when characters are off)
+  const ct=curTrip();D.crewCheer=await AV.snap(ct,"cheer",620,640).catch(()=>null);D.crewWave=await AV.snap(ct,"wave",520,540).catch(()=>null);
   const cards=wCards(D),th=WTHEMES[WR.theme%WTHEMES.length],deck=[];
   for(let i=0;i<cards.length;i++){const cv=document.createElement("canvas");cv.width=1080;cv.height=1920;const c=cv.getContext("2d");
     wBg(c,1080,1920,th,i+1+WR.theme*3);await cards[i].draw(c,1080,1920,th,D);wFoot(c,1080,1920,th,i,cards.length);deck.push({name:cards[i].n,cv})}

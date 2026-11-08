@@ -545,6 +545,15 @@ html.pass-open{overflow:hidden}
 .avslot .avcv{width:100%;height:100%;display:block}
 .avmore{position:absolute;right:4px;top:4px;z-index:1;font:700 11px/1 var(--sans);background:var(--acc);color:var(--acc-ink);border-radius:999px;padding:3px 7px}
 @media(min-width:760px){.avslot{width:132px;height:132px;margin-top:-22px}.avslot.wide{width:172px}}
+/* Memories header: title on the left, crew above the Capture button on the right */
+.jhead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;align-items:center;margin-bottom:12px}
+.jhead .jt{grid-row:1/3;min-width:0}
+.jhead .avslot{justify-self:end}
+.jhead>.btn{justify-self:end}
+.avslot.jr{width:84px;height:84px;margin:-8px -6px -6px 0}
+.avslot.jr.wide{width:110px}
+img.avsnap{display:block;width:120px;height:110px;margin:-6px auto 4px;object-fit:contain}
+span.avsnap{display:contents}
 .avslot.wel{float:right;width:150px;height:150px;margin:-16px -10px 4px 10px}
 @media(max-width:480px){.avslot.wel{width:112px;height:112px;margin:-14px -10px 0 6px}}
 .avintro{position:fixed;inset:0;z-index:60;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:20px;cursor:pointer;-webkit-tap-highlight-color:transparent}
