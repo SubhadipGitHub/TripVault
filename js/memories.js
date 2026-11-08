@@ -64,7 +64,7 @@ function openMemory(m,isNew){
     const n={...m,title:g.title,date:g.date||m.date,place:g.place,text:g.text,mood,fav:$("#mFav",ov).checked};
     const added=await addPhotos(pend,n.tripId,n.id);
     const removed=(m.photoIds||[]).filter(id=>!keep.includes(id));for(const id of removed){PHOTO_URLS.delete(id);await DB.del("files",id);S.files=S.files.filter(f=>f.id!==id)}
-    n.photoIds=[...keep,...added];await saveMem(n);ov.remove();render();toast(isNew?"Memory saved to your vault":"Memory updated")};
+    n.photoIds=[...keep,...added];await saveMem(n);ov.remove();AV.cheer();render();toast(isNew?"Memory saved to your vault":"Memory updated")};
   $("#mDel",ov)?.addEventListener("click",async()=>{if(!(await gate({title:"Delete this memory?",plan:[`Delete “${esc(m.title||"Untitled")}” and its ${memPhotos(m).length} photo(s)`],irreversible:"It can't be recovered unless it's in a backup.",ok:"Delete memory"})))return;await delMem(m.id);ov.remove();$$(".ov").forEach(o=>o.remove());render();toast("Memory deleted")});
 }
 function newMemory(o={}){const t=curTrip();if(!t){toast("Create a trip first","bad");return}
@@ -81,12 +81,12 @@ async function quickMemory(){ // from the Today screen: one-tap capture
   if(!txt&&!files.length){toast("Write a line or add a photo","bad");return}
   const m={id:uid(),tripId:t.id,date:memDefaultDate(t),title:"",text:txt||"",place:"",mood:"",photoIds:[],fav:false};
   m.title=(txt||"").split(/[.\n!?]/)[0].slice(0,48)||"Moment";
-  m.photoIds=await addPhotos(files,t.id,m.id);await saveMem(m);render();toast("Saved to Memories")}
+  m.photoIds=await addPhotos(files,t.id,m.id);await saveMem(m);AV.cheer();render();toast("Saved to Memories")}
 
 function viewMemories(t){
   const ms=tripMems(t.id).sort((a,b)=>(a.date||"").localeCompare(b.date||"")||a.createdAt-b.createdAt);
   const photos=ms.reduce((a,m)=>a+memPhotos(m).length,0);const ph=tripPhase(t);
-  let h=`<div class="row wrap" style="margin-bottom:12px"><div><div class="eyebrow">Journal</div><h2 class="serif" style="font-size:26px;line-height:1.1">${esc(t.name)}</h2><div class="small muted">${ms.length} memor${ms.length===1?"y":"ies"} · ${photos} photo${photos===1?"":"s"}</div></div><span class="sp"></span><button class="btn pri" data-a="newMem">${ic("plus")} Capture</button></div>`;
+  let h=`<div class="jhead"><div class="jt"><div class="eyebrow">Journal</div><h2 class="serif" style="font-size:26px;line-height:1.1">${esc(t.name)}</h2><div class="small muted">${ms.length} memor${ms.length===1?"y":"ies"} · ${photos} photo${photos===1?"":"s"}</div></div>${avSlot(t,"jr")}<button class="btn pri" data-a="newMem">${ic("plus")} Capture</button></div>`;
   if(ms.length||ph.p==="after")h+=wrappedCta(t);
   if(!ms.length)return h+`<div class="card empty">${kic("memory")}<b>Nothing captured yet</b><div class="small">Jot a line, drop a photo, tag the mood. These become the heart of your Trip Wrapped.</div><div class="small dim mt serif" style="font-style:italic">“${esc(PROMPTS[new Date().getDate()%PROMPTS.length])}”</div><div class="row mt" style="justify-content:center"><button class="btn pri" data-a="newMem">${ic("camera")} Capture your first memory</button></div></div>`;
   return h+`<div class="mfeed mt">${ms.map(memCard).join("")}</div>`;

@@ -1,6 +1,6 @@
 /* Trip Vault service worker: caches the app shell so it works offline.
    It never touches your data (that lives in IndexedDB) and never makes third-party requests. */
-const VERSION = "tv-v6";
+const VERSION = "tv-v7";
 const SHARE = "tv-share"; // short-lived inbox for files shared to the installed app
 const SHELL = [
   "./", "index.html", "manifest.webmanifest", "css/app.css",
