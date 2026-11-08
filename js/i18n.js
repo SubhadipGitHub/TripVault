@@ -111,6 +111,11 @@ const HI={
   /* travel crew */
   "Who's going":"कौन जा रहा है","Solo":"अकेले","Couple":"जोड़ी","Group":"समूह","Him":"पुरुष","Her":"महिला","Tap to skip":"छोड़ने के लिए टैप करें",
   "Character animations":"किरदार एनिमेशन","Full (intro + idle)":"पूरा (इंट्रो + हलचल)","Calm (no intro)":"शांत (बिना इंट्रो)","Off":"बंद",
+  /* Google sharing */
+  "Share this trip":"यह ट्रिप शेयर करें","Shared trip":"शेयर की गई ट्रिप","Share":"शेयर","Shared":"शेयर की गई","Join a shared trip":"शेयर की गई ट्रिप से जुड़ें","Connect Google & share":"Google जोड़ें और शेयर करें",
+  "Connect Google & join":"Google जोड़ें और जुड़ें","Sync now":"अभी सिंक करें","Stop sharing":"शेयर करना बंद करें","Leave":"छोड़ें","Invite link":"न्योता लिंक","Copy link":"लिंक कॉपी करें","Send…":"भेजें…",
+  "Their Gmail addresses":"उनके Gmail पते","People you shared with":"जिनके साथ शेयर किया","Shared with":"इनके साथ शेयर","No one yet.":"अभी कोई नहीं।","Google sharing":"Google शेयरिंग","Disconnect Google":"Google से डिस्कनेक्ट करें",
+  "Shared trips (Google Drive)":"शेयर की गई ट्रिप्स (Google Drive)","Sync is paused.":"सिंक रुका हुआ है।","Connect":"जोड़ें","Syncing…":"सिंक हो रहा है…","Sync paused · tap to reconnect":"सिंक रुका · फिर जोड़ने के लिए टैप करें",
   /* plan calendar legend */
   "Travel":"यात्रा","Free to plan":"योजना के लिए ख़ाली","Not in trip":"ट्रिप में नहीं",
   /* weekday & month abbreviations shown on their own (calendar) */
@@ -118,7 +123,7 @@ const HI={
   "Jan":"जन","Feb":"फ़र","Mar":"मार्च","Apr":"अप्रै","May":"मई","Jun":"जून","Jul":"जुला","Aug":"अग","Sep":"सितं","Oct":"अक्टू","Nov":"नवं","Dec":"दिसं"
 };
 /* A few headings carry counts; translate the label and keep the numbers. */
-const HI_RX=[[/^Ready for (.+)\?$/,"$1 के लिए तैयार?"],[/^Packing · (.+)$/,"पैकिंग · $1"],[/^Ideas · (.+)$/,"आइडिया · $1"],[/^Getting started · (.+)$/,"शुरुआत · $1"],[/^Day (\d+) · (.+)$/,"दिन $1 · $2"],[/^Received (\d+) of (\d+) frames$/,"$2 में से $1 फ़्रेम मिले"],[/^Frame (\d+) of (\d+)$/,"फ़्रेम $1 / $2"],[/^Reading the image · (\d+)%$/,"इमेज पढ़ी जा रही है · $1%"],[/^Sending (\d+) trips?$/,"$1 ट्रिप भेजी जा रही है"],[/^This trip · (.+)$/,"यह ट्रिप · $1"],[/^All (\d+) trips$/,"सभी $1 ट्रिप्स"],
+const HI_RX=[[/^Shared with (\d+) · synced (.+)$/,"$1 के साथ शेयर · सिंक $2"],[/^Shared · synced (.+)$/,"शेयर · सिंक $1"],[/^Synced (.+)$/,"सिंक $1"],[/^Ready for (.+)\?$/,"$1 के लिए तैयार?"],[/^Packing · (.+)$/,"पैकिंग · $1"],[/^Ideas · (.+)$/,"आइडिया · $1"],[/^Getting started · (.+)$/,"शुरुआत · $1"],[/^Day (\d+) · (.+)$/,"दिन $1 · $2"],[/^Received (\d+) of (\d+) frames$/,"$2 में से $1 फ़्रेम मिले"],[/^Frame (\d+) of (\d+)$/,"फ़्रेम $1 / $2"],[/^Reading the image · (\d+)%$/,"इमेज पढ़ी जा रही है · $1%"],[/^Sending (\d+) trips?$/,"$1 ट्रिप भेजी जा रही है"],[/^This trip · (.+)$/,"यह ट्रिप · $1"],[/^All (\d+) trips$/,"सभी $1 ट्रिप्स"],
   [/^About (\d+) QR frames\. Roughly (\d+) seconds if the camera catches each one first time\.$/,"लगभग $1 QR फ़्रेम। अगर कैमरा हर फ़्रेम पहली बार में पकड़ ले तो लगभग $2 सेकंड।"],
   [/^(\d+) frames repeat until the other phone has them all\. Keep this screen bright and steady\.$/,"$1 फ़्रेम तब तक दोहराए जाएँगे जब तक दूसरे फ़ोन को सब न मिल जाएँ। स्क्रीन चमकदार और स्थिर रखें।"],
   [/^All (\d+) frames received\. Type the code shown under the QR codes on the other phone\.$/,"सभी $1 फ़्रेम मिल गए। दूसरे फ़ोन पर QR कोड के नीचे दिखा कोड डालें।"],[/^Loading English · (\d+)%$/,"अंग्रेज़ी लोड हो रही है · $1%"],

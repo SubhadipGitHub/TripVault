@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'; worker-src 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://accounts.google.com/gsi/client https://apis.google.com; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src https://www.googleapis.com https://accounts.google.com; frame-src https://accounts.google.com https://docs.google.com; object-src 'none'; base-uri 'none'; form-action 'none'; manifest-src 'self'; worker-src 'self'">
 <meta name="referrer" content="no-referrer">
 <meta name="color-scheme" content="dark light">
 <meta name="theme-color" content="#0a0d14">
@@ -114,6 +114,8 @@
 <script src="js/transfer.js"></script>
 <script src="js/ideas.js"></script>
 <script src="js/avatars.js"></script>
+<script src="js/sync-config.js"></script>
+<script src="js/gsync.js"></script>
 <script src="js/views.js"></script>
 <script src="js/main.js"></script>
 </body>

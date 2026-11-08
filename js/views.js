@@ -53,7 +53,7 @@ function bpHero(t){
   else route=`<div class="serif" style="font-size:30px;line-height:1.1;font-weight:700;margin:6px 0 4px">${esc(t.dest||t.name)}</div><div class="small muted">Add a flight or train to see your route</div>`;
   const stub=ph.p==="before"?`<div class="u">${intl?"Departs in":"Leaves in"}</div><div class="n">${ph.days}</div><div class="u">${ph.days===1?"day":"days"}</div>`:ph.p==="during"?`<div class="u">Now on</div><div class="n">Day ${ph.day}</div><div class="u">of ${ph.of}</div>`:ph.p==="after"?`<div class="u">Trip</div><div class="n" style="font-size:26px">Done</div><div class="stamp ok" style="margin-top:6px">Wrapped</div>`:`<div class="u">No dates</div><div class="n">—</div>`;
   return`<div class="bp"><span class="notch t"></span><span class="notch b"></span>
-   <div class="main"><div class="row wrap" style="gap:8px"><span class="eyebrow">${intl?"International":"Domestic"} · ${esc(t.name)}</span><span class="sp"></span><button class="btn xs ghost" data-a="editTrip" aria-label="Edit trip">${ic("edit","sm")} Edit</button></div>${route}
+   <div class="main"><div class="row wrap" style="gap:8px"><span class="eyebrow">${intl?"International":"Domestic"} · ${esc(t.name)}</span>${gsChip(t)}<span class="sp"></span><button class="btn xs ghost" data-a="editTrip" aria-label="Edit trip">${ic("edit","sm")} Edit</button></div>${route}
     <div class="bpx"><div class="meta"><div>Dates<b>${s?fmtDs(s)+" – "+fmtDs(e):"Not set"}</b></div><div>Nights<b>${nights}</b></div><div>Travellers<b>${names.length||crewOf(t).crew.length}</b></div></div>${avSlot(t)}</div>${clocks(t)}</div>
    <div class="stub">${stub}<div class="bar2"></div></div></div>`}
 function startList(t){
