@@ -48,21 +48,6 @@ function settleCard(t){
     ${S2.pay.length?S2.pay.map(x=>`<div class="li"><div class="b"><div class="t">${esc(x.from)} <span class="dim">pays</span> ${esc(x.to)}</div></div><div class="r serif" style="font-size:18px;font-weight:700">${fmtM(x.v)}</div></div>`).join(""):`<div class="note ok mt">${ic("check")}<div>Everyone is square.</div></div>`}`:`<div class="small muted">No expenses with “Paid by” yet.</div>`}</div>`;
 }
 
-/* ---------- shareable read-only itinerary (single self-contained HTML, no bookings refs unless asked) ---------- */
-function shareItinerary(){
-  const t=curTrip();if(!t)return;
-  const ov=sheet({title:`${ic("share")} Share itinerary`,body:`<p class="muted">Creates one HTML file with the day-by-day plan that anyone can open in a browser. No app or account needed.</p>
-   <label class="row mt" style="cursor:pointer"><input type="checkbox" id="shRef"> <span style="font-size:13px;color:var(--tx)">Include booking references (PNR, confirmation numbers)</span></label>
-   <label class="row mt" style="cursor:pointer"><input type="checkbox" id="shAddr" checked> <span style="font-size:13px;color:var(--tx)">Include hotel addresses</span></label>
-   <div class="note warn mt">${ic("alert")}<div>The file is not protected. Anyone you send it to can read everything in it.</div></div>`,
-   foot:`<button class="btn" data-close>Cancel</button><button class="btn pri" id="shGo">${ic("download","sm")} Download</button>`});
-  $("#shGo",ov).onclick=()=>{const refs=$("#shRef",ov).checked,addr=$("#shAddr",ov).checked;
-    const rows=tripDays(t).map((d,i)=>{const evs=tripItems(t.id).flatMap(it=>itemEvents(it).filter(e=>e.main&&e.s.slice(0,10)===d)).sort((a,b)=>a.su-b.su),st=stayOn(t,d);
-      return`<section><h3>Day ${i+1} · ${esc(fmtD(d,1))}</h3>${evs.length?evs.map(e=>`<p><b>${esc(e.s.slice(11))}</b> ${esc(e.label)}${e.it.location?` · ${esc(e.it.location)}`:""}${refs&&e.it.ref?` <code>${esc(e.it.ref)}</code>`:""}</p>`).join(""):"<p class='m'>Free day</p>"}${st?`<p class="m">Night: ${esc(st.name)}${addr&&st.address?" — "+esc(st.address):""}</p>`:""}</section>`}).join("");
-    const html=`<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(t.name)}</title><style>body{font:16px/1.55 Georgia,serif;max-width:640px;margin:0 auto;padding:24px;background:#faf6ec;color:#1d2232}h1{font-size:32px;margin:0}h3{font-size:15px;letter-spacing:.06em;text-transform:uppercase;border-bottom:1px solid #d9ccae;padding-bottom:4px;margin:26px 0 6px;color:#8f650f}p{margin:6px 0}.m{color:#6b6657}code{background:#efe6d0;padding:1px 5px;border-radius:4px}footer{margin-top:36px;color:#8a8573;font-size:12px}</style><h1>${esc(t.name)}</h1><p class="m">${esc(t.dest||"")} · ${esc(tripMeta(t))}</p>${rows}<footer>Made with Trip Vault</footer></html>`;
-    dl(new Blob([html],{type:"text/html"}),`itinerary-${slug(t.name)}.html`);ov.remove();toast("Itinerary file downloaded")};
-}
-
 /* ---------- cost export: CSV and printable expense report ---------- */
 function costRows(t){
   return tripItems(t.id).filter(i=>i.kind!=="doc").map(it=>({it,p:payInfo(it)})).filter(x=>x.p.cost>0).map(({it,p})=>{

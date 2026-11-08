@@ -19,7 +19,7 @@ const HI={
   "Copy":"कॉपी करें","Share":"शेयर करें","Download":"डाउनलोड करें","Import":"इम्पोर्ट","Review":"देखें","Hide":"छिपाएँ","Reset":"रीसेट","Done":"हो गया",
   "Next":"अगला","Previous":"पिछला","Unlock":"अनलॉक करें","Extract":"पढ़ें","Paid":"चुकाया","Mark paid":"चुकाया मार्क करें","Mark fully paid":"पूरा चुकाया",
   "Import booking":"बुकिंग इम्पोर्ट करें","Import a booking":"बुकिंग इम्पोर्ट करें","Smart import":"स्मार्ट इम्पोर्ट","Log expense":"ख़र्च लिखें","Capture memory":"याद सहेजें","Capture":"सहेजें",
-  "Copy itinerary":"यात्रा-क्रम कॉपी करें","Add to calendar":"कैलेंडर में जोड़ें","Share itinerary":"यात्रा-क्रम शेयर करें","Show pass":"पास दिखाएँ",
+  "Copy itinerary":"यात्रा-क्रम कॉपी करें","Add to calendar":"कैलेंडर में जोड़ें","Show pass":"पास दिखाएँ",
   "Start a trip":"ट्रिप शुरू करें","Explore a sample":"नमूना देखें","New trip":"नई ट्रिप","Sample":"नमूना","Duplicate":"कॉपी बनाएँ","Delete trip":"ट्रिप हटाएँ","Edit trip":"ट्रिप बदलें",
   "Set dates":"तारीख़ें चुनें","Set rate":"रेट डालें","Extend dates":"तारीख़ें बढ़ाएँ","Backup":"बैकअप","Set passphrase":"पासफ़्रेज़ सेट करें","Set a passphrase":"पासफ़्रेज़ सेट करें",
   "Change passphrase":"पासफ़्रेज़ बदलें","Lock now":"अभी लॉक करें","Remove lock":"लॉक हटाएँ","Limits":"सीमाएँ","Save limits":"सीमाएँ सेव करें","Blank list":"ख़ाली सूची",
@@ -70,7 +70,7 @@ const HI={
   "Baggage, meal, check-in tips, contact…":"सामान, खाना, चेक-इन की बातें, संपर्क…",
   /* toasts & short messages */
   "Saved":"सेव हो गया","Deleted":"हटा दिया","Settings saved":"सेटिंग्स सेव हुईं","Expense logged":"ख़र्च लिख लिया","Limits saved":"सीमाएँ सेव हुईं","Backup downloaded":"बैकअप डाउनलोड हुआ",
-  "Copied":"कॉपी हो गया","Itinerary file downloaded":"यात्रा-क्रम फ़ाइल डाउनलोड हुई","Transfer cancelled":"ट्रांसफ़र रद्द","Starting…":"शुरू हो रहा है…","Starting the camera…":"कैमरा शुरू हो रहा है…",
+  "Copied":"कॉपी हो गया","Transfer cancelled":"ट्रांसफ़र रद्द","Starting…":"शुरू हो रहा है…","Starting the camera…":"कैमरा शुरू हो रहा है…",
   "Looking for QR codes…":"QR कोड ढूँढ रहे हैं…","Reading the image":"इमेज पढ़ी जा रही है","Everyone is square.":"सबका हिसाब बराबर है।","No costs yet.":"अभी कोई ख़र्च नहीं।","Free":"ख़ाली",
   /* Today */
   "Skip to content":"मुख्य सामग्री पर जाएँ","Dates":"तारीख़ें","Nights":"रातें","Travellers":"यात्री","Departs in":"रवानगी में","Leaves in":"निकलने में","days":"दिन","day":"दिन","Now on":"अभी","Trip":"ट्रिप",
@@ -115,7 +115,7 @@ const HI={
   "Share this trip":"यह ट्रिप शेयर करें","Shared trip":"शेयर की गई ट्रिप","Share":"शेयर","Shared":"शेयर की गई","Join a shared trip":"शेयर की गई ट्रिप से जुड़ें","Connect Google & share":"Google जोड़ें और शेयर करें",
   "Connect Google & join":"Google जोड़ें और जुड़ें","Sync now":"अभी सिंक करें","Stop sharing":"शेयर करना बंद करें","Leave":"छोड़ें","Invite link":"न्योता लिंक","Copy link":"लिंक कॉपी करें","Send…":"भेजें…",
   "Their Gmail addresses":"उनके Gmail पते","People you shared with":"जिनके साथ शेयर किया","Shared with":"इनके साथ शेयर","No one yet.":"अभी कोई नहीं।","Google sharing":"Google शेयरिंग","Disconnect Google":"Google से डिस्कनेक्ट करें",
-  "Shared trips (Google Drive)":"शेयर की गई ट्रिप्स (Google Drive)","Sync is paused.":"सिंक रुका हुआ है।","Connect":"जोड़ें","Syncing…":"सिंक हो रहा है…","Sync paused · tap to reconnect":"सिंक रुका · फिर जोड़ने के लिए टैप करें","Versions":"पुराने संस्करण","New trip key · ask the owner for the new link":"नई ट्रिप चाबी · मालिक से नया लिंक माँगें","The trip key changed.":"ट्रिप की चाबी बदल गई।","Done, I've sent it":"हो गया, भेज दिया","Earlier versions":"पुराने संस्करण","Restore…":"वापस लाएँ…","Restore this version?":"यह संस्करण वापस लाएँ?",
+  "Shared trips (Google Drive)":"शेयर की गई ट्रिप्स (Google Drive)","Sync is paused.":"सिंक रुका हुआ है।","Connect":"जोड़ें","Syncing…":"सिंक हो रहा है…","Sync paused · tap to reconnect":"सिंक रुका · फिर जोड़ने के लिए टैप करें","Versions":"पुराने संस्करण","Share trip":"ट्रिप शेयर करें","Sharing & sync":"शेयरिंग और सिंक","Synced":"सिंक हो गया","Syncing":"सिंक हो रहा है","Reconnect":"फिर जोड़ें","Problem":"समस्या","Not connected":"जुड़ा नहीं है","Disconnect":"अलग करें","Sync all now":"सब अभी सिंक करें","Shared trips":"शेयर की गई ट्रिप्स","Recent changes from others":"दूसरों के हाल के बदलाव","Synced · up to date":"सिंक हो गया · सब नया है","New trip key · ask the owner for the new link":"नई ट्रिप चाबी · मालिक से नया लिंक माँगें","The trip key changed.":"ट्रिप की चाबी बदल गई।","Done, I've sent it":"हो गया, भेज दिया","Earlier versions":"पुराने संस्करण","Restore…":"वापस लाएँ…","Restore this version?":"यह संस्करण वापस लाएँ?",
   /* plan calendar legend */
   "Travel":"यात्रा","Free to plan":"योजना के लिए ख़ाली","Not in trip":"ट्रिप में नहीं",
   /* weekday & month abbreviations shown on their own (calendar) */
