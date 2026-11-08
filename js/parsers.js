@@ -228,13 +228,19 @@ function findFlights(text){
 const NAME_STOP=new Set("seat adult adults child infant economy business premium flight ticket male female passenger passengers name age status confirmed baggage check meal pnr booking reference guest guests room rooms total date from to departure arrival terminal gate class fare dear hello hi thank thanks your you sir madam mr mrs ms the and for of with booked web extra cabin hand nationality passport frequent flyer type sl cnf wl rac berth coach quota sex no vegetarian veg nonveg".split(" "));
 const tcase=s=>s.toLowerCase().replace(/\b[a-z]/g,c=>c.toUpperCase());
 function cleanName(raw){const w=raw.trim().split(/\s+/);const r=[];for(const x of w){const k=x.toLowerCase().replace(/[^a-z]/g,"");if(!k||NAME_STOP.has(k)||/\d/.test(x))break;r.push(x)}return r.length>=1&&r.join(" ").length>=3?tcase(r.join(" ")):null}
-function findNames(text){
-  const out=[];const add=n=>{if(n&&!out.some(o=>o.toLowerCase()===n.toLowerCase())&&n.split(" ").length<=5)out.push(n)};
-  for(const m of text.matchAll(/\b([A-Z]{2,})\s*\/\s*([A-Z]{2,}(?:\s[A-Z]{2,})?)\s*(MRS|MR|MS|MSTR|MISS|DR)\b/g)){if(!NAME_STOP.has(m[1].toLowerCase()))add(cleanName(m[2]+" "+m[1]))}
-  for(const m of text.matchAll(/(?<![A-Za-z])(MRS|MR|MS|MISS|MSTR|DR|Mrs|Mr|Ms|Miss|Mstr|Dr)\.?\s+([A-Z][A-Za-z'\-]+(?:[ \t]+[A-Z][A-Za-z'\-]+){0,3})/g))add(cleanName(m[2]));
-  for(const m of text.matchAll(/(?:passenger|traveller|traveler|guest|lead guest|booked by|guest name|passenger name)s?(?:\s*name)?\s*(?:\(s\))?\s*[:\-]\s*([A-Za-z][A-Za-z .'\-]{2,40})/gi)){const n=cleanName(m[1].replace(/^(mrs|mr|ms|miss|dr)\.?\s+/i,""));add(n)}
-  for(const m of text.matchAll(/^\s*\d\s*[.)]?\s+([A-Z][A-Z .]{2,40}?)\s+(\d{1,2})\s+(M|F|MALE|FEMALE|Male|Female)\b/gm))add(cleanName(m[1]));
-  return out.slice(0,9)}
+/* Traveller names, plus him/her where the ticket says so: from the title (Mr/Master → m, Mrs/Ms/Miss → f,
+   Dr → unknown) or IRCTC's M/F column. sex is keyed by lower-cased name; a name with conflicting titles is left unknown. */
+const TITLE_SEX={mr:"m",mstr:"m",master:"m",mrs:"f",ms:"f",miss:"f"};
+function findPeople(text){
+  const out=[],sex={},ts=t=>TITLE_SEX[(t||"").toLowerCase()]||null;
+  const add=(n,sx)=>{if(!n||n.split(" ").length>5)return;const k=n.toLowerCase();if(!out.some(o=>o.toLowerCase()===k))out.push(n);
+    if(sx){if(!(k in sex))sex[k]=sx;else if(sex[k]&&sex[k]!==sx)sex[k]=null}};
+  for(const m of text.matchAll(/\b([A-Z]{2,})\s*\/\s*([A-Z]{2,}(?:\s[A-Z]{2,})?)\s*(MRS|MR|MS|MSTR|MISS|DR)\b/g)){if(!NAME_STOP.has(m[1].toLowerCase()))add(cleanName(m[2]+" "+m[1]),ts(m[3]))}
+  for(const m of text.matchAll(/(?<![A-Za-z])(MRS|MR|MS|MISS|MSTR|DR|Mrs|Mr|Ms|Miss|Mstr|Dr)\.?\s+([A-Z][A-Za-z'\-]+(?:[ \t]+[A-Z][A-Za-z'\-]+){0,3})/g))add(cleanName(m[2]),ts(m[1]));
+  for(const m of text.matchAll(/(?:passenger|traveller|traveler|guest|lead guest|booked by|guest name|passenger name)s?(?:\s*name)?\s*(?:\(s\))?\s*[:\-]\s*([A-Za-z][A-Za-z .'\-]{2,40})/gi)){const t=m[1].match(/^(mrs|mr|ms|miss|dr)\.?\s+/i);add(cleanName(m[1].replace(/^(mrs|mr|ms|miss|dr)\.?\s+/i,"")),t&&ts(t[1]))}
+  for(const m of text.matchAll(/^\s*\d\s*[.)]?\s+([A-Z][A-Z .]{2,40}?)\s+(\d{1,2})\s+(M|F|MALE|FEMALE|Male|Female)\b/gm))add(cleanName(m[1]),m[3][0].toUpperCase()==="F"?"f":"m");
+  const names=out.slice(0,9);
+  return{names,sex:Object.fromEntries(Object.entries(sex).filter(([k,v])=>v&&names.some(n=>n.toLowerCase()===k)))}}
 const CURMAP={"₹":"INR","rs":"INR","rs.":"INR","inr":"INR","$":"USD","us$":"USD","usd":"USD","rm":"MYR","myr":"MYR","€":"EUR","eur":"EUR","£":"GBP","gbp":"GBP","aed":"AED","sgd":"SGD","s$":"SGD","thb":"THB","฿":"THB","idr":"IDR","rp":"IDR","lkr":"LKR","jpy":"JPY","¥":"JPY","aud":"AUD","a$":"AUD","vnd":"VND","₫":"VND","npr":"NPR","qar":"QAR","sar":"SAR","chf":"CHF","hkd":"HKD"};
 function findAmount(text){
   const rx=/(grand\s+total|total\s+(?:amount|fare|price|paid|cost|charges|payable)|amount\s+(?:paid|payable|charged)|you(?:'ve)?\s+paid|net\s+payable|total|price|amount)\s*(?:\([^)]{0,30}\))?\s*[:\-]?\s*(₹|rs\.?|inr|usd|us\$|\$|myr|rm|eur|€|gbp|£|aed|sgd|s\$|thb|฿|idr|rp|lkr|jpy|¥|aud|a\$|vnd|₫|npr|qar|sar|chf|hkd)?\s*([\d][\d,]*(?:\.\d{1,2})?)\s*(inr|usd|myr|eur|gbp|aed|sgd|thb|idr|lkr|jpy|aud|vnd|npr|qar|sar|chf|hkd)?/gi;
@@ -367,8 +373,8 @@ function scoreParse(p){const f=o=>Object.values(o?._f||{}).filter(Boolean).lengt
 function parseBest(texts,kind,ref){let best=null;for(const t of texts.filter(Boolean)){const p=parseBooking(t,kind,ref);p._score=scoreParse(p);if(!best||p._score>best._score)best=p}return best||parseBooking("",kind,ref)}
 function parseBooking(text,kind,ref){
   text=(text||"").replace(/\r/g,"");kind=kind||detectKind(text);
-  const names=findNames(text),amt=findAmount(text),pay=payStatus(text);
-  const base={kind,names,cost:amt?.v||"",cur:amt?.cur||"",pay,raw:text};
+  const{names,sex}=findPeople(text),amt=findAmount(text),pay=payStatus(text);
+  const base={kind,names,sex,cost:amt?.v||"",cur:amt?.cur||"",pay,raw:text};
   if(kind==="flight"){const pnr=labelVal(text,["pnr\\s*/\\s*booking\\s*ref(?:erence)?","airline\\s*pnr","pnr","booking\\s*ref(?:erence)?","record\\s*locator","confirmation\\s*code"],"([A-Z0-9]{5,8})\\b",v=>v===v.toUpperCase()&&/[A-Z]/.test(v));
     const bid=labelVal(text,["booking\\s*id","trip\\s*id","itinerary\\s*(?:id|no)","order\\s*id"],"([A-Z0-9\\-]{6,20})");
     return{...base,ref:pnr&&/[A-Z]/.test(pnr)?pnr:(pnr||""),bookingId:bid||"",segments:parseFlights(text,ref)}}
