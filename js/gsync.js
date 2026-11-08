@@ -81,8 +81,15 @@ async function gsSeal(obj,code){const raw=new TextEncoder().encode(JSON.stringif
 async function gsOpen(bytes,code){if(!GS_TRIP.every((v,i)=>bytes[i]===v))throw gsErr("That isn't a Trip Vault shared trip");let p;
   try{p=new Uint8Array(await Crypt.dec(await gsKey(code),bytes.slice(5).buffer))}catch(e){throw gsErr("That code doesn't open this trip. Check the invite",{code:"key"})}
   return JSON.parse(new TextDecoder().decode(bytes[4]&1?await gz(p,false):p))}
+/* After a removal the trip gets a new code; earlier codes stay in the trip file's keyring (encrypted
+   under the current code) so older versions and attachments still open. Try the current code first. */
+const gsCodes=t=>[...new Set([t.sync.code,...(t.sync.keyring||[])].filter(Boolean))];
+async function gsOpenAny(bytes,codes){let err;for(let i=0;i<codes.length;i++){try{return{R:await gsOpen(bytes,codes[i]),stale:i>0}}catch(e){if(e.code!=="key")throw e;err=e}}
+  throw err||gsErr("No trip code",{code:"key"})}
 async function gsSealBlob(blob,code){const ct=new Uint8Array(await Crypt.enc(await gsKey(code),await blob.arrayBuffer())),o=new Uint8Array(4+ct.length);o.set(GS_FILE);o.set(ct,4);return o}
-async function gsOpenBlob(bytes,code,type){if(!GS_FILE.every((v,i)=>bytes[i]===v))throw gsErr("Shared file is damaged");return new Blob([await Crypt.dec(await gsKey(code),bytes.slice(4).buffer)],{type:type||"application/octet-stream"})}
+async function gsOpenBlob(bytes,codes,type){if(!GS_FILE.every((v,i)=>bytes[i]===v))throw gsErr("Shared file is damaged");
+  for(const c of[].concat(codes)){try{return new Blob([await Crypt.dec(await gsKey(c),bytes.slice(4).buffer)],{type:type||"application/octet-stream"})}catch(e){}}
+  throw gsErr("Shared file doesn't open with this trip's keys")}
 
 
 /* ---------- incoming data is untrusted: clean it before it is stored or shown ----------
@@ -132,12 +139,13 @@ function cleanBundle(d){const out={...d},tz=t=>t?.tz;
   if("tomb"in d)out.tomb=cList(d.tomb,x=>({s:["items","memories","files"].includes(x.s)?x.s:"",id:cStr(x.id,80),at:cNum(x.at)}),5000).filter(x=>x.s&&CLEAN_ID.test(x.id));
   if("members"in d)out.members=cList(d.members,m=>({email:cStr(m.email,200).toLowerCase()}),100).filter(m=>m.email);
   if("owner"in d)out.owner=cStr(d.owner,200).toLowerCase();
+  if("keyring"in d)out.keyring=(Array.isArray(d.keyring)?d.keyring:[]).filter(x=>typeof x==="string"&&/^[A-Z0-9]{4}(-[A-Z0-9]{4}){4}$/.test(x)).slice(0,20);
   return out}
 
 /* ---------- merge ---------- */
 const gsStable=v=>Array.isArray(v)?"["+v.map(gsStable).join(",")+"]":v&&typeof v==="object"?"{"+Object.keys(v).filter(k=>v[k]!==undefined).sort().map(k=>JSON.stringify(k)+":"+gsStable(v[k])).join(",")+"}":JSON.stringify(v??null);
 const gsById=a=>(a||[]).slice().sort((x,y)=>x.id<y.id?-1:x.id>y.id?1:0);
-const gsCanon=m=>gsStable({trip:m.trip,items:gsById(m.items),memories:gsById(m.memories),files:gsById(m.files),tomb:m.tomb||[],members:m.members||[],owner:m.owner||""});
+const gsCanon=m=>gsStable({trip:m.trip,items:gsById(m.items),memories:gsById(m.memories),files:gsById(m.files),tomb:m.tomb||[],members:m.members||[],owner:m.owner||"",keyring:m.keyring||[]});
 function gsLocal(t){const{sync,...trip}=t;return{trip,items:tripItems(t.id),memories:tripMems(t.id),files:S.files.filter(f=>f.tripId===t.id).map(({blob,...m})=>m)}}
 /* Returns what to change locally (P) and the merged trip file to write back (out). */
 function gsPlan(t,R){
@@ -155,6 +163,7 @@ function gsPlan(t,R){
   out.trip=L.trip;if(R?.trip&&(R.trip.updatedAt||0)>(L.trip.updatedAt||0)){P.trip=R.trip;out.trip={...R.trip,id:t.id}}
   out.tomb=[...tomb.values()].sort((a,b)=>a.at-b.at||(a.id<b.id?-1:1)).slice(-3000);
   out.members=t.sync.role==="owner"?(t.sync.members||[]).map(m=>({email:m.email})):(R?.members||[]);out.owner=t.sync.role==="owner"?t.sync.owner:(R?.owner||t.sync.owner||"");
+  out.keyring=t.sync.role==="owner"?(t.sync.keyring||[]):(R?.keyring||t.sync.keyring||[]);
   return{P,out}}
 async function gsApply(t,P){
   for(const s of["items","memories"]){for(const r of P.put[s]){await DB.put(s,r);const a=S[s],i=a.findIndex(x=>x.id===r.id);i>=0?a[i]=r:a.push(r)}
@@ -170,7 +179,7 @@ async function gsUploadFiles(t){const mine=S.files.filter(f=>f.tripId===t.id&&!f
     f.driveId=r.id;f.updatedAt=Date.now();await DB.put("files",f)}}
 async function gsFetchFiles(t,list){let n=0;
   for(const r of list){if(!r.driveId||S.files.some(f=>f.id===r.id))continue;
-    try{const same=S.files.find(f=>f.hash&&f.hash===r.hash&&f.blob);const blob=same?same.blob:await gsOpenBlob(await GDrive.readPublic(r.driveId),t.sync.code,r.type);
+    try{const same=S.files.find(f=>f.hash&&f.hash===r.hash&&f.blob);const blob=same?same.blob:await gsOpenBlob(await GDrive.readPublic(r.driveId),gsCodes(t),r.type);
       const rec={...r,tripId:t.id,blob};await DB.put("files",rec);S.files.push(rec);n++}catch(e){console.warn("Trip Vault: shared file not fetched yet",e.message)}}
   if(n)SEARCH.stale=true}
 
@@ -179,17 +188,19 @@ function gsSt(t,state,msg){const o=GS.st[t.id]||{};GS.st[t.id]=state==="note"?{.
 async function syncTrip(t,o={}){
   if(!t?.sync?.fileId||GS.busy.has(t.id))return false;GS.busy.add(t.id);gsSt(t,"syncing");gsPaint();let ok=false;
   try{await GAuth.token(o.interactive);if(o.interactive)await gsMe();
-    await gsUploadFiles(t);
     for(let a=0;;a++){
       let m0;try{m0=await GDrive.meta(t.sync.fileId)}catch(e){if(e.status===404||e.status===403)throw gsErr(t.sync.role==="owner"?"The trip file is missing from your Drive":"You no longer have access to this shared trip",{code:"gone"});throw e}
       if(m0.trashed)throw gsErr("The trip file was moved to the bin in Google Drive",{code:"gone"});
-      const R=cleanBundle(await gsOpen(await GDrive.read(t.sync.fileId),t.sync.code)),{P,out}=gsPlan(t,R);
-      if(gsCanon(R)!==gsCanon(out)){const m1=await GDrive.meta(t.sync.fileId);if(m1.version!==m0.version&&a<2)continue; // someone saved in between: merge again
+      const opened=await gsOpenAny(await GDrive.read(t.sync.fileId),gsCodes(t)).catch(e=>{if(e.code==="key")throw gsErr("The owner changed the trip key. Open the new invite link they send you.",{code:"rekey"});throw e});
+      if(a===0)await gsUploadFiles(t); // only once we know our key still opens the trip
+      const R=cleanBundle(opened.R),{P,out}=gsPlan(t,R);
+      // stale: someone wrote with an older key (their sync overlapped a key change); rewrite under the current key
+      if(opened.stale||gsCanon(R)!==gsCanon(out)){const m1=await GDrive.meta(t.sync.fileId);if(m1.version!==m0.version&&a<2)continue; // someone saved in between: merge again
         await GDrive.write(t.sync.fileId,await gsSeal({app:"TripVault",kind:"shared-trip",v:1,...out,savedAt:Date.now()},t.sync.code))}
-      await gsApply(t,P);if(t.sync.role!=="owner")t.sync.members=out.members;
+      await gsApply(t,P);if(t.sync.role!=="owner"){t.sync.members=out.members;t.sync.keyring=out.keyring}
       t.sync.tomb=[];t.sync.lastSync=Date.now();await DB.put("trips",t);
       await gsFetchFiles(t,P.fetch);gsSt(t,"ok");ok=true;break}
-  }catch(e){gsSt(t,e.code==="auth"?"paused":e.code==="gone"?"gone":"error",e.message);if(o.interactive&&e.code!=="auth")toast(esc(e.message),"bad")}
+  }catch(e){gsSt(t,e.code==="auth"?"paused":e.code==="gone"?"gone":e.code==="rekey"?"rekey":"error",e.message);if(o.interactive&&e.code!=="auth")toast(esc(e.message),"bad")}
   finally{GS.busy.delete(t.id);gsPaint(true)}
   return ok}
 const gsLinked=()=>S.trips.filter(t=>t.sync?.fileId);
@@ -225,7 +236,16 @@ async function gsAddMember(t,email,quiet){email=email.toLowerCase();if(!gsEmailO
 async function gsRemoveMember(t,email){const m=(t.sync.members||[]).find(x=>x.email===email);if(!m)return;
   let id=m.perm;if(!id){const l=await GDrive.perms(t.sync.fileId);id=(l.permissions||[]).find(p=>(p.emailAddress||"").toLowerCase()===email)?.id}
   if(id){try{await GDrive.unshare(t.sync.fileId,id)}catch(e){if(e.status!==404)throw e}}
-  t.sync.members=t.sync.members.filter(x=>x.email!==email);await DB.put("trips",t);await syncTrip(t,{interactive:true})}
+  t.sync.members=t.sync.members.filter(x=>x.email!==email);await DB.put("trips",t);await gsRotate(t,email)}
+/* New trip code after a removal: re-encrypt the trip file under it. The removed person keeps the old code
+   but can't open anything written from now on; the others get the new invite link from the owner. */
+async function gsRotate(t,removed){
+  const{R}=await gsOpenAny(await GDrive.read(t.sync.fileId),gsCodes(t)),R1=cleanBundle(R),was={code:t.sync.code,keyring:t.sync.keyring,rekey:t.sync.rekey};
+  t.sync.keyring=[...new Set([t.sync.code,...(t.sync.keyring||[]),...(R1.keyring||[])])].slice(0,20);t.sync.code=gsNewCode();t.sync.rekey={at:Date.now(),removed};
+  try{const{P,out}=gsPlan(t,R1);await GDrive.write(t.sync.fileId,await gsSeal({app:"TripVault",kind:"shared-trip",v:1,...out,savedAt:Date.now()},t.sync.code));
+    await gsApply(t,P);t.sync.tomb=[]}
+  catch(e){Object.assign(t.sync,was);throw e}
+  await DB.put("trips",t);await syncTrip(t,{interactive:true})}
 async function gsStopShare(t){for(const m of[...(t.sync.members||[])]){let id=m.perm;try{if(!id){const l=await GDrive.perms(t.sync.fileId);id=(l.permissions||[]).find(p=>(p.emailAddress||"").toLowerCase()===m.email)?.id}if(id)await GDrive.unshare(t.sync.fileId,id)}catch(e){}}
   gsUnlink(t)}
 async function gsUnlink(t){delete t.sync;delete GS.st[t.id];await DB.put("trips",t)}
@@ -239,18 +259,18 @@ async function gsJoin(inv){
     toast("Choose the shared trip file in the Google window","info");const id=await GPicker.pick();if(!id)throw gsErr("No trip file chosen");inv.fileId=id;bytes=await GDrive.read(id)}
   const R0=await gsOpen(bytes,inv.code);if(R0.kind!=="shared-trip")throw gsErr("That isn't a Trip Vault shared trip");
   const R=cleanBundle(R0);if(!R.trip?.id)throw gsErr("That shared trip is damaged");
-  let t=S.trips.find(x=>x.id===R.trip.id);
+  let t=S.trips.find(x=>x.id===R.trip.id);const relink=!!(t?.sync?.fileId&&t.sync.fileId===inv.fileId);
   if(!t){t={...R.trip};S.trips.push(t)}
-  t.sync={fileId:inv.fileId,code:inv.code,role:t.sync?.role==="owner"&&t.sync.fileId===inv.fileId?"owner":"member",owner:R.owner||"",members:R.members||[],tomb:t.sync?.tomb||[],lastSync:0};
+  t.sync={fileId:inv.fileId,code:inv.code,role:t.sync?.role==="owner"&&t.sync.fileId===inv.fileId?"owner":"member",owner:R.owner||"",members:R.members||[],tomb:t.sync?.tomb||[],keyring:R.keyring||[],lastSync:t.sync?.lastSync||0};
   await DB.put("trips",t);S.cur=t.id;S.meta.cur=t.id;S.day=null;S.calM=null;saveMeta();
-  await syncTrip(t,{interactive:true});return t}
+  await syncTrip(t,{interactive:true});return{t,relink}}
 
 /* ---------- undo a bad sync: bring back an earlier version of the trip file ----------
    Drive keeps earlier versions of the trip file (for binary files, about 30 days or 100 versions).
    Restoring makes every record of that version newer than anything since, and records a deletion for
    whatever was added after it, then syncs, so every phone ends up with that version. */
 async function gsVersions(t){const l=await GDrive.revisions(t.sync.fileId);return(l.revisions||[]).slice().reverse()}
-async function gsPeek(t,rev){return cleanBundle(await gsOpen(await GDrive.readRev(t.sync.fileId,rev),t.sync.code))}
+async function gsPeek(t,rev){return cleanBundle((await gsOpenAny(await GDrive.readRev(t.sync.fileId,rev),gsCodes(t))).R)}
 async function gsRestore(t,R0){
   const now=Date.now(),keep={items:new Set(R0.items.map(x=>x.id)),memories:new Set(R0.memories.map(x=>x.id)),files:new Set(R0.files.map(x=>x.id))};
   for(const s of["items","memories","files"])for(const r of S[s].filter(x=>x.tripId===t.id&&!keep[s].has(x.id)))(t.sync.tomb||=[]).push({s,id:r.id,at:now});
@@ -272,13 +292,14 @@ async function openVersions(t){
 /* ---------- UI ---------- */
 const gsAgo=ms=>{const m=Math.round((Date.now()-ms)/6e4);return m<1?"just now":m<60?`${m} min ago`:m<1440?`${Math.round(m/60)} h ago`:fmtDs(new Date(ms).toISOString().slice(0,10))};
 function gsChip(t){if(!t?.sync?.fileId)return"";const s=GS.st[t.id]||{state:GS.tok?"ok":"paused"},n=(t.sync.members||[]).filter(m=>m.email!==GS.email).length+(t.sync.role==="owner"?0:1); // the other people, not you
-  const [cls,txt]=s.state==="syncing"?["",`${ic("clock","sm")} Syncing…`]:s.state==="paused"?["warn",`${ic("unlock","sm")} Sync paused · tap to reconnect`]:s.state==="gone"?["bad",`${ic("alert","sm")} No longer shared`]:s.state==="error"?["bad",`${ic("alert","sm")} Sync problem · tap`]
+  const [cls,txt]=s.state==="syncing"?["",`${ic("clock","sm")} Syncing…`]:s.state==="paused"?["warn",`${ic("unlock","sm")} Sync paused · tap to reconnect`]:s.state==="gone"?["bad",`${ic("alert","sm")} No longer shared`]:s.state==="rekey"?["warn",`${ic("key","sm")} New trip key · ask the owner for the new link`]:s.state==="error"?["bad",`${ic("alert","sm")} Sync problem · tap`]
     :["ok",`${ic("share","sm")} Shared${n?` with ${n}`:""}${t.sync.lastSync?` · synced ${gsAgo(t.sync.lastSync)}`:""}`];
   return`<button class="syncchip ${cls}" data-a="gsChip" data-trip="${esc(t.id)}" title="${esc(s.msg||"Shared through Google Drive")}">${txt}</button>`}
 const gsLink=t=>`${location.origin}${location.pathname}#join=${t.sync.fileId}.${t.sync.code}`;
 function gsStat(t){const s=t.sync,st=GS.st[t.id]||{};
   const line=st.state==="syncing"?`<div class="note info">${ic("clock")}<div>Syncing…</div></div>`
     :st.state==="paused"||!GS.tok?`<div class="note warn">${ic("unlock")}<div><b>Sync is paused.</b> Connect Google to sync this trip. <button class="btn xs" id="gsRe">${ic("unlock","sm")} Connect</button></div></div>`
+    :st.state==="rekey"?`<div class="note warn">${ic("key")}<div><b>The trip key changed.</b><div class="small muted">The owner removed someone and made a new key. Open the new invite link they send you; until then your changes stay on this phone and sync afterwards.</div></div></div>`
     :st.state==="gone"?`<div class="note bad">${ic("alert")}<div><b>${esc(st.msg)}</b><div class="small muted">Your copy stays on this phone.</div></div></div>`
     :st.state==="error"?`<div class="note bad">${ic("alert")}<div><b>Last sync didn't finish.</b><div class="small muted">${esc(st.msg)}</div></div></div>`
     :`<div class="note ok">${ic("check")}<div>Synced ${s.lastSync?gsAgo(s.lastSync):"—"}${GS.email?` · as ${esc(GS.email)}`:""}</div></div>`;
@@ -298,6 +319,7 @@ function gsSheetBody(t){
    ${mem.length?mem.map(m=>`<div class="li"><div class="b"><div class="t">${esc(m.email)}${m.email===GS.email?" (you)":""}</div></div>${owner?`<button class="btn xs ghost" data-gsrm="${esc(m.email)}">${ic("x","sm")} Remove</button>`:""}</div>`).join(""):`<div class="small muted">No one yet.</div>`}
    ${owner?`<div class="row mt"><input id="gsEm" type="email" placeholder="Add a Gmail address" autocomplete="off"><button class="btn" id="gsAdd">${ic("plus","sm")} Add</button></div>`:""}
    <div class="h mt">${ic("key")}<h2>Invite link</h2></div>
+   ${owner&&s.rekey?`<div class="note warn">${ic("key")}<div><b>New trip key after removing ${esc(s.rekey.removed)}.</b> Send this new link to ${mem.length?esc(mem.map(m=>m.email).join(", ")):"anyone you add"}; the old link no longer opens the trip. <button class="btn xs" id="gsRekeyDone">${ic("check","sm")} Done, I've sent it</button></div></div>`:""}
    <div class="small muted">Send this to the people above (WhatsApp, SMS). It opens Trip Vault and holds the key to the trip, so share it only with them.</div>
    <div class="gsinv"><canvas id="gsQr" aria-label="Invite QR code"></canvas><div class="sp" style="min-width:0"><div class="mono small gslink" data-copy="${esc(gsLink(t))}">${esc(gsLink(t))}</div>
     <div class="small dim mt">Trip code: <b class="mono" data-copy="${esc(s.code)}">${esc(s.code)}</b></div>
@@ -315,8 +337,9 @@ function openShare(t=curTrip()){if(!t){toast("Create a trip first","bad");return
     if(b.id==="gsGo"){const em=gsEmails($("#gsEm",ov).value),bad=em.find(x=>!gsEmailOk(x));if(bad){toast(`“${esc(bad)}” isn't an email address`,"bad");return}
       await busy(b,async()=>{await gsStartShare(t,em);ov.remove();openShare(t);toast(em.length?`Shared with ${em.length}. Now send them the invite link`:"Trip file created. Add people and send them the invite link")})}
     else if(b.id==="gsAdd"){const em=gsEmails($("#gsEm",ov).value);if(!em.length)return;await busy(b,async()=>{for(const x of em)await gsAddMember(t,x);$(".sb",ov).innerHTML=gsSheetBody(t);qr();toast("Added. Send them the invite link")})}
-    else if(b.dataset.gsrm){const em=b.dataset.gsrm;if(!(await gate({title:`Remove ${esc(em)}?`,plan:["They lose access to the trip file in Google Drive and stop getting updates","What they already have on their phone stays with them"],ok:"Remove",danger:false})))return;
-      await busy(b,async()=>{await gsRemoveMember(t,em);$(".sb",ov).innerHTML=gsSheetBody(t);qr()})}
+    else if(b.dataset.gsrm){const em=b.dataset.gsrm;if(!(await gate({title:`Remove ${esc(em)}?`,plan:["They lose access to the trip file in Google Drive and stop getting updates","A new trip key is made: send the new invite link to everyone still in the trip. The removed person can't open anything added from now on","What they already have on their phone stays with them"],ok:"Remove",danger:false})))return;
+      await busy(b,async()=>{await gsRemoveMember(t,em);$(".sb",ov).innerHTML=gsSheetBody(t);qr();toast(`${esc(em)} removed. Send the new invite link to the others`)})}
+    else if(b.id==="gsRekeyDone"){delete t.sync.rekey;await DB.put("trips",t);$(".sb",ov).innerHTML=gsSheetBody(t);qr()}
     else if(b.id==="gsRe")await busy(b,async()=>{await syncTrip(t,{interactive:true});qr()})
     else if(b.id==="gsShr")navigator.share({title:`Join “${t.name}” in Trip Vault`,text:`Join our trip “${t.name}” in Trip Vault`,url:gsLink(t)}).catch(()=>{})});
   $("#gsHist",ov)?.addEventListener("click",()=>{ov.remove();openVersions(t)});
@@ -332,7 +355,7 @@ function openJoin(pre){if(!gsReady()){sheet({title:`${ic("share")} Join a shared
     foot:`<button class="btn" data-close>Cancel</button><button class="btn pri" id="gsJoin">${ic("unlock","sm")} Connect Google & join</button>`});
   $("#gsJoin",ov).onclick=async e=>{const b=e.currentTarget,inv=gsParseInvite($("#gsInv",ov).value);if(!inv){toast("That doesn't look like a Trip Vault invite link","bad");return}
     b.disabled=true;b.innerHTML=`${ic("clock","sm")} Joining…`;
-    try{const t=await gsJoin(inv);ov.remove();go("today");toast(`Joined “${esc(t.name)}”`)}
+    try{const{t,relink}=await gsJoin(inv);ov.remove();go("today");toast(relink?`Trip key updated for “${esc(t.name)}”`:`Joined “${esc(t.name)}”`)}
     catch(err){toast(esc(err.message||String(err)),"bad");b.disabled=false;b.innerHTML=`${ic("unlock","sm")} Connect Google & join`}}}
 function gsSettingsBlock(){if(!gsReady())return"";const n=gsLinked().length;
   return`<div class="sep"></div><div class="h">${ic("share")}<h2>Google sharing</h2></div>

@@ -115,7 +115,7 @@ const HI={
   "Share this trip":"यह ट्रिप शेयर करें","Shared trip":"शेयर की गई ट्रिप","Share":"शेयर","Shared":"शेयर की गई","Join a shared trip":"शेयर की गई ट्रिप से जुड़ें","Connect Google & share":"Google जोड़ें और शेयर करें",
   "Connect Google & join":"Google जोड़ें और जुड़ें","Sync now":"अभी सिंक करें","Stop sharing":"शेयर करना बंद करें","Leave":"छोड़ें","Invite link":"न्योता लिंक","Copy link":"लिंक कॉपी करें","Send…":"भेजें…",
   "Their Gmail addresses":"उनके Gmail पते","People you shared with":"जिनके साथ शेयर किया","Shared with":"इनके साथ शेयर","No one yet.":"अभी कोई नहीं।","Google sharing":"Google शेयरिंग","Disconnect Google":"Google से डिस्कनेक्ट करें",
-  "Shared trips (Google Drive)":"शेयर की गई ट्रिप्स (Google Drive)","Sync is paused.":"सिंक रुका हुआ है।","Connect":"जोड़ें","Syncing…":"सिंक हो रहा है…","Sync paused · tap to reconnect":"सिंक रुका · फिर जोड़ने के लिए टैप करें","Versions":"पुराने संस्करण","Earlier versions":"पुराने संस्करण","Restore…":"वापस लाएँ…","Restore this version?":"यह संस्करण वापस लाएँ?",
+  "Shared trips (Google Drive)":"शेयर की गई ट्रिप्स (Google Drive)","Sync is paused.":"सिंक रुका हुआ है।","Connect":"जोड़ें","Syncing…":"सिंक हो रहा है…","Sync paused · tap to reconnect":"सिंक रुका · फिर जोड़ने के लिए टैप करें","Versions":"पुराने संस्करण","New trip key · ask the owner for the new link":"नई ट्रिप चाबी · मालिक से नया लिंक माँगें","The trip key changed.":"ट्रिप की चाबी बदल गई।","Done, I've sent it":"हो गया, भेज दिया","Earlier versions":"पुराने संस्करण","Restore…":"वापस लाएँ…","Restore this version?":"यह संस्करण वापस लाएँ?",
   /* plan calendar legend */
   "Travel":"यात्रा","Free to plan":"योजना के लिए ख़ाली","Not in trip":"ट्रिप में नहीं",
   /* weekday & month abbreviations shown on their own (calendar) */
