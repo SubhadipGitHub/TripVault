@@ -65,7 +65,7 @@ const clearPhotoCache=()=>{PHOTO_URLS.forEach(u=>URL.revokeObjectURL(u));PHOTO_U
 /* ===================== Sample trip ===================== */
 async function loadSample(){const today=todayIn("Asia/Kolkata"),d0=addDays(today,21),D=n=>addDays(d0,n),KL="Asia/Kuala_Lumpur";
   const t={id:uid(),name:"Sample · KL & Langkawi",dest:"Kuala Lumpur, Langkawi",start:d0,end:D(5),tz:KL,type:"international",localCur:"MYR",rates:{MYR:19.2},budget:180000,createdAt:Date.now(),sample:true};
-  const g1=uid(),g2=uid(),P=(s,a,m,due)=>({id:uid(),status:s,amount:a,method:m,due:due||today}),nm=["Arjun Mehta","Riya Mehta"];
+  const g1=uid(),g2=uid(),P=(s,a,m,due)=>({id:uid(),status:s,amount:a,method:m,due:due||today}),nm=["Arjun Mehta","Riya Mehta"],sx={"arjun mehta":"m","riya mehta":"f"};
   const L=[
     {kind:"flight",flightNo:"6E 1061",airline:"IndiGo",from:"BLR",to:"KUL",dep:`${D(0)}T07:15`,arr:`${D(0)}T14:05`,depTz:"Asia/Kolkata",arrTz:KL,terminal:"1",ref:"Q7XK2M",groupId:g1,cost:48640,cur:"INR",payments:[P("paid",48640,"Card")],names:nm},
     {kind:"transfer",title:"KLIA Ekspres → KL Sentral + Grab",start:`${D(0)}T15:15`,end:`${D(0)}T16:15`,tz:KL,location:"KLIA arrival hall, Level 1",cost:110,cur:"MYR",payments:[]},
@@ -84,7 +84,7 @@ async function loadSample(){const today=todayIn("Asia/Kolkata"),d0=addDays(today
   const EX=(d,time,title,cat,cost)=>({kind:"expense",title,cat,cost,cur:"MYR",date:D(d),time,tz:KL,payments:[]});
   L.push(EX(0,"19:40","Nasi lemak at Jalan Alor","Food",42),EX(1,"08:30","Roti canai breakfast","Food",14),EX(1,"13:10","Grab to KLCC","Local transport",22),EX(2,"09:00","Batu Caves train ticket","Local transport",6),EX(2,"20:15","Laksa and cendol","Food",38),EX(4,"19:00","Seafood dinner, Cenang","Food",140),EX(4,"12:30","Batik shopping","Shopping",85));
   t.pack=defaultPack(true).map((p,i)=>({...p,done:i%3===0}));t.emergency="Insurance helpline: (add yours)\nHotel KL: front desk on the booking email";
-  await saveTrip(t);for(const x of L)await saveItem({id:uid(),tripId:t.id,names:[],payments:[],...x,sample:true});
+  await saveTrip(t);for(const x of L)await saveItem({id:uid(),tripId:t.id,names:[],payments:[],...x,...(x.names===nm?{sex:sx}:{}),sample:true});
   const card=(hue,word,sub)=>new Promise(r=>{const c=document.createElement("canvas");c.width=1200;c.height=900;const g=c.getContext("2d");const gr=g.createLinearGradient(0,0,1200,900);gr.addColorStop(0,`hsl(${hue},70%,62%)`);gr.addColorStop(1,`hsl(${(hue+50)%360},65%,28%)`);g.fillStyle=gr;g.fillRect(0,0,1200,900);
     g.fillStyle="rgba(255,255,255,.18)";g.beginPath();g.arc(880,300,150,0,7);g.fill();g.fillStyle="rgba(0,0,0,.28)";g.beginPath();g.moveTo(0,900);g.lineTo(0,640);g.lineTo(260,420);g.lineTo(470,610);g.lineTo(720,360);g.lineTo(1000,640);g.lineTo(1200,520);g.lineTo(1200,900);g.fill();
     g.fillStyle="#fff";g.font="700 96px Georgia,serif";g.fillText(word,70,170);g.font="500 38px system-ui,sans-serif";g.globalAlpha=.85;g.fillText(sub,74,230);c.toBlob(b=>r(new File([b],word+".jpg",{type:"image/jpeg"})),"image/jpeg",.85)});

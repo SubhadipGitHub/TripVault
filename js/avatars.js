@@ -11,10 +11,13 @@ function crewOf(t){
   if(!t)return{party:"solo",crew:["f"]};
   const ok=Array.isArray(t.crew)&&t.crew.length&&t.crew.every(x=>x==="m"||x==="f");
   if(t.party&&ok)return{party:t.party,crew:t.crew.slice(0,6)};
-  const n=tripPeople(t).length;
-  if(n<=1)return{party:"solo",crew:["m"]};
-  if(n===2)return{party:"couple",crew:["m","f"]};
-  return{party:"group",crew:Array.from({length:Math.min(6,n)},(_,i)=>i%2?"f":"m")};
+  // guess from the bookings: who is travelling, and him/her where a ticket's title or IRCTC's M/F said so
+  const known={};for(const it of tripItems(t.id))for(const[k,v]of Object.entries(it.sex||{}))if(!(k in known)&&(v==="m"||v==="f"))known[k]=v;
+  const ppl=tripPeople(t),n=ppl.length,party=n<=1?"solo":n===2?"couple":"group";
+  const crew=(n?ppl:[""]).slice(0,6).map(p=>known[p.toLowerCase()]||null);
+  if(party==="couple"&&(crew[0]||crew[1])&&!(crew[0]&&crew[1])){const k=crew[0]||crew[1];crew[crew[0]?1:0]=k==="m"?"f":"m"}
+  else for(let i=0;i<crew.length;i++)if(!crew[i]){const m=crew.filter(x=>x==="m").length,f=crew.filter(x=>x==="f").length;crew[i]=n<=1||m<=f?"m":"f"}
+  return{party,crew};
 }
 function avSlot(t,cls=""){
   if(!AV.can())return"";const{party,crew}=crewOf(t);

@@ -64,6 +64,8 @@ function buildItem(base,g){const it={...base};const lt=(d,t)=>d?`${d}T${t||"00:0
   else{Object.assign(it,{title:g.title,start:lt(g.stD,g.stT||"10:00"),end:g.enD||g.enT?lt(g.enD||g.stD,g.enT||g.stT):"",location:g.location,tz:g.tz||it.tz||""});if(!it.tz)it.tz=dayTz(S.trips.find(t=>t.id===it.tripId)||{id:"",tz:"Asia/Kolkata"},g.stD)}
   if(g.ref!==undefined)it.ref=k==="flight"?g.ref.toUpperCase():g.ref;if(g.bookingId!==undefined)it.bookingId=g.bookingId;
   if(g.names!==undefined)it.names=g.names.split(/\s*,\s*/).filter(Boolean);
+  // him/her read from the ticket: keep only entries whose name is still on the booking
+  if(it.sex){const keep=new Set((it.names||[]).map(n=>n.toLowerCase()));it.sex=Object.fromEntries(Object.entries(it.sex).filter(([k,v])=>keep.has(k)&&(v==="m"||v==="f")));if(!Object.keys(it.sex).length)delete it.sex}
   if(g.cost!==undefined){it.cost=+g.cost||0;it.cur=g.cur||HC()}if(g.refundable!==undefined)it.refundable=g.refundable;if(g.notes!==undefined)it.notes=g.notes;
   return it}
 function validItem(it){switch(it.kind){case"flight":return(it.from&&it.to||it.flightNo)&&it.dep?null:"Need flight no. or route, and departure date";
@@ -213,7 +215,7 @@ function openReview(R,kind){
     const segEls=$$(".seg[data-i]",ov).filter(s=>$(".segOn",s).checked);if(!segEls.length){toast("Nothing ticked to import","bad");return}
     const shared=gather($(".seg:not([data-i])",ov));
     let tripId=R.tripId;const gid=segEls.length>1?uid():null;
-    const items=segEls.map((se,i)=>{const g={...gather(se),...shared};if(i>0){g.cost="0"}return buildItem({id:uid(),kind:P.kind,tripId:tripId==="__new"?"_":tripId,payments:[],groupId:gid,srcHash:R.textHash,createdAt:Date.now()},g)});
+    const items=segEls.map((se,i)=>{const g={...gather(se),...shared};if(i>0){g.cost="0"}return buildItem({id:uid(),kind:P.kind,tripId:tripId==="__new"?"_":tripId,payments:[],groupId:gid,srcHash:R.textHash,createdAt:Date.now(),sex:{...(P.sex||{})}},g)});
     for(const it of items){const e=validItem(it);if(e){toast(e,"bad");return}}
     if(tripId!=="__new"){const t0=S.trips.find(t=>t.id===tripId),rg=t0?tripRange(t0):{};const ds=items.flatMap(itemDates).sort();
       if(rg.s&&ds.length&&(ds[0]<addDays(rg.s,-2)||ds[ds.length-1]>addDays(rg.e,2))){
