@@ -57,7 +57,7 @@ Whoever hosts this copy of Trip Vault does this once; everyone using it then jus
 4. **Credentials → Create credentials → OAuth client ID → Web application**. Under *Authorized JavaScript origins* add `https://subhadipgithub.github.io` (your Pages origin) and `http://localhost:8000` for local testing. Copy the **Client ID**.
 5. **Credentials → Create credentials → API key**. Restrict it: *Application restrictions → Websites* `https://subhadipgithub.github.io/*` and `http://localhost:8000/*`; *API restrictions* → Google Drive API and Google Picker API. Copy the key.
 6. **IAM & Admin → Settings**: copy the **Project number**.
-7. Put the three values in `js/sync-config.js` and push. They are public identifiers, not secrets.
+7. In GitHub, open **Settings → Environments → github-pages** and add three environment secrets: `OAUTH_CLIENT_ID`, `GOOGLE_API_KEY` and `GOOGLE_PROJECT_NUMBER` (the number, not the project ID). The deploy workflow writes them into `js/sync-config.js` on the live site; if one is missing or malformed, the site deploys with sharing off and the workflow run shows a warning. They are public identifiers that end up in the site's JavaScript; the secrets only keep them out of the repository. **Don't add the OAuth client secret** (nothing uses it; delete it if you created one). To test on `localhost:8000`, fill `js/sync-config.js` temporarily with a localhost-only client and don't commit it.
 
 Then: open a trip → **Edit → Share**, add your partner's Gmail, and send them the invite link. They open it, sign in with that Gmail and pick the shared trip file once.
 

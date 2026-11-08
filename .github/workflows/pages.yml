@@ -19,6 +19,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # Google sharing: write the public IDs from the github-pages environment secrets into the site.
+      # The OAuth client secret is deliberately not passed: the browser sign-in flow never uses it.
+      - name: Write Google sharing config
+        env:
+          CLIENT_ID: ${{ secrets.OAUTH_CLIENT_ID }}
+          API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          PROJECT_NUMBER: ${{ secrets.GOOGLE_PROJECT_NUMBER }}
+        run: node .github/scripts/write-sync-config.js
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
