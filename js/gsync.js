@@ -344,7 +344,7 @@ function gsSheetBody(t){
    ${owner?"":`<div class="li">${gsAv(s.owner)}<div class="b"><div class="t">${esc(s.owner||"Trip owner")}</div><div class="d">Owner</div></div></div>`}
    ${mem.length?mem.map(m=>`<div class="li">${gsAv(m.email)}<div class="b"><div class="t">${esc(m.email)}${m.email===(s.me||GS.email)?" (you)":""}</div></div>${owner?`<button class="btn xs ghost" data-gsrm="${esc(m.email)}">${ic("x","sm")} Remove</button>`:""}</div>`).join(""):`<div class="small muted">No one yet.</div>`}
    ${owner?`<div class="row mt"><input id="gsEm" type="email" placeholder="Add a Gmail address" autocomplete="off"><button class="btn" id="gsAdd">${ic("plus","sm")} Add</button></div>`:""}
-   <div class="small dim mt">${ic("info","sm")} Entries the others add show their coloured initial, so you can tell who added what.</div>
+   <div class="small dim mt">${ic("info","sm")} Entries the others add show their coloured initial; a ring in their colour means they changed it last.</div>
    <div class="h mt">${ic("key")}<h2>Invite link</h2></div>
    ${owner&&s.rekey?`<div class="note warn">${ic("key")}<div><b>New trip key after removing ${esc(s.rekey.removed)}.</b> Send this new link to ${mem.length?esc(mem.map(m=>m.email).join(", ")):"anyone you add"}; the old link no longer opens the trip. <button class="btn xs" id="gsRekeyDone">${ic("check","sm")} Done, I've sent it</button></div></div>`:""}
    <div class="small muted">Send this to the people above (WhatsApp, SMS). It opens Trip Vault and holds the key to the trip, so share it only with them.</div>
@@ -393,16 +393,19 @@ function gsBackupBlock(){return`<div class="h">${ic("share")}<h2>Shared trips (G
    <div class="row wrap mt"><button class="btn" id="gsJoinB">${ic("share","sm")} Join a shared trip</button></div><div class="sep"></div>`}
 
 /* ---------- who's who: a stable colour and initial per person ---------- */
-const gsHue=e=>{let h=7;for(const c of String(e||""))h=(h*31+c.charCodeAt(0))>>>0;return h%360};
+const gsHue=e=>{let h=2166136261;for(const c of String(e||"")){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}h^=h>>>15;h=Math.imul(h,2246822507);h^=h>>>13;return(h>>>0)%360}; // FNV-1a + mix: similar emails get far-apart colours
 const gsColor=e=>e?`hsl(${gsHue(e)} 58% 46%)`:"var(--tx3)";
 function gsName(e){const l=String(e||"").split("@")[0].replace(/[._+-]+/g," ").replace(/\d+/g,"").trim().slice(0,40);return l?l.replace(/(^|\s)\S/g,c=>c.toUpperCase()):(e?String(e).slice(0,40):"Someone")}
 const gsIni=e=>e?(gsName(e).match(/\S/)?.[0]||"?").toUpperCase():"";
 const gsAv=(e,cls="")=>`<span class="gsav ${cls}" style="--bc:${gsColor(e)}" aria-hidden="true">${e?esc(gsIni(e)):ic("user","sm")}</span>`;
-/* Someone else's entry in a shared trip: their email, else "" (your own entries and unshared trips get no mark). */
-function gsWho(rec){const t=rec&&S.trips.find(x=>x.id===rec.tripId);if(!t?.sync?.fileId||!rec.by)return"";const me=t.sync.me||GS.email;return rec.by===me?"":rec.by}
-function byMark(rec){const w=gsWho(rec);if(!w)return"";const n=esc(`Added by ${gsName(w)}`);
-  return`<span class="bym" style="--bc:${gsColor(w)}" title="${n}" aria-label="${n}">${esc(gsIni(w))}</span>`}
-const byRow=rec=>{const w=gsWho(rec);return w?` data-by style="--bc:${gsColor(w)}"`:""};
+/* Someone else in a shared trip who added (k="by") or last changed (k="ed") a record: their email, else ""
+   (you, unknown, and unshared trips get no mark). */
+function gsOther(rec,k){const t=rec&&S.trips.find(x=>x.id===rec.tripId);if(!t?.sync?.fileId||!rec[k])return"";const me=t.sync.me||GS.email;return rec[k]===me?"":rec[k]}
+const gsWho=rec=>gsOther(rec,"by");
+/* Filled initial: they added it. Ring: they changed it last (shown when that's not the person who added it). */
+function byMark(rec){const a=gsOther(rec,"by"),e=gsOther(rec,"ed"),m=(w,what,cls)=>{const n=esc(`${what} by ${gsName(w)}`);return`<span class="bym${cls}" style="--bc:${gsColor(w)}" title="${n}" aria-label="${n}">${esc(gsIni(w))}</span>`};
+  return(a?m(a,"Added",""):"")+(e&&e!==a?m(e,"Changed"," ed"):"")}
+const byRow=rec=>{const w=gsOther(rec,"ed")||gsOther(rec,"by");return w?` data-by style="--bc:${gsColor(w)}"`:""};
 
 /* ---------- header account pill: are you connected, and did everything sync ---------- */
 function gsOverall(){const L=gsLinked(),st=L.map(t=>GS.st[t.id]?.state);

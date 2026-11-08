@@ -610,5 +610,7 @@ span.avsnap{display:contents}
 .gsst[data-s=warn]{background:var(--warn)}.gsst[data-s=bad]{background:var(--bad)}.gsst[data-s=syncing]{background:var(--acc);animation:gspulse 1s infinite}
 .gsppl{display:flex;align-items:center;gap:0}.gsppl .gsav{margin-left:-5px;border:2px solid var(--bg2,var(--card))}.gsppl .gsav:first-child{margin-left:0}
 .bym{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;background:var(--bc);color:#fff;font:700 9.5px/1 var(--sans);margin-left:6px;flex:none;vertical-align:2px;font-style:normal;letter-spacing:0}
+.bym.ed{background:transparent;color:var(--bc);box-shadow:inset 0 0 0 1.6px var(--bc)}
+.bym+.bym{margin-left:3px}
 .li[data-by],.ev[data-by]{box-shadow:inset 3px 0 0 var(--bc);padding-left:10px;background:linear-gradient(90deg,color-mix(in srgb,var(--bc) 9%,transparent),transparent 45%)}
 .mem[data-by]{box-shadow:0 6px 18px rgba(0,0,0,.32),0 0 0 2px var(--bc)}
