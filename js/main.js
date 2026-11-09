@@ -19,7 +19,12 @@ const A={
   vsub:el=>{S.sub=el.dataset.s;S.meta.sub=S.sub;saveMeta();render()},
   avPoke:()=>AV.poke(),
   acct:()=>openAcctMenu(),gsHub:()=>openAcctMenu(),profile:()=>{$$(".ov").forEach(o=>o.remove());openProfile()},about:()=>openAbout(),
-  privacyNotice:()=>openNotice(),help:el=>openHelp(el?.closest?.(".ov")?.dataset.help||""),tour:()=>{$$(".ov").forEach(o=>o.remove());openTour()},backupTab:()=>{$$(".ov").forEach(o=>o.remove());openSettings("backup")},
+  privacyNotice:()=>openNotice(),help:el=>openHelp(el?.dataset?.k||el?.closest?.(".ov")?.dataset.help||""),
+  places:()=>openPlaces(),phrases:()=>openPhrases(),translate:()=>openTranslate(),offMap:()=>openOfflineMap(),
+  plMenu:el=>{const p=placeFrom(el.dataset.p);if(p)openPlaceMenu(p)},plDrv:el=>{const p=placeFrom(el.dataset.p);if(p)openDriver(p)},plGo:el=>{const p=placeFrom(el.dataset.p);if(p)plGo(p)},
+  plCab:el=>{const p=placeFrom(el.dataset.p);if(p)plCab(p)},plTr:el=>{const p=placeFrom(el.dataset.p);if(p)plTr(p)},
+  plCabPick:()=>pickPlace(`${ic("car")} Cab to…`,plCab),plGoPick:()=>pickPlace(`${ic("compass")} Directions to…`,plGo),
+  payUpi:()=>{$$(".ov").forEach(o=>o.remove());S.sub="money";go("vault");setTimeout(()=>$(".upi-ids")?.closest(".card")?.scrollIntoView({block:"center"}),50)},tour:()=>{$$(".ov").forEach(o=>o.remove());openTour()},backupTab:()=>{$$(".ov").forEach(o=>o.remove());openSettings("backup")},
   gsShare:el=>{const t=S.trips.find(x=>x.id===el.dataset.trip)||curTrip();$$(".ov").forEach(o=>o.remove());openShare(t)},
   gsChip:el=>{const t=S.trips.find(x=>x.id===el.dataset.trip);if(!t)return;const s=GS.st[t.id];if(!gsOn()||s?.state==="paused")syncTrip(t,{interactive:true});else openShare(t)},
   day:el=>{const kb=document.activeElement===el;S.day=el.dataset.d;render();if(kb)$(`.calc[data-d="${S.day}"]`)?.focus({preventScroll:true})},
@@ -90,6 +95,8 @@ document.addEventListener("change",async e=>{
   const r=e.target.closest("[data-rate]");if(r){const t=curTrip();t.rates={...(t.rates||{})};const v=+r.value;if(v>0)t.rates[r.dataset.rate]=v;else delete t.rates[r.dataset.rate];await saveTrip(t);render();toast(`Rate saved: 1 ${r.dataset.rate} = ${sym(HC())}${v}`)}});
 let _emgT=null;
 document.addEventListener("change",async e=>{const hm2=e.target.closest("[data-home]");if(hm2){S.settings={...S.settings,[hm2.dataset.home]:hm2.value};await DB.put("meta",{k:"settings",v:S.settings});if(hm2.dataset.home==="lang"){location.reload();return}toast("Saved");return}
+  const up=e.target.closest("[data-upi]");if(up){const t=curTrip(),v=up.value.trim();if(v&&!UPI_RE.test(v)){toast("That doesn't look like a UPI ID (name@bank)","bad");return}
+    t.upi={...(t.upi||{})};if(v)t.upi[up.dataset.upi]=v;else delete t.upi[up.dataset.upi];await saveTrip(t);render();return}
   const pp=e.target.closest("[data-people]");if(pp){const t=curTrip();t.people=pp.value.split(/\s*,\s*/).filter(Boolean);await saveTrip(t);render()}});
 document.addEventListener("input",e=>{
   const s=e.target.closest("[data-save=emergency]");if(s){clearTimeout(_emgT);_emgT=setTimeout(async()=>{const t=curTrip();if(t){t.emergency=s.value;await saveTrip(t)}},500)}
@@ -133,5 +140,6 @@ async function consumeLaunch(){
   render();armIdle();if(!location.hash.startsWith("#join="))AV.intro(curTrip());gsBoot();consumeLaunch();if(!location.hash.startsWith("#join="))tourMaybe();
 })();
 setInterval(()=>{if(S.cur&&(S.view==="today"||S.view==="plan")&&!$(".ov")&&!SEARCH.ov&&!WR.ov&&!Vault.locked&&document.visibilityState==="visible"&&!document.activeElement?.matches("input,select,textarea"))render()},60000);
+document.addEventListener("toggle",e=>{if(e.target.matches?.(".upi-ids"))S.upiOpen=e.target.open},true);
 addEventListener("hashchange",()=>{if(location.hash.startsWith("#join="))consumeLaunch()}); // invite opened while Trip Vault is already open
 if("serviceWorker"in navigator&&location.protocol.startsWith("http"))addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));

@@ -21,7 +21,7 @@ function itemFields(it,o={}){
       ${F("Pick-up location","pickup",it.pickup,{full:1,ph:"Airport counter / address",cls:hl(f,"pickup")})}${F("Pick-up date","puD",s0.d,{type:"date",cls:hl(f,"start")})}${F("Time","puT",s0.t||"10:00",{type:"time"})}
       ${F("Drop-off date","doD",e0.d,{type:"date",cls:hl(f,"end")})}${F("Time","doT",e0.t||"10:00",{type:"time"})}${F("Drop-off location","dropoff",it.dropoff,{full:1,ph:"Same as pick-up if blank"})}
       ${F("Car type","carType",it.carType,{ph:"Compact / SUV / automatic"})}${o.compact?"":F("Confirmation no.","ref",it.ref,{cls:hl(f,"ref")})}<div class="${o.compact?"full":""}">${TZsel("Timezone","tz",it.tz)}</div></div>`}
-    case"hotel":return`<div class="fg f4">${F("Property","name",it.name,{full:1,cls:hl(f,"name"),ph:"Hotel / homestay name"})}${F("Address","address",it.address,{full:1,cls:hl(f,"address")})}
+    case"hotel":return`<div class="fg f4">${F("Property","name",it.name,{full:1,cls:hl(f,"name"),ph:"Hotel / homestay name"})}${F("Address","address",it.address,{full:1,cls:hl(f,"address")})}${F("Address in local language","addrLocal",it.addrLocal,{full:1,ph:"For the driver card (optional)"})}
       ${F("Check-in date","ciD",a.d,{type:"date",cls:hl(f,"checkIn")})}${F("From","ciT",a.t||"14:00",{type:"time"})}${F("Check-out date","coD",b.d,{type:"date",cls:hl(f,"checkOut")})}${F("Until","coT",b.t||"12:00",{type:"time"})}
       ${o.compact?"":F("Confirmation no.","ref",it.ref,{cls:hl(f,"ref")})}${F("PIN","pin",it.pin)}${F("Phone","phone",it.phone,{type:"tel"})}${F("Room","roomType",it.roomType)}
       <div class="full">${TZsel("Timezone","tz",it.tz)}</div></div>`;
@@ -29,7 +29,7 @@ function itemFields(it,o={}){
     case"doc":return`<div class="fg f4">${Sel("Type","docType",it.docType||"Passport",DOC_TYPES)}${F("Title","title",it.title,{ph:"e.g. Malaysia eVisa"})}${F("Expiry","expiry",it.expiry,{type:"date"})}${F("Ref / policy no.","ref",it.ref)}${F("Holder(s)","names",(it.names||[]).join(", "),{full:1,ph:"Comma separated"})}</div>`;
     default:return`<div class="fg f4">${F(k==="transfer"?"Transfer":"Activity","title",it.title,{full:1,ph:k==="transfer"?"KLIA Ekspres to KL Sentral / airport cab":"Petronas Towers skybridge"})}
       ${F("Date","stD",a.d,{type:"date"})}${F("Start","stT",a.t,{type:"time"})}${F("End date","enD",b.d||a.d,{type:"date"})}${F("End","enT",b.t,{type:"time"})}
-      ${F("Where","location",it.location,{full:1,ph:"Meeting point / address"})}${o.compact?"":F("Ticket / ref","ref",it.ref)}<div class="${o.compact?"full":""}">${TZsel("Timezone","tz",it.tz)}</div></div>`}}
+      ${F("Where","location",it.location,{full:1,ph:"Meeting point / address"})}${o.compact?"":F("Address in local language","addrLocal",it.addrLocal,{full:1,ph:"For the driver card (optional)"})}${o.compact?"":F("Ticket / ref","ref",it.ref)}<div class="${o.compact?"full":""}">${TZsel("Timezone","tz",it.tz)}</div></div>`}}
 const PAY_M=["UPI","Card","Net banking","Cash","Wallet","Forex card","Pay at property","Agent","Other"];
 const payRow=p=>`<div class="payrow fg f4" style="margin-top:6px;align-items:end"><div><label>Status</label><select data-p="status"><option value="paid" ${p.status==="paid"?"selected":""}>Paid</option><option value="pending" ${p.status!=="paid"?"selected":""}>Pending</option></select></div><div><label>Amount</label><input data-p="amount" type="number" step="0.01" value="${esc(p.amount??"")}"></div><div><label>${p.status==="paid"?"Paid on":"Due by"}</label><input data-p="due" type="date" value="${esc(p.due||p.date||"")}"></div><div class="row" style="gap:4px"><select data-p="method">${PAY_M.map(m=>`<option ${m===p.method?"selected":""}>${m}</option>`).join("")}</select><button class="ibtn" data-rmpay title="Remove">${ic("x","sm")}</button></div></div>`;
 /* Expense split: who paid, and who it's shared between (empty = everyone on the trip). */
@@ -56,12 +56,12 @@ function buildItem(base,g){const it={...base};const lt=(d,t)=>d?`${d}T${t||"00:0
     if(!it.tz)it.tz=dayTz(S.trips.find(t=>t.id===it.tripId)||{id:"",tz:"Asia/Kolkata"},g.depD)}
   else if(k==="car"){Object.assign(it,{name:g.name,pickup:g.pickup,dropoff:g.dropoff,carType:g.carType,start:lt(g.puD,g.puT||"10:00"),end:g.doD?lt(g.doD,g.doT||"10:00"):"",tz:g.tz||it.tz||""});
     if(!it.tz)it.tz=dayTz(S.trips.find(t=>t.id===it.tripId)||{id:"",tz:"Asia/Kolkata"},g.puD)}
-  else if(k==="hotel"){Object.assign(it,{name:g.name,address:g.address,checkIn:lt(g.ciD,g.ciT||"14:00"),checkOut:lt(g.coD,g.coT||"12:00"),pin:g.pin,phone:g.phone,roomType:g.roomType,tz:g.tz||it.tz||""});
+  else if(k==="hotel"){Object.assign(it,{name:g.name,address:g.address,addrLocal:g.addrLocal||"",checkIn:lt(g.ciD,g.ciT||"14:00"),checkOut:lt(g.coD,g.coT||"12:00"),pin:g.pin,phone:g.phone,roomType:g.roomType,tz:g.tz||it.tz||""});
     if(!it.tz){const a=findAirports((g.name||"")+" "+(g.address||"")).find(x=>x.city);it.tz=a?AP[a.v].tz:(S.trips.find(t=>t.id===it.tripId)?.tz||"Asia/Kolkata")}}
   else if(k==="expense"){Object.assign(it,{title:g.title,cat:g.cat,date:g.date,time:g.time,method:g.method});if(g.paidBy!==undefined)it.paidBy=g.paidBy;
     const sp=Object.keys(g).filter(x=>x.startsWith("sp:"));if(sp.length){const on=sp.filter(x=>g[x]).map(x=>x.slice(3));it.splitWith=on.length===sp.length||!on.length?[]:on}}
   else if(k==="doc")Object.assign(it,{docType:g.docType,title:g.title,expiry:g.expiry});
-  else{Object.assign(it,{title:g.title,start:lt(g.stD,g.stT||"10:00"),end:g.enD||g.enT?lt(g.enD||g.stD,g.enT||g.stT):"",location:g.location,tz:g.tz||it.tz||""});if(!it.tz)it.tz=dayTz(S.trips.find(t=>t.id===it.tripId)||{id:"",tz:"Asia/Kolkata"},g.stD)}
+  else{Object.assign(it,{title:g.title,start:lt(g.stD,g.stT||"10:00"),end:g.enD||g.enT?lt(g.enD||g.stD,g.enT||g.stT):"",location:g.location,...("addrLocal"in g?{addrLocal:g.addrLocal}:{}),tz:g.tz||it.tz||""});if(!it.tz)it.tz=dayTz(S.trips.find(t=>t.id===it.tripId)||{id:"",tz:"Asia/Kolkata"},g.stD)}
   if(g.ref!==undefined)it.ref=k==="flight"?g.ref.toUpperCase():g.ref;if(g.bookingId!==undefined)it.bookingId=g.bookingId;
   if(g.names!==undefined)it.names=g.names.split(/\s*,\s*/).filter(Boolean);
   // him/her read from the ticket: keep only entries whose name is still on the booking

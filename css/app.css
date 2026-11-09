@@ -680,3 +680,18 @@ span.avsnap{display:contents}
 .tour-dots button{width:8px;height:8px;border-radius:50%;background:var(--line2);padding:0}
 .tour-dots button[aria-selected=true]{background:var(--acc);width:22px;border-radius:5px}
 @media(prefers-reduced-motion:reduce){.tour-track{transition:none}}
+
+/* On the ground: hand-off tiles, places, driver card, phrasebook */
+.gtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+.gtile{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 6px;border-radius:14px;background:var(--bg2);border:1px solid var(--line);font-size:12.5px;font-weight:600;color:var(--tx2)}
+.gtile .ic{width:22px;height:22px;color:var(--acc)}.gtile:hover{border-color:var(--line2)}.gtile:active{transform:scale(.97)}
+.card>.h .ibtn.hq{width:30px;height:30px;font-size:14px}
+.pl-b{gap:6px;margin-top:8px}
+.mapl{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:9px;color:var(--tx2);background:none}
+.sheet.drv .sb{display:flex;flex-direction:column;justify-content:center;min-height:40vh;text-align:center}
+.drv-big{font:700 clamp(28px,8vw,46px)/1.25 var(--sans);color:var(--tx);overflow-wrap:anywhere}
+.drv-sub{margin-top:14px;color:var(--tx2);font-size:16px;overflow-wrap:anywhere}
+.phr-i{display:grid;grid-template-columns:1fr;gap:2px;width:100%;text-align:left;padding:10px 4px;border-top:1px solid var(--line)}
+.phr-i .en{font-size:12px;color:var(--tx3)}.phr-i .tx{font-size:17px;font-weight:600;color:var(--tx)}.phr-i .rom{font-size:12.5px;color:var(--tx2);font-style:italic}
+.phr-i:hover{background:var(--card)}
+.upi-ids summary{cursor:pointer;color:var(--tx2)}

@@ -5,7 +5,7 @@ const IDEA_CATS=["See","Eat","Do","Shop","Stay","Other"];
 /* Places to see / eat / do. Schedule one and it becomes an activity in the plan. */
 function viewIdeas(t){
   const L=t.ideas||[];
-  let h=`<div class="card"><div class="h">${ic("compass")}<h2>Ideas · ${L.length}</h2></div>
+  let h=`<div class="card"><div class="h">${ic("compass")}<h2>Ideas · ${L.length}</h2><span class="sp"></span><button class="btn xs ghost" data-a="places">${ic("pin","sm")} Places</button><button class="btn xs ghost" data-a="phrases">${ic("book","sm")} Phrases</button></div>
    <div class="fg"><div class="full"><label>Idea</label><input id="idT" placeholder="Petronas skybridge, Jalan Alor night market…"></div>
    <div><label>Type</label><select id="idC">${IDEA_CATS.map(c=>`<option>${c}</option>`).join("")}</select></div><div><label>Place / area (for maps)</label><input id="idP" placeholder="KLCC, Kuala Lumpur"></div>
    <div class="full"><label>Note</label><input id="idN" placeholder="Book ahead, closed Mondays…"></div></div>
