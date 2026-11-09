@@ -695,3 +695,8 @@ span.avsnap{display:contents}
 .phr-i .en{font-size:12px;color:var(--tx3)}.phr-i .tx{font-size:17px;font-weight:600;color:var(--tx)}.phr-i .rom{font-size:12.5px;color:var(--tx2);font-style:italic}
 .phr-i:hover{background:var(--card)}
 .upi-ids summary{cursor:pointer;color:var(--tx2)}
+
+/* pairing code and the update bar */
+.paircode{font-size:clamp(26px,8vw,40px);font-weight:700;letter-spacing:2px;text-align:center;margin:18px 0 6px;color:var(--tx);cursor:copy;overflow-wrap:anywhere}
+.updbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + var(--safe-b));z-index:95;display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line2);border-radius:14px;padding:8px 8px 8px 14px;box-shadow:var(--sh);font-size:13px;max-width:calc(100vw - 24px)}
+.updbar>.ic{color:var(--acc)}.updbar .ibtn{width:30px;height:30px}

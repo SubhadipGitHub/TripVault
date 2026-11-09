@@ -87,11 +87,11 @@ function openTranslate(){const t=curTrip(),L=appPref("lang")||tripLang(t)||"en";
   $("#trGo",ov).onclick=()=>{const v=$("#trT",ov).value.trim();window.open(translateUrl(v||" ",L),"_blank","noopener,noreferrer")}}
 
 /* ---------- Today: On the ground (from the day before the trip until it ends) ---------- */
-function groundCard(t){const ph=tripPhase(t);if(!(ph.p==="during"||(ph.p==="before"&&ph.days<=1)))return"";
-  const upi=HC()==="INR"&&Object.keys(t.upi||{}).length>0&&isTouch();
+function groundCard(t){const ph=tripPhase(t);if(ph.p==="after"||ph.p==="none")return"";const near=ph.p==="during"||ph.days<=1;
+  const upi=near&&HC()==="INR"&&Object.keys(t.upi||{}).length>0&&isTouch();
   const tile=(a,i,l)=>`<button class="gtile" data-a="${a}">${ic(i)}<span>${l}</span></button>`;
-  return`<div class="card"><div class="h">${ic("compass")}<h2>On the ground</h2><span class="sp"></span><button class="ibtn hq" data-a="help" data-k="ground" aria-label="Help">?</button></div>
-   <div class="gtiles">${tile("plCabPick","car","Cab")}${tile("plGoPick","compass","Directions")}${tile("translate","globe","Translate")}${tile("phrases","book","Phrases")}${tile("places","pin","Places")}${tile("offMap","download","Offline map")}${upi?tile("payUpi","wallet","Pay"):""}</div></div>`}
+  return`<div class="card"><div class="h">${ic("compass")}<h2>${near?"On the ground":"Get ready"}</h2><span class="sp"></span><button class="ibtn hq" data-a="help" data-k="ground" aria-label="Help">?</button></div>
+   <div class="gtiles">${near?tile("plCabPick","car","Cab")+tile("plGoPick","compass","Directions"):""}${tile("translate","globe","Translate")}${tile("phrases","book","Phrases")}${tile("places","pin","Places")}${tile("offMap","download","Offline map")}${upi?tile("payUpi","wallet","Pay"):""}</div></div>`}
 /* Where-to picker for the Cab and Directions tiles: tonight's stay first. */
 function pickPlace(title,run){const t=curTrip(),P=tripPlaces(t);if(!P.length){toast("Add a stay or a place first","info");return}
   const ov=sheet({title,body:P.map((p,i)=>`<button class="li tap pick" data-i="${i}" style="width:100%;text-align:left"><div class="b"><div class="t">${esc(p.name)}${p.tonight?pill("tonight","ok"):""}</div>${p.addr!==p.name?`<div class="d">${esc(p.addr)}</div>`:""}</div></button>`).join(""),foot:`<button class="btn" data-close>Cancel</button>`});

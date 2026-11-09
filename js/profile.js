@@ -3,7 +3,7 @@
    Everyone has a profile: an offline one on this device (just a name, optional), which shows Google
    sync status once Google is connected. The menu holds the account, Settings, Privacy and About. */
 const profName=()=>String(S.settings?.profile?.name||"").trim().slice(0,60);
-const TV_VERSION="1.1";
+const TV_VERSION="1.4";
 
 function closeAcctMenu(){$$(".pmov").forEach(o=>o.remove());$("#gsPill")?.setAttribute("aria-expanded","false")}
 function openAcctMenu(){
@@ -17,7 +17,7 @@ function openAcctMenu(){
       :item("connect","unlock",L.length?"Reconnect Google":"Connect Google Drive",L.length?"Your shared trips are paused":"Sync trips to your Drive and share them","hi")):"";
   const ov=document.createElement("div");ov.className="pmov";
   ov.innerHTML=`<div class="pmenu" role="menu" aria-label="Account menu">${head}<div class="pm-l">${g}
-    ${item("profile","user","Profile",nm?"":"Add your name")}${item("settings","sliders","Settings","Backup &amp; restore, security, planner")}
+    ${on?item("adddev","phone","Add a device",""):""}${on?item("gettrips","download","Get trips from my other device",""):""}${curTrip()?item("places","pin","Places &amp; phrases",""):""}${item("profile","user","Profile",nm?"":"Add your name")}${item("settings","sliders","Settings","Backup &amp; restore, security, planner")}
     ${item("privacy","shield","Privacy &amp; your data","See, download or erase your data")}${item("help","info","Help &amp; tour","")}${item("about","book","About us","")}
     ${Vault.protected?item("lock","lock","Lock now",""):""}${on?item("out","x","Disconnect Google","Shared trips pause until you connect again"):""}</div></div>`;
   document.body.append(ov);$("#gsPill")?.setAttribute("aria-expanded","true");
@@ -28,7 +28,7 @@ function openAcctMenu(){
   ov.addEventListener("click",async e=>{const b=e.target.closest("[data-pm]");if(!b){if(!e.target.closest(".pmenu"))closeAcctMenu();return}
     const k=b.dataset.pm;closeAcctMenu();
     if(k==="sync")openSettings("sync");else if(k==="connect")gsConnect();else if(k==="profile")openProfile();else if(k==="settings")openSettings();
-    else if(k==="privacy")openSettings("privacy");else if(k==="about")openAbout();else if(k==="help")openHelp();else if(k==="lock")Vault.lock();
+    else if(k==="privacy")openSettings("privacy");else if(k==="about")openAbout();else if(k==="adddev")A.addDevice();else if(k==="gettrips")A.getTrips();else if(k==="places")openPlaces();else if(k==="help")openHelp();else if(k==="lock")Vault.lock();
     else if(k==="out"){GAuth.revoke();gsPaint();render();toast("Disconnected from Google. Shared trips pause until you connect again","info")}})}
 
 function openProfile(){

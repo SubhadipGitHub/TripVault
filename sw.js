@@ -1,6 +1,6 @@
 /* Trip Vault service worker: caches the app shell so it works offline.
    It never touches your data (that lives in IndexedDB) and never makes third-party requests. */
-const VERSION = "tv-v15";
+const VERSION = "tv-v16";
 const SHARE = "tv-share"; // short-lived inbox for files shared to the installed app
 const SHELL = [
   "./", "index.html", "manifest.webmanifest", "css/app.css",
@@ -36,7 +36,8 @@ self.addEventListener("fetch", e => {
   if (req.method !== "GET" || new URL(req.url).origin !== location.origin) return;
   // network-first so updates arrive quickly; fall back to cache when offline.
   // The OCR files under vendor/ are not precached (about 7 MB): they are cached here on first use.
-  e.respondWith(fetch(req).then(res => {
+  // cache: "no-cache" revalidates with the server, so a new deploy isn't hidden behind the browser's HTTP cache
+  e.respondWith(fetch(req, { cache: "no-cache" }).then(res => {
     if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
     return res;
   }).catch(() => caches.match(req).then(r => r || caches.match("index.html"))));
