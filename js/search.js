@@ -13,17 +13,27 @@ function searchActions(){return[
   {type:"action",id:"go:mem",title:"Open Memories",icon:"camera",text:"memories journal photos diary",run:()=>go("memories")},
   {type:"action",id:"a:import",title:"Import a booking (PDF, email, text)",icon:"zap",text:"import smart ticket pdf email eml upload add booking",run:()=>A.import()},
   {type:"action",id:"a:mem",title:"Capture a memory",icon:"camera",text:"new memory capture photo note journal",run:()=>newMemory()},
-  {type:"action",id:"a:exp",title:"Log an expense",icon:"tag",text:"expense spend cost log money add",run:()=>{go("vault");S.sub="money";render()}},
+  {type:"action",id:"a:exp",title:"Log an expense",icon:"tag",text:"expense spend cost log money add",run:()=>go("money")},
   {type:"action",id:"a:wrap",title:"Open Trip Wrapped",icon:"play",text:"wrapped story cards share export year recap",run:()=>openWrapped()},
   {type:"action",id:"a:pass",title:"Show boarding pass / ticket",icon:"phone",text:"boarding pass ticket gate show pnr seat scan qr barcode",run:()=>openPass()},
-  {type:"action",id:"a:csv",title:"Export costs (CSV or printable report)",icon:"download",text:"export csv excel sheets expense report reimbursement receipts print",run:()=>{go("vault");S.sub="money";render();setTimeout(()=>$("[data-a=expCSV]")?.scrollIntoView({block:"center"}),50)}},
+  {type:"action",id:"a:csv",title:"Export costs (CSV or printable report)",icon:"download",text:"export csv excel sheets expense report reimbursement receipts print",run:()=>{go("money");setTimeout(()=>{const d=$("#expCard");if(d){d.open=true;d.scrollIntoView({block:"center"})}},50)}},
+  {type:"action",id:"a:trip",title:"Trip menu (settings, share, exports)",icon:"sliders",text:"trip menu settings edit dates budget share duplicate copy export backup wrapped book print",run:()=>openTripMenu()},
+  {type:"action",id:"a:kit",title:"Travel kit (cab, directions, translate…)",icon:"compass",text:"travel kit on the ground get ready cab taxi uber ola grab directions maps translate talk phrases places offline map pay upi",run:()=>openKit()},
+  {type:"action",id:"a:places",title:"Places (show the driver, directions, cab)",icon:"pin",text:"places address driver hotel airport station map directions cab",run:()=>openPlaces()},
+  {type:"action",id:"a:phr",title:"Phrasebook",icon:"book",text:"phrases phrasebook language say hello thank you offline",run:()=>openPhrases()},
+  {type:"action",id:"a:tr",title:"Translate",icon:"globe",text:"translate google language text",run:()=>openTranslate()},
+  {type:"action",id:"a:conv",title:"Conversation (voice translation)",icon:"mic",text:"conversation talk voice speak listen interpreter translate aloud",run:()=>openConverse()},
+  {type:"action",id:"go:ideas",title:"Ideas (wish list)",icon:"compass",text:"ideas wish list places to see eat do shop schedule",run:()=>go("ideas")},
+  {type:"action",id:"go:pack",title:"Packing list",icon:"bag",text:"packing list pack checklist luggage",run:()=>go("pack")},
+  {type:"action",id:"go:docs",title:"Documents & emergency contacts",icon:"shield",text:"documents passport visa insurance id files attachments emergency contacts",run:()=>go("docs")},
+  {type:"action",id:"a:dup",title:"Duplicate this trip",icon:"copy",text:"duplicate copy trip template clone",run:()=>duplicateTrip()},
   {type:"action",id:"a:emg",title:"Emergency card",icon:"heart",text:"emergency medical id blood group allergy contact insurance helpline",run:()=>openEmgCard()},
   {type:"action",id:"a:ics",title:"Export itinerary to calendar (.ics)",icon:"cal",text:"calendar ics google apple outlook export reminders",run:()=>exportICS()},
   {type:"action",id:"a:share",title:"Share this trip (Google Drive)",icon:"share",text:"share trip google drive partner group family invite sync together",run:()=>openShare()},
-  {type:"action",id:"a:hub",title:"Sharing & sync status",icon:"user",text:"google account signed in connected sync status recent changes who added",run:()=>openSettings("sync")},
+  {type:"action",id:"a:hub",title:"Sync, sharing & devices",icon:"user",text:"google account signed in connected sync status recent changes who added add a device other phone laptop pair code get trips",run:()=>openSettings("sync")},
   {type:"action",id:"a:qrs",title:"Send trips to another phone (QR)",icon:"share",text:"transfer phone qr send move sync another device",run:()=>openSendQR()},
   {type:"action",id:"a:qrr",title:"Receive trips from another phone (QR)",icon:"camera",text:"transfer phone qr receive scan move sync another device import",run:()=>openReceiveQR()},
-  {type:"action",id:"a:backup",title:"Backup & restore",icon:"db",text:"backup restore export import json encrypted",run:()=>openBackup()},
+  {type:"action",id:"a:backup",title:"Backup & restore",icon:"db",text:"backup restore export import json encrypted storage persistent space",run:()=>openBackup()},
   {type:"action",id:"a:privacy",title:"Privacy & your data",icon:"shield",text:"privacy dpdp data protection consent delete erase my data download notice grievance",run:()=>openSettings("privacy")},
   {type:"action",id:"a:about",title:"About Trip Vault",icon:"info",text:"about version help contact feedback grievance licences",run:()=>openAbout()},
   {type:"action",id:"a:profile",title:"Profile",icon:"user",text:"profile name account offline",run:()=>openProfile()},
@@ -41,7 +51,7 @@ function buildIndex(){
   });
   S.files.filter(f=>!f.memId).forEach(f=>push({type:"file",id:f.id,tripId:f.tripId,title:f.name,sub:`${(f.size/1024).toFixed(0)} KB · attachment`,icon:"file",ck:"doc",text:f.name+" "+(f.text||"")}));
   S.memories.forEach(m=>push({type:"memory",id:m.id,tripId:m.tripId,title:m.title||"Untitled moment",sub:`${fmtDs(m.date)}${m.place?" · "+m.place:""}`,icon:"camera",ck:"memory",text:[m.title,m.text,m.place,MOODS[m.mood]?.n].join(" ")}));
-  S.trips.forEach(t=>(t.ideas||[]).forEach(p=>push({type:"pack",id:p.id,tripId:t.id,title:p.text,sub:`Idea · ${p.cat||""} ${p.place||""}`,icon:"compass",ck:"activity",text:[p.text,p.place,p.note,p.cat].join(" ")})));
+  S.trips.forEach(t=>(t.ideas||[]).forEach(p=>push({type:"pack",idea:1,id:p.id,tripId:t.id,title:p.text,sub:`Idea · ${p.cat||""} ${p.place||""}`,icon:"compass",ck:"activity",text:[p.text,p.place,p.note,p.cat].join(" ")})));
   S.trips.forEach(t=>(t.pack||[]).forEach(p=>push({type:"pack",id:p.id,tripId:t.id,title:p.text,sub:`Packing · ${p.done?"packed":"to pack"}`,icon:"bag",ck:"doc",text:p.text+" "+(p.cat||"")})));
   SEARCH.idx=idx;SEARCH.stale=false;
 }
@@ -103,5 +113,5 @@ function openHit(o){
   if(o.type==="booking"||o.type==="doc"||o.type==="expense"){render();const it=S.items.find(i=>i.id===o.id);if(it)openItem(structuredClone(it))}
   else if(o.type==="file"){render();openBlob(S.files.find(f=>f.id===o.id))}
   else if(o.type==="memory"){go("memories");openMemView(o.id)}
-  else if(o.type==="pack"){S.view="vault";S.sub="pack";S.meta.view="vault";saveMeta();render()}
+  else if(o.type==="pack")go(o.idea?"ideas":"pack");
 }

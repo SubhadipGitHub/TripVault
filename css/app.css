@@ -731,3 +731,12 @@ span.avsnap{display:contents}
 .paircode{font-size:clamp(26px,8vw,40px);font-weight:700;letter-spacing:2px;text-align:center;margin:18px 0 6px;color:var(--tx);cursor:copy;overflow-wrap:anywhere}
 .updbar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(150px + var(--safe-b));z-index:95;display:flex;align-items:center;gap:8px;background:var(--card2);border:1px solid var(--line2);border-radius:14px;padding:8px 8px 8px 14px;box-shadow:var(--sh);font-size:13px;max-width:calc(100vw - 24px)}
 .updbar>.ic{color:var(--acc)}.updbar .ibtn{width:30px;height:30px}
+/* Account menu: the profile header is a button that opens Profile */
+.pm-hb{width:100%;text-align:left;border-radius:11px 11px 0 0;color:var(--tx)}
+.pm-hb:hover,.pm-hb:focus-visible{background:var(--card);outline:none}
+/* Collapsible cards (Money: spend by day, export costs) */
+details.fold>summary{list-style:none;margin:0;color:var(--tx);font-size:inherit}
+details.fold>summary::-webkit-details-marker{display:none}
+details.fold>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--tx3);border-bottom:2px solid var(--tx3);transform:rotate(45deg);margin:0 4px 4px 8px;transition:transform .15s}
+details.fold[open]>summary{margin-bottom:10px}
+details.fold[open]>summary::after{transform:rotate(-135deg);margin-bottom:0}

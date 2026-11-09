@@ -445,7 +445,7 @@ function gsPillPaint(){const p=$("#gsPill");if(!p)return;const L=gsLinked(),nm=p
   p.dataset.s=s;p.title=lbl;p.setAttribute("aria-label",lbl);
   p.innerHTML=`<span class="gsavw">${gsAv(gsOn()?who:nm)}<span class="gsdot"></span></span><span class="gsw">${word}</span>`}
 
-/* ---------- Settings → Sync & sharing: account, which trips sync, other devices, recent changes ---------- */
+/* ---------- Settings → Sync & devices: account, which trips sync, other devices, recent changes ---------- */
 function gsTripRow(t,on,all){const sy=!!t.sync?.fileId,st=sy?GS.st[t.id]?.state||(on?"ok":"paused"):"",me=t.sync?.me||GS.email;
   const ppl=sy?[t.sync.owner,...(t.sync.members||[]).map(m=>m.email)].filter(e=>e&&e!==me):[];
   const dot=!sy?"none":st==="ok"?"ok":st==="syncing"?"syncing":st==="paused"||st==="rekey"?"warn":"bad",
@@ -614,7 +614,7 @@ async function gsAddDevice(){await GAuth.token(true);await gsMe();
   await kcEnsure();const raw=await kcRaw(),code=pairCode(),exp=Date.now()+PAIR_TTL;
   const r=await GDrive.create("Trip Vault pairing",await pairSeal(code,{app:"TripVault",kind:"pair",v:1,exp,trips:kcEntries(),k:raw?b64e8(raw):"",kcId:S.meta.kc?.fileId||""}),{tv:"pair"});
   let gone=false;const drop=()=>{if(gone)return;gone=true;clearInterval(tick);GDrive.del(r.id).catch(()=>{})};
-  const ov=sheet({title:`${ic("phone")} Add a device`,help:"pair",onClose:drop,body:`<div class="small muted">On your other device: sign in with ${esc(GS.email)}, open the account menu → <b>Get trips from my other device</b>, and type:</div>
+  const ov=sheet({title:`${ic("phone")} Add a device`,help:"pair",onClose:drop,body:`<div class="small muted">On your other device: sign in with ${esc(GS.email)}, open Settings → Sync &amp; devices → <b>Get trips from my other device</b>, and type:</div>
      <div class="paircode mono" data-copy="${code}" aria-label="Pairing code">${code}</div><div class="small dim" id="pairT" style="text-align:center"></div>`,foot:`<span class="sp"></span><button class="btn pri" data-close>Done</button>`});
   const tick=setInterval(async()=>{const left=exp-Date.now(),el=$("#pairT",ov);if(!ov.isConnected||!el){drop();return}
     if(left<=0){drop();el.textContent="This code has expired. Close and add the device again.";$(".paircode",ov).style.opacity=".35";return}
@@ -624,7 +624,7 @@ async function gsAddDevice(){await GAuth.token(true);await gsMe();
 let _pairFails=0,_pairWait=0;
 async function gsGetTrips(n){await GAuth.token(true);await gsMe();
   const ov=sheet({title:`${ic("download")} Get trips from my other device`,help:"pair",body:`${n?`<div class="note info">${ic("share")}<div><b>${n} trip${n>1?"s are":" is"} synced from your other device.</b></div></div>`:""}
-     <div class="small muted mt">On that device: account menu → <b>Add a device</b>. Then type the code it shows.</div>
+     <div class="small muted mt">On that device: Settings → Sync &amp; devices → <b>Add a device</b>. Then type the code it shows.</div>
      <label class="mt" for="pairIn">Code</label><input id="pairIn" class="mono" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-EFGH-JKMN" maxlength="20">
      <div class="small mt"><a href="#" id="pairPass">I set a sync passphrase</a></div>`,
     foot:`<button class="btn" data-close>Not now</button><button class="btn pri" id="pairGo">${ic("download","sm")} Get my trips</button>`});

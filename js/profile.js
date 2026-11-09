@@ -3,32 +3,31 @@
    Everyone has a profile: an offline one on this device (just a name, optional), which shows Google
    sync status once Google is connected. The menu holds the account, Settings, Privacy and About. */
 const profName=()=>String(S.settings?.profile?.name||"").trim().slice(0,60);
-const TV_VERSION="1.5";
+const TV_VERSION="1.6";
 
 function closeAcctMenu(){$$(".pmov").forEach(o=>o.remove());$("#gsPill")?.setAttribute("aria-expanded","false")}
 function openAcctMenu(){
   if($(".pmov")){closeAcctMenu();return}
   const on=gsOn(),L=gsLinked(),[st,,tip]=gsOverall(),nm=profName(),who=on?GS.email:"";
   const item=(id,icn,lbl,sub,cls="")=>`<button class="pm-i ${cls}" role="menuitem" data-pm="${id}">${ic(icn,"sm")}<span><b>${lbl}</b></span></button>`;
-  const head=`<div class="pm-h">${gsAv(on?(who||nm):nm,"lg")}<div class="b"><div class="t">${esc(nm||(on?gsName(who):"Your profile"))}</div>
-     <div class="small muted">${on?esc(who):gsReady()?"Offline profile · data on this device only":"Offline profile · data on this device only"}</div>
-     ${on||L.length?`<div class="pm-st" data-s="${st}"><span class="gsdot"></span>${esc(tip)}</div>`:""}</div></div>`;
-  const g=gsReady()?(on?item("sync","share","Sync &amp; sharing","Choose trips, people, recent changes")
+  const head=`<button class="pm-h pm-hb" role="menuitem" data-pm="profile" title="Edit your profile">${gsAv(on?(who||nm):nm,"lg")}<div class="b"><div class="t">${esc(nm||(on?gsName(who):"Your profile"))}</div>
+     <div class="small muted">${on?esc(who):"Offline profile · data on this device only"}</div>
+     ${on||L.length?`<div class="pm-st" data-s="${st}"><span class="gsdot"></span>${esc(tip)}</div>`:""}</div></button>`;
+  const g=gsReady()?(on?item("sync","share","Sync, sharing &amp; devices","Choose trips, people, recent changes")
       :item("connect","unlock",L.length?"Reconnect Google":"Connect Google Drive",L.length?"Your shared trips are paused":"Sync trips to your Drive and share them","hi")):"";
   const ov=document.createElement("div");ov.className="pmov";
   ov.innerHTML=`<div class="pmenu" role="menu" aria-label="Account menu">${head}<div class="pm-l">${g}
-    ${on?item("adddev","phone","Add a device",""):""}${on?item("gettrips","download","Get trips from my other device",""):""}${curTrip()?item("places","pin","Places &amp; phrases",""):""}${item("profile","user","Profile",nm?"":"Add your name")}${item("settings","sliders","Settings","Backup &amp; restore, security, planner")}
-    ${item("privacy","shield","Privacy &amp; your data","See, download or erase your data")}${item("help","info","Help &amp; tour","")}${item("about","book","About us","")}
-    ${Vault.protected?item("lock","lock","Lock now",""):""}${on?item("out","x","Disconnect Google","Shared trips pause until you connect again"):""}</div></div>`;
+    ${item("settings","sliders","Settings","")}${item("privacy","shield","Privacy &amp; your data","")}${item("help","info","Help &amp; about","")}
+    ${on?item("out","x","Disconnect Google",""):""}</div></div>`;
   document.body.append(ov);$("#gsPill")?.setAttribute("aria-expanded","true");
   const p=$("#gsPill")?.getBoundingClientRect();if(p&&innerWidth>560){const m=$(".pmenu",ov);m.style.top=Math.round(p.bottom+8)+"px";m.style.right=Math.max(8,Math.round(innerWidth-p.right))+"px"}
-  $(".pm-i",ov)?.focus({preventScroll:true});
+  $(".pm-l .pm-i",ov)?.focus({preventScroll:true});
   ov.addEventListener("keydown",e=>{if(e.key==="Escape"){closeAcctMenu();$("#gsPill")?.focus()}
-    if(e.key==="ArrowDown"||e.key==="ArrowUp"){const b=$$(".pm-i",ov),i=b.indexOf(document.activeElement);b[(i+(e.key==="ArrowDown"?1:-1)+b.length)%b.length]?.focus();e.preventDefault()}});
+    if(e.key==="ArrowDown"||e.key==="ArrowUp"){const b=$$("[data-pm]",ov),i=b.indexOf(document.activeElement);b[(i+(e.key==="ArrowDown"?1:-1)+b.length)%b.length]?.focus();e.preventDefault()}});
   ov.addEventListener("click",async e=>{const b=e.target.closest("[data-pm]");if(!b){if(!e.target.closest(".pmenu"))closeAcctMenu();return}
     const k=b.dataset.pm;closeAcctMenu();
     if(k==="sync")openSettings("sync");else if(k==="connect")gsConnect();else if(k==="profile")openProfile();else if(k==="settings")openSettings();
-    else if(k==="privacy")openSettings("privacy");else if(k==="about")openAbout();else if(k==="adddev")A.addDevice();else if(k==="gettrips")A.getTrips();else if(k==="places")openPlaces();else if(k==="help")openHelp();else if(k==="lock")Vault.lock();
+    else if(k==="privacy")openSettings("privacy");else if(k==="help")openHelp();
     else if(k==="out"){GAuth.revoke();gsPaint();render();toast("Disconnected from Google. Shared trips pause until you connect again","info")}})}
 
 function openProfile(){

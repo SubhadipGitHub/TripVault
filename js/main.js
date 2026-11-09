@@ -12,13 +12,15 @@ function addMenuSheet(){
 const A={
   trips:()=>openTrips(),backup:()=>openBackup(),settings:()=>openSettings(),import:()=>openImport(),search:()=>openSearch(),
   newTrip:()=>{$$(".ov").forEach(o=>o.remove());openTrip({id:uid(),name:"",rates:{},tz:S.settings.homeTz,localCur:HC()},true)},
-  editTrip:()=>{const t=curTrip();t?openTrip(t):A.newTrip()},
+  editTrip:()=>{const t=curTrip();$$(".ov").forEach(o=>o.remove());t?openTrip(t):A.newTrip()},
   selTrip:el=>{S.cur=el.dataset.id;S.meta.cur=S.cur;S.day=null;S.calM=null;saveMeta();$$(".ov").forEach(o=>o.remove());render()},
   loadSample:()=>loadSample(),
   go:el=>go(el.dataset.v),
   vsub:el=>{S.sub=el.dataset.s;S.meta.sub=S.sub;saveMeta();render()},
+  psub:el=>{S.psub=el.dataset.s;S.meta.psub=S.psub;saveMeta();render()},
+  tripMenu:()=>openTripMenu(),kit:()=>openKit(),tripBook:()=>printTripBook(),
   avPoke:()=>AV.poke(),
-  acct:()=>openAcctMenu(),gsHub:()=>openAcctMenu(),profile:()=>{$$(".ov").forEach(o=>o.remove());openProfile()},about:()=>openAbout(),
+  acct:()=>openAcctMenu(),profile:()=>{$$(".ov").forEach(o=>o.remove());openProfile()},about:()=>openAbout(),
   privacyNotice:()=>openNotice(),help:el=>openHelp(el?.dataset?.k||el?.closest?.(".ov")?.dataset.help||""),
   reloadApp:()=>location.reload(),updClose:()=>$("#updBar")?.remove(),addDevice:()=>gsAddDevice().catch(e=>{if(e.code!=="consent")toast(esc(e.message),"bad")}),getTrips:()=>gsKcOffer(true).catch(e=>{if(e.code!=="consent")toast(esc(e.message),"bad")}),
   places:()=>openPlaces(),phrases:()=>openPhrases(),translate:()=>openTranslate(),converse:()=>{$$(".ov").forEach(o=>o.remove());openConverse()},offMap:()=>openOfflineMap(),
@@ -42,7 +44,7 @@ const A={
   openFile:el=>openBlob(S.files.find(f=>f.id===el.dataset.id)),
   delFile:async el=>{const f=S.files.find(x=>x.id===el.dataset.id);if(!f)return;const its=S.items.filter(i=>(f.itemIds||[]).includes(i.id));
     if(!(await gate({title:"Delete this file?",plan:[`Delete <b>${esc(f.name)}</b> (${(f.size/1024).toFixed(0)} KB)`,its.length?`Bookings stay; ${its.length} will lose this attachment`:"Not linked to any booking"],irreversible:"The file can't be recovered unless it's in a backup.",ok:"Delete file"})))return;await delFile(f.id);render();toast("File deleted")},
-  persist:async()=>{const ok=await navigator.storage?.persist?.();toast(ok?"Storage is now persistent":"Browser declined — keep regular backups",ok?"ok":"info");render()},
+  persist:async()=>{const ok=await navigator.storage?.persist?.();toast(ok?"Storage is now persistent":"Browser declined — keep regular backups",ok?"ok":"info");storFill($("#stor"))},
   fitDates:async()=>{const t=curTrip();const ds=tripItems(t.id).filter(i=>i.kind!=="doc").flatMap(itemDates).sort();t.start=ds[0]<t.start?ds[0]:t.start;t.end=ds[ds.length-1]>t.end?ds[ds.length-1]:t.end;await saveTrip(t);render();toast("Trip dates extended")},
   dupTrip:()=>duplicateTrip(),
   ideaAdd:async()=>{const t=curTrip(),v=$("#idT").value.trim();if(!v){toast("Type an idea first","bad");return}t.ideas=[...(t.ideas||[]),{id:uid(),text:v,cat:$("#idC").value,place:$("#idP").value.trim(),note:$("#idN").value.trim()}];await saveTrip(t);render()},
@@ -136,7 +138,8 @@ async function consumeLaunch(){
   await Vault.readLock();
   if(Vault.protected){const st=await DB.get("meta","settings");S.settings={...DEF_SET,...(st?.v||{})};applyTheme()}
   if(Vault.locked){const m=await DB.get("meta","state");S.meta=m?.v||{};showLock();return}
-  await loadAll();applyTheme();S.view=({book:"vault",money:"vault",docs:"vault"}[S.meta.view])||S.meta.view||"today";S.sub=S.meta.sub||({book:"bookings",money:"money",docs:"docs"})[S.meta.view]||"bookings";
+  await loadAll();applyTheme();S.view=({book:"vault",money:"vault",docs:"vault"}[S.meta.view])||S.meta.view||"today";S.sub=S.meta.sub||({book:"bookings",money:"money",docs:"docs"})[S.meta.view]||"bookings";S.psub=S.meta.psub||"days";
+  if(S.sub==="ideas"){S.view="plan";S.psub="ideas";S.sub="bookings"} // Ideas moved from Vault to Plan
   if(!["today","plan","vault","memories"].includes(S.view))S.view="today";
   render();armIdle();if(!location.hash.startsWith("#join="))AV.intro(curTrip());gsBoot();consumeLaunch();if(!location.hash.startsWith("#join="))tourMaybe();
 })();
