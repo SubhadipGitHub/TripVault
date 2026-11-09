@@ -37,7 +37,7 @@ function crewArt(t,pose,fb){
 const AV={T:null,ld:null,dead:false,r:null,cv:null,sc:null,cam:null,root:null,crew:[],fx:[],key:"",act:null,
   run:false,io:null,slot:null,introOn:false,frame:{W:1,H:1.8,cx:0},clock:0,lastT:0,cache:new Map(),
   rm:matchMedia("(prefers-reduced-motion: reduce)"),
-  mode(){const m=S.settings?.anim||"full";if(m==="off")return"off";if(this.rm.matches)return"still";return m},
+  mode(){const m=S.settings?.anim||"calm";if(m==="off")return"off";if(this.rm.matches)return"still";return m},
   can(){return!this.dead&&this.mode()!=="off"&&!!window.WebGLRenderingContext},
   load(){
     if(this.T)return Promise.resolve(this.T);

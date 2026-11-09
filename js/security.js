@@ -65,7 +65,7 @@ const SET_ALIAS={planner:"general",emergency:"security"};
 function openSettings(tab="general"){
   const s=S.settings,sect=SET_ALIAS[tab]?tab:"";tab=SET_ALIAS[tab]||tab;if(!SET_TABS.some(x=>x[0]===tab))tab="general";
   const P={
-   general:`<div class="fg">${Sel("Home currency","homeCur",s.homeCur||"INR",CURS)}${Sel("Appearance","theme",s.theme,[["auto","Match my device"],["dark","Midnight"],["light","Parchment"]])}${Sel("Character animations","anim",s.anim||"full",[["full","Full (intro + idle)"],["calm","Calm (no intro)"],["off","Off"]])}</div>
+   general:`<div class="fg">${Sel("Home currency","homeCur",s.homeCur||"INR",CURS)}${Sel("Appearance","theme",s.theme,[["auto","Match my device"],["dark","Midnight"],["light","Parchment"]])}${Sel("Character animations","anim",s.anim||"calm",[["calm","Calm (characters, no intro)"],["full","Full (launch intro + idle)"],["off","Off (no download)"]])}</div>
    <label class="row mt" style="cursor:pointer"><input type="checkbox" name="optimizePhotos" ${s.optimizePhotos?"checked":""}> <span style="font-size:12.5px;color:var(--tx)">Resize memory photos to 1600px when saving (saves lots of space)</span></label>
    <div class="sep"></div><div class="h">${ic("eye")}<h2>Screenshot reader</h2></div>
    <div class="row"><button class="btn" id="ocrDl" type="button">${ic("download","sm")} ${S.meta.ocrReady?"Downloaded · refresh":`Download for offline (${OCR_SIZE})`}</button></div>

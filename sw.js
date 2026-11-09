@@ -1,13 +1,12 @@
 /* Trip Vault service worker: caches the app shell so it works offline.
    It never touches your data (that lives in IndexedDB) and makes no third-party requests itself. (Offline speech and
    translation packs come from Hugging Face only when you download one; js/ai-worker.js fetches and caches those.) */
-const VERSION = "tv-v21";
+const VERSION = "tv-v22";
 const SHARE = "tv-share"; // short-lived inbox for files shared to the installed app
 const SHELL = [
   "./", "index.html", "manifest.webmanifest", "css/app.css",
   "js/data.js", "js/core.js", "js/store.js", "js/parsers.js", "js/model.js", "js/forms.js", "js/backup.js",
   "js/security.js", "js/memories.js", "js/wrapped.js", "js/search.js", "js/extras.js", "js/pass.js", "js/ocr.js", "js/transfer.js", "js/ideas.js", "js/avatars.js", "js/sync-config.js", "js/gsync.js", "js/privacy.js", "js/profile.js", "js/help.js", "js/apps.js", "js/phrases.js", "js/offline-ai.js", "js/ai-worker.js", "js/converse.js", "js/views.js", "js/main.js",
-  "vendor/three/three.module.min.js", "vendor/three/three.core.min.js",
   "assets/icon.svg", "assets/icon-192.png", "assets/icon-512.png", "assets/apple-touch-icon.png"
 ];
 self.addEventListener("install", e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
@@ -47,12 +46,19 @@ async function receiveShare(req) {
   } catch (err) { /* the page reports "nothing came through" */ }
   return Response.redirect(new URL("./?share=1", self.registration.scope).href, 303);
 }
+// The travel crew's three.js isn't precached. The page asks for it to be cached once it has used it on a visit the
+// worker didn't control yet (the very first one). Only this fixed pair can be requested this way.
+const CREW = ["vendor/three/three.module.min.js", "vendor/three/three.core.min.js"];
+self.addEventListener("message", e => {
+  if (e.data === "warm-crew") e.waitUntil(caches.open(VERSION).then(c => c.addAll(CREW)).catch(() => {}));
+});
 self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method === "POST" && new URL(req.url).pathname.endsWith("/share-target")) { e.respondWith(receiveShare(req)); return; }
   if (req.method !== "GET" || new URL(req.url).origin !== location.origin) return;
   // network-first so updates arrive quickly; fall back to cache when offline.
-  // The OCR files under vendor/ are not precached (about 7 MB): they are cached here on first use.
+  // Files under vendor/ are not precached: the OCR reader (about 7 MB) and the travel crew's three.js (720 KB)
+  // are cached here the first time they are used, and kept across updates by carryVendor().
   // cache: "no-cache" revalidates with the server, so a new deploy isn't hidden behind the browser's HTTP cache
   e.respondWith(fetch(req, { cache: "no-cache" }).then(res => {
     if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(req, copy)); }
