@@ -3,7 +3,7 @@
    Everyone has a profile: an offline one on this device (just a name, optional), which shows Google
    sync status once Google is connected. The menu holds the account, Settings, Privacy and About. */
 const profName=()=>String(S.settings?.profile?.name||"").trim().slice(0,60);
-const TV_VERSION="1.4";
+const TV_VERSION="1.5";
 
 function closeAcctMenu(){$$(".pmov").forEach(o=>o.remove());$("#gsPill")?.setAttribute("aria-expanded","false")}
 function openAcctMenu(){

@@ -10,12 +10,22 @@
      "Trip Vault files" folder in their own Drive, shared as "anyone with the link". Others fetch
      it with the API key, so no per-file grants are needed. Google only ever stores ciphertext.
    Sync merges record by record (newer updatedAt wins) and passes deletions on as tombstones.
-   The Google token is kept in memory only. */
+   The Google token is kept in memory and in this tab's sessionStorage (so a refresh keeps syncing);
+   it is gone when the tab or app closes, and Google expires it within an hour. */
 const GS={tok:null,exp:0,email:"",name:"",folder:null,keys:new Map(),busy:new Set(),st:{},lastCh:{},told:false};
 const GS_SCOPE="https://www.googleapis.com/auth/drive.file",GS_NAME="Trip Vault shared trip",GS_FOLDER="Trip Vault files";
 const GD="https://www.googleapis.com/drive/v3",GDU="https://www.googleapis.com/upload/drive/v3";
 const gsReady=()=>typeof GSYNC==="object"&&!!(GSYNC.clientId&&GSYNC.apiKey&&GSYNC.appId);
 const gsErr=(msg,extra)=>Object.assign(new Error(msg),extra||{});
+/* The token survives a reload of this tab only (sessionStorage). Private modes that block storage just fall back to memory. */
+const GS_SS="tv-g";
+function gsStash(){try{if(GS.tok)sessionStorage.setItem(GS_SS,JSON.stringify({tok:GS.tok,exp:GS.exp,email:GS.email,name:GS.name}))}catch(e){}}
+function gsUnstash(){try{sessionStorage.removeItem(GS_SS)}catch(e){}}
+function gsResume(){try{const v=JSON.parse(sessionStorage.getItem(GS_SS)||"null");
+    if(!v||!consentNow()||typeof v.tok!=="string"||!/^[\w.\-~+/=]{10,4096}$/.test(v.tok)||!(+v.exp>Date.now()+60000)){gsUnstash();return false}
+    GS.tok=v.tok;GS.exp=+v.exp;if(typeof v.email==="string"&&!GS.email){GS.email=v.email.slice(0,200).toLowerCase();GS.name=String(v.name||"").slice(0,200)}return true}
+  catch(e){return false}}
+const gsHint=()=>GS.email||String(S.meta?.gsLast||"");
 function gsScript(src){return new Promise((res,rej)=>{if([...document.scripts].some(s=>s.src===src&&s.dataset.ok))return res();
   const s=document.createElement("script");s.src=src;s.async=true;s.onload=()=>{s.dataset.ok="1";res()};s.onerror=()=>{s.remove();rej(gsErr("Couldn't reach Google. Check your connection."))};document.head.append(s)})}
 
@@ -30,17 +40,17 @@ const GAuth={
     return this._gis()},
   async _gis(){
     await gsScript("https://accounts.google.com/gsi/client");
-    return new Promise((res,rej)=>{const c=google.accounts.oauth2.initTokenClient({client_id:GSYNC.clientId,scope:GS_SCOPE,login_hint:GS.email||undefined,prompt:GS.email?"":"select_account",
-      callback:r=>{if(r.error){rej(gsErr(r.error_description||r.error,{code:"auth"}));return}GS.tok=r.access_token;GS.exp=Date.now()+(+r.expires_in||3600)*1000;res(GS.tok)},
+    return new Promise((res,rej)=>{const c=google.accounts.oauth2.initTokenClient({client_id:GSYNC.clientId,scope:GS_SCOPE,login_hint:gsHint()||undefined,prompt:gsHint()?"":"select_account",
+      callback:r=>{if(r.error){rej(gsErr(r.error_description||r.error,{code:"auth"}));return}GS.tok=r.access_token;GS.exp=Date.now()+(+r.expires_in||3600)*1000;gsStash();res(GS.tok)},
       error_callback:e=>rej(gsErr(e?.type==="popup_closed"?"Google sign-in was closed":"Google sign-in didn't finish (pop-ups blocked?)",{code:"auth"}))});
       c.requestAccessToken()})},
-  revoke(){try{if(GS.tok&&window.google?.accounts?.oauth2)google.accounts.oauth2.revoke(GS.tok,()=>{})}catch(e){}GS.tok=null;GS.exp=0;GS.email="";GS.name="";GS.folder=null;for(const k in GS.st)if(GS.st[k].state==="ok")GS.st[k].state="paused"}
+  revoke(){try{if(GS.tok&&window.google?.accounts?.oauth2)google.accounts.oauth2.revoke(GS.tok,()=>{})}catch(e){}gsUnstash();if(S.meta?.gsLast){delete S.meta.gsLast;saveMeta()}GS.tok=null;GS.exp=0;GS.email="";GS.name="";GS.folder=null;for(const k in GS.st)if(GS.st[k].state==="ok")GS.st[k].state="paused"}
 };
 
 /* ---------- Drive REST (only the calls sharing needs) ---------- */
 async function gfetch(url,o={}){
   const tok=await GAuth.token(o.interactive);const r=await fetch(url,{...o,headers:{...(o.headers||{}),Authorization:"Bearer "+tok}});
-  if(r.status===401){GS.tok=null;throw gsErr("Google sign-in expired",{code:"auth"})}
+  if(r.status===401){GS.tok=null;gsUnstash();throw gsErr("Google sign-in expired",{code:"auth"})}
   if(!r.ok){let m="";try{m=(await r.json()).error?.message||""}catch(e){}throw gsErr(m||`Google Drive said ${r.status}`,{status:r.status})}
   return r}
 async function gUpload(method,url,meta,bytes){const b="tv"+uid();
@@ -78,7 +88,7 @@ const GPicker={ // lets a member open the trip file someone shared with them (th
       new google.picker.PickerBuilder().addView(v).setOAuthToken(tok).setDeveloperKey(GSYNC.apiKey).setAppId(GSYNC.appId).setTitle("Choose the shared trip file")
         .setCallback(d=>{if(d.action===google.picker.Action.PICKED)res(d.docs[0].id);else if(d.action===google.picker.Action.CANCEL)res(null)}).build().setVisible(true)})}
 };
-async function gsMe(){if(!GS.email){const a=await GDrive.about();GS.email=(a.user?.emailAddress||"").toLowerCase();GS.name=a.user?.displayName||"";GS.told=false;if(GS.email)syncToast(`Connected as ${esc(GS.email)}`,"info");consentEmail(GS.email);gsPillPaint()}return GS.email}
+async function gsMe(){if(!GS.email){const a=await GDrive.about();GS.email=(a.user?.emailAddress||"").toLowerCase();GS.name=a.user?.displayName||"";GS.told=false;if(GS.email){syncToast(`Connected as ${esc(GS.email)}`,"info");gsStash();if(S.meta.gsLast!==GS.email){S.meta.gsLast=GS.email;saveMeta()}}consentEmail(GS.email);gsPillPaint()}return GS.email}
 const gsOn=()=>!!GS.tok&&Date.now()<GS.exp-60000;
 
 /* ---------- trip code and encryption ---------- */
@@ -135,7 +145,8 @@ function cleanRecord(s,r,tz){
   if(s==="memories"){if(o.mood&&!MOODS[o.mood])o.mood="";o.photoIds=cIds(r.photoIds);o.fav=!!r.fav}
   if(s==="files"){if(!/^[\w.+-]+\/[\w.+-]+$/.test(o.type||""))o.type="application/octet-stream";o.itemIds=cIds(r.itemIds);if(o.memId&&!CLEAN_ID.test(o.memId))delete o.memId;if(o.driveId&&!/^[\w-]{10,200}$/.test(o.driveId))delete o.driveId}
   if(s==="trips"){o.tz=cTz(o.tz,S.settings?.homeTz||"Asia/Kolkata");
-    if("upi"in r)o.upi=r.upi&&typeof r.upi==="object"&&!Array.isArray(r.upi)?Object.fromEntries(Object.entries(r.upi).filter(([k,v])=>typeof v==="string"&&/^[\w.-]{2,256}@[A-Za-z][A-Za-z0-9.]{2,64}$/.test(v)).slice(0,30).map(([k,v])=>[cStr(k,200),v])):{};if("localCur"in o)o.localCur=cCur(o.localCur);if(!["domestic","international",""].includes(o.type||""))o.type="";
+    if("upi"in r)o.upi=r.upi&&typeof r.upi==="object"&&!Array.isArray(r.upi)?Object.fromEntries(Object.entries(r.upi).filter(([k,v])=>typeof v==="string"&&/^[\w.-]{2,256}@[A-Za-z][A-Za-z0-9.]{2,64}$/.test(v)).slice(0,30).map(([k,v])=>[cStr(k,200),v])):{};if("localCur"in o)o.localCur=cCur(o.localCur);
+    if("expCur"in o&&!(typeof o.expCur==="string"&&/^[A-Z]{3}$/.test(o.expCur)))delete o.expCur;if("lang"in o&&!isLang(o.lang))delete o.lang;if(!["domestic","international",""].includes(o.type||""))o.type="";
     const num=x=>x&&typeof x==="object"&&!Array.isArray(x)?Object.fromEntries(Object.entries(x).filter(([k,v])=>Number.isFinite(+v)).slice(0,100).map(([k,v])=>[cStr(k,60),+v])):{};
     o.rates=Object.fromEntries(Object.entries(num(r.rates)).filter(([k])=>/^[A-Z]{3}$/.test(k)));if("catBudgets"in r)o.catBudgets=num(r.catBudgets);
     if("pack"in r)o.pack=cList(r.pack,x=>({id:CLEAN_ID.test(x.id||"")?x.id:uid(),cat:cStr(x.cat,80),text:cStr(x.text,500),done:!!x.done}),1000);
@@ -250,7 +261,7 @@ function gsAllStart(){if(_gsAllRun)return _gsAllRun;_gsAllRun=(async()=>{let n=0
 async function gsConnect(){try{await GAuth.token(true);await gsMe();gsSyncAll();await gsKcOffer()}catch(e){if(e.code!=="consent")toast(esc(e.message||String(e)),"bad")}finally{gsPaint()}}
 let _gsDeb=null;
 function gsChanged(){if(!GS.tok||(!gsLinked().length&&!S.meta.gsAll))return;clearTimeout(_gsDeb);_gsDeb=setTimeout(()=>gsSyncAll(),8000)}
-function gsBoot(){for(const t of gsLinked())if(!GS.st[t.id])gsSt(t,GS.tok?"ok":"paused");if(GS.tok)gsSyncAll()}
+function gsBoot(){if(GS.tok)gsStash();else gsResume();for(const t of gsLinked())if(!GS.st[t.id])gsSt(t,GS.tok?"ok":"paused");if(GS.tok)gsSyncAll()}
 setInterval(()=>{if(GS.tok&&document.visibilityState==="visible")gsSyncAll()},180000);
 document.addEventListener("visibilitychange",()=>{if(GS.tok&&document.visibilityState==="visible")gsSyncAll()});
 addEventListener("online",()=>{if(GS.tok)gsSyncAll()});

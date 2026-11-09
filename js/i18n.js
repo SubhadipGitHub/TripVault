@@ -42,7 +42,7 @@ const HI={
   "Flight no.":"फ्लाइट नंबर","Airline":"एयरलाइन","From (IATA)":"कहाँ से (IATA)","To (IATA)":"कहाँ तक (IATA)","Terminal":"टर्मिनल","Seat":"सीट","Booking ID":"बुकिंग ID","Booking ID (OTA)":"बुकिंग ID (OTA)",
   "Property":"प्रॉपर्टी","Address":"पता","Check-in date":"चेक-इन की तारीख़","Check-out date":"चेक-आउट की तारीख़","From":"से","Until":"तक","Phone":"फ़ोन","Room":"कमरा","Confirmation no.":"कन्फ़र्मेशन नंबर",
   "Expiry":"समाप्ति","Holder(s)":"धारक","Ref / policy no.":"रेफ़ / पॉलिसी नंबर","Ticket / ref":"टिकट / रेफ़","Due by (if pending)":"कब तक (अगर बाक़ी है)","PNR / booking ref":"PNR / बुकिंग रेफ़",
-  "Trip name":"ट्रिप का नाम","Destination":"गंतव्य","Local currency":"स्थानीय मुद्रा","Home currency":"घरेलू मुद्रा","Home timezone":"घरेलू टाइमज़ोन","Timezone":"टाइमज़ोन","Budget":"बजट",
+  "Trip name":"ट्रिप का नाम","Destination":"गंतव्य","Local currency":"स्थानीय मुद्रा","Defaults":"डिफ़ॉल्ट","Spend in":"ख़र्च की मुद्रा","Auto":"अपने-आप","Home currency":"घरेलू मुद्रा","Home timezone":"घरेलू टाइमज़ोन","Timezone":"टाइमज़ोन","Budget":"बजट",
   "Rental company":"किराया कंपनी","Pick-up location":"पिक-अप की जगह","Pick-up date":"पिक-अप की तारीख़","Drop-off date":"ड्रॉप-ऑफ़ की तारीख़","Drop-off location":"ड्रॉप-ऑफ़ की जगह","Car type":"कार का प्रकार",
   "Operator":"ऑपरेटर","Boarding point":"बोर्डिंग पॉइंट","Drop point":"ड्रॉप पॉइंट","Bus type":"बस का प्रकार","Seat(s)":"सीट","Class":"क्लास",
   "Idea":"आइडिया","Type":"प्रकार","Place / area (for maps)":"जगह / इलाक़ा (मैप के लिए)","The story":"कहानी","How did it feel?":"कैसा लगा?","Photos":"फ़ोटो","Place":"जगह",
