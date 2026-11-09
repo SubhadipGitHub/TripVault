@@ -29,7 +29,7 @@ function tripLang(t){const cc=tripCC(t);if(cc!=="IN")return CC_LANG[cc]||"";cons
   return IN_TA.test(s)?"ta":IN_BN.test(s)?"bn":"hi"}
 const splitP=s=>{const[a,b]=String(s).split("|");return{text:a,rom:b||""}};
 function openPhrases(lang){
-  const t=curTrip();let L=PHRASES[lang]?lang:PHRASES[tripLang(t||{})]?tripLang(t):"ms";
+  const t=curTrip(),pref=t?tripLangPref(t):"";let L=Object.hasOwn(PHRASES,lang||"")?lang:Object.hasOwn(PHRASES,pref)?pref:t&&Object.hasOwn(PHRASES,tripLang(t))?tripLang(t):"ms";
   const opts=Object.entries(PHRASES).map(([k,[n]])=>`<option value="${k}" ${k===L?"selected":""}>${n}</option>`).join("");
   const ov=sheet({title:`${ic("globe")} Phrases`,help:"phrases",cls:"phr",body:`<div class="row" style="margin-bottom:8px"><select id="phL" aria-label="Language">${opts}</select></div><div id="phBody"></div>`,foot:`<button class="btn pri" data-close>Close</button>`});
   const paint=()=>{const[,ps]=PHRASES[L];$("#phBody",ov).innerHTML=PHRASE_EN.map((en,i)=>{const p=splitP(ps[i]);return`<button type="button" class="phr-i" data-ph="${i}"><span class="en">${esc(en)}</span><span class="tx" lang="${L}" ${LANG_RTL.has(L)?'dir="rtl"':""}>${esc(p.text)}</span>${p.rom?`<span class="rom">${esc(p.rom)}</span>`:""}</button>`}).join("")};

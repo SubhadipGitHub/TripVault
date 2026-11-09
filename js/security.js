@@ -40,7 +40,7 @@ async function removeLock(){
   if(!(await gate({title:"Remove encryption?",plan:["Your data is rewritten to this browser without encryption","The lock screen and auto-lock stop"],irreversible:"Anyone with access to this browser profile can then read your vault.",ok:"Remove lock"})))return;
   await Vault.disable();clearTimeout(_idleT);$$(".ov").forEach(o=>o.remove());render();toast("Encryption removed")
 }
-async function wipeAll(){for(const st of[...DATA_STORES,"meta"])await DB.clear(st);location.reload()}
+async function wipeAll(){if(typeof gsUnstash==="function")gsUnstash();for(const st of[...DATA_STORES,"meta"])await DB.clear(st);location.reload()}
 
 function showLock(){
   document.getElementById("lock")?.remove();$("#app").innerHTML="";$("#tsName").textContent="Locked";$("#tsMeta").textContent="";$("#lockBtn").classList.add("hide");

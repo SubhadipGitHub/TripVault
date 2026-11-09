@@ -29,6 +29,12 @@ const CAB_BY_CC={IN:["uber","ola","rapido"],MY:["grab"],SG:["grab"],TH:["grab"],
   AE:["careem","uber"],SA:["careem","uber"],QA:["careem","uber"],JO:["careem","uber"],PK:["careem","uber"],KW:["careem"],BH:["careem"],OM:["careem"],EG:["uber","careem"],
   US:["uber","lyft"],CA:["uber","lyft"],LK:["uber"],NP:[],MV:[],...Object.fromEntries(EU_CC.map(c=>[c,["bolt","uber"]]))};
 const appById=(cat,id)=>APPS[cat].find(a=>a.id===id);
+/* Per-trip defaults (Trip settings → Defaults). Empty means Auto. */
+const tripCur=t=>t?.expCur||(t&&isIntlTrip(t)&&t.localCur?t.localCur:HC());
+const isLang=l=>l==="en"||(typeof l==="string"&&Object.hasOwn(PHRASES,l));
+const tripLangPref=t=>[t?.lang,appPref("lang"),t?tripLang(t):""].find(isLang)||"en";
+/* The quick converter's foreign currency: the trip's spend currency if foreign, else its local one. */
+const convCur=t=>[t?.expCur,t?.localCur].find(c=>c&&c!==HC())||null;
 const appPref=cat=>S.settings?.["app"+cat[0].toUpperCase()+cat.slice(1)]||"";
 /* The trip's country: the first arrival outside home, else the local currency's country, else home. */
 function tripCC(t){if(!t)return homeCC();const h=homeCC();
@@ -75,13 +81,13 @@ function chooseApp(title,list,run){if(list.length===1){run(list[0]);return}
   ov.addEventListener("click",e=>{const b=e.target.closest("[data-app]");if(!b)return;ov.remove();run(list.find(a=>a.id===b.dataset.app))})}
 function plCab(p){const t=curTrip(),L=cabsFor(tripCC(t));if(!L.length){toast("No cab app set for this country. Choose one in Settings → Apps","info");return}chooseApp(`${ic("car")} Cab to ${esc(p.name)}`,L,a=>handOff(a,p))}
 const plGo=p=>handOff(mapApp(),p);
-const plTr=p=>window.open(translateUrl(p.local||p.addr||p.name,appPref("lang")||tripLang(curTrip())||"en"),"_blank","noopener,noreferrer");
+const plTr=p=>window.open(translateUrl(p.local||p.addr||p.name,tripLangPref(curTrip())),"_blank","noopener,noreferrer");
 function openOfflineMap(){const t=curTrip(),c=destCity(t);
   sheet({title:`${ic("download")} Offline map`,help:"places",body:`<div class="h"><h2>${esc(c||"Destination")}</h2></div>
     <div class="grid" style="gap:8px">${APPS.map.filter(a=>a.city).map(a=>`<a class="btn" style="justify-content:center" href="${esc(a.city(c||t?.name||""))}" target="_blank" rel="noopener noreferrer">${ic("download","sm")} ${esc(a.name)}</a>`).join("")}</div>`,foot:`<button class="btn pri" data-close>Close</button>`})}
 function destCity(t){if(!t)return"";const h=homeCC();const f=tripItems(t.id).filter(i=>i.kind==="flight"&&AP[i.to]).sort((a,b)=>(a.dep||"").localeCompare(b.dep||""));
   const out=f.find(i=>AP[i.to].cc!==h)||f[0];return out?AP[out.to].city:(t.dest||"").split(",")[0].trim()}
-function openTranslate(){const t=curTrip(),L=appPref("lang")||tripLang(t)||"en";
+function openTranslate(){const t=curTrip(),L=tripLangPref(t);
   const ov=sheet({title:`${ic("globe")} Translate`,help:"phrases",body:`<label for="trT">Text</label><textarea id="trT" style="min-height:90px" placeholder="Type or paste"></textarea>
     <div class="row wrap mt" style="gap:6px"><button class="btn pri" id="trGo">${ic("globe","sm")} Google Translate · ${esc((PHRASES[L]||[L.toUpperCase()])[0])}</button><button class="btn" data-a="phrases">${ic("book","sm")} Phrases</button></div>`,foot:`<button class="btn" data-close>Close</button>`});
   $("#trGo",ov).onclick=()=>{const v=$("#trT",ov).value.trim();window.open(translateUrl(v||" ",L),"_blank","noopener,noreferrer")}}

@@ -101,7 +101,7 @@ document.addEventListener("change",async e=>{const hm2=e.target.closest("[data-h
   const pp=e.target.closest("[data-people]");if(pp){const t=curTrip();t.people=pp.value.split(/\s*,\s*/).filter(Boolean);await saveTrip(t);render()}});
 document.addEventListener("input",e=>{
   const s=e.target.closest("[data-save=emergency]");if(s){clearTimeout(_emgT);_emgT=setTimeout(async()=>{const t=curTrip();if(t){t.emergency=s.value;await saveTrip(t)}},500)}
-  const cv=e.target.closest("[data-conv]");if(cv){const t=curTrip(),cur=t.localCur,r=rate(t,cur);if(!r)return;const v=+cv.value;
+  const cv=e.target.closest("[data-conv]");if(cv){const t=curTrip(),cur=convCur(t),r=cur&&rate(t,cur);if(!r)return;const v=+cv.value;
     if(cv.dataset.conv==="inr")$("#cvL").value=v?Math.round(v/r*100)/100:"";else $("#cvI").value=v?Math.round(v*r*100)/100:""}});
 document.addEventListener("dragover",e=>{if(!$(".ov")&&!Vault.locked&&e.dataTransfer?.types?.includes("Files"))e.preventDefault()});
 document.addEventListener("drop",e=>{if(!$(".ov")&&!Vault.locked&&S.settings&&e.dataTransfer?.files?.length){e.preventDefault();startFiles([...e.dataTransfer.files],S.cur||"__new")}});

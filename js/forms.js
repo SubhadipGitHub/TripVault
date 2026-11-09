@@ -138,7 +138,7 @@ function newItem(kind,o={}){const t=curTrip();const d=o.d||(t?(tripPhase(t).toda
   if(kind==="hotel"){it.checkIn=`${d}T14:00`;it.checkOut=`${addDays(d,1)}T12:00`;it.tz=tz}
   if(isTransport(kind)){it.dep=`${d}T`;it.depTz="";if(kind!=="flight"&&kind!=="train")it.tz=tz}
   if(kind==="car"){it.start=`${d}T10:00`;it.end=`${addDays(d,1)}T10:00`;it.tz=tz}
-  if(kind==="expense"){const p=tzParts(tz,Date.now());it.date=o.d||todayIn(tz);it.time=`${pad(p.h)}:${pad(p.mi)}`;it.tz=tz;it.cur=t&&isIntlTrip(t)&&t.localCur?t.localCur:HC()}
+  if(kind==="expense"){const p=tzParts(tz,Date.now());it.date=o.d||todayIn(tz);it.time=`${pad(p.h)}:${pad(p.mi)}`;it.tz=tz;it.cur=tripCur(t)}
   if(kind==="doc"){it.docType=o.dt||"Passport"}if(o.title)it.title=o.title;if(o.location)it.location=o.location;
   if(!t){toast("Create a trip first","bad");return}
   openItem(it,true)}
@@ -251,7 +251,9 @@ function openTrip(t,isNew){const ov=sheet({title:isNew?"New trip":"Trip settings
   ${F("Start","start",t.start,{type:"date"})}${F("End","end",t.end,{type:"date"})}
   ${Sel("Type","type",t.type||"auto",[["auto","Auto-detect"],["domestic","Domestic (India)"],["international","International"]])}${TZsel("Main timezone","tz",t.tz)}
   ${F(`Total budget (${sym(HC()).trim()})`,"budget",t.budget||"",{type:"number"})}${Sel("Local currency","localCur",t.localCur||HC(),CURS)}
-  ${F(`Exchange rates (${HC()} per unit)`,"rates",ratesStr(t.rates),{full:1,ph:"MYR=19.2, USD=84.5"})}</div>`,
+  ${F(`Exchange rates (${HC()} per unit)`,"rates",ratesStr(t.rates),{full:1,ph:"MYR=19.2, USD=84.5"})}
+  <div class="full h mt" style="margin-bottom:0"><h2>Defaults</h2></div>
+  ${Sel("Spend in","expCur",t.expCur||"",[["","Auto"],...CURS])}${Sel("Language","lang",isLang(t.lang)?t.lang:"",[["","Auto"],...Object.entries(PHRASES).map(([k,[n]])=>[k,n]),["en","English"]])}</div>`,
   foot:`${isNew?"":`<button class="btn" data-a="gsShare" data-trip="${esc(t.id)}">${ic("share","sm")} ${t.sync?.fileId?"Shared":"Share"}</button><button class="btn" data-a="dupTrip" style="margin-right:auto">${ic("copy","sm")} Duplicate</button><button class="btn bad" id="tDel">${ic("trash","sm")} Delete trip</button>`}<button class="btn" data-close>Cancel</button><button class="btn pri" id="tSv">${ic("check","sm")} Save</button>`});
   $("[name=tz]",ov).options[0].textContent="Auto (from bookings)";
   /* Who's going: solo / couple / group, and him or her for each traveller (drives the crew characters) */
@@ -266,7 +268,7 @@ function openTrip(t,isNew){const ov=sheet({title:isNew?"New trip":"Trip settings
   const sI=$("[name=start]",ov),eI=$("[name=end]",ov),syncEnd=()=>{eI.min=sI.value||"";if(sI.value&&(!eI.value||eI.value<sI.value))eI.value=sI.value};sI.addEventListener("change",syncEnd);eI.min=sI.value||"";
   $("#tSv",ov).onclick=async()=>{const g=gather(ov);if(!g.name){toast("Name the trip","bad");return}if(g.start&&g.end&&g.end<g.start){toast("End is before start","bad");return}
     const crewWas=JSON.stringify(crewOf(t));t.party=party;t.crew=cr.slice();if(isNew||crewWas!==JSON.stringify(crewOf(t)))AV.cheer();
-    Object.assign(t,{name:g.name,dest:g.dest,start:g.start,end:g.end,type:g.type==="auto"?"":g.type,tz:g.tz||t.tz||"Asia/Kolkata",budget:+g.budget||0,localCur:g.localCur,rates:parseRates(g.rates)});t.createdAt??=Date.now();
+    Object.assign(t,{name:g.name,dest:g.dest,start:g.start,end:g.end,type:g.type==="auto"?"":g.type,tz:g.tz||t.tz||"Asia/Kolkata",budget:+g.budget||0,localCur:g.localCur,rates:parseRates(g.rates)});for(const k of["expCur","lang"])if(g[k])t[k]=g[k];else delete t[k];t.createdAt??=Date.now();
     await saveTrip(t);S.cur=t.id;S.meta.cur=t.id;S.day=null;S.calM=null;saveMeta();ov.remove();$$(".ov").forEach(o=>o.remove());render();toast(isNew?"Trip created — now import a booking":"Saved")};
   $("#tDel",ov)?.addEventListener("click",async()=>{const its=tripItems(t.id),fs=S.files.filter(f=>f.tripId===t.id),nm=tripMems(t.id).length;
     if(!(await gate({title:`Delete “${esc(t.name)}”?`,plan:[`Delete the trip and its ${its.length} entries (bookings, activities, expenses, documents)`,`Delete ${fs.length} stored file(s) and ${nm} memor${nm===1?"y":"ies"}`,"Other trips are not touched",...(t.sync?.fileId?["This is a shared trip: you leave it, and the others keep their copy in Google Drive"]:[])],irreversible:`All of the above. ${S.meta.lastBackup?"Your last backup was "+new Date(S.meta.lastBackup).toLocaleString()+".":"You have never exported a backup."}`,ok:"Delete trip"})))return;
