@@ -21,7 +21,7 @@ const A={
   acct:()=>openAcctMenu(),gsHub:()=>openAcctMenu(),profile:()=>{$$(".ov").forEach(o=>o.remove());openProfile()},about:()=>openAbout(),
   privacyNotice:()=>openNotice(),help:el=>openHelp(el?.dataset?.k||el?.closest?.(".ov")?.dataset.help||""),
   reloadApp:()=>location.reload(),updClose:()=>$("#updBar")?.remove(),addDevice:()=>gsAddDevice().catch(e=>{if(e.code!=="consent")toast(esc(e.message),"bad")}),getTrips:()=>gsKcOffer(true).catch(e=>{if(e.code!=="consent")toast(esc(e.message),"bad")}),
-  places:()=>openPlaces(),phrases:()=>openPhrases(),translate:()=>openTranslate(),offMap:()=>openOfflineMap(),
+  places:()=>openPlaces(),phrases:()=>openPhrases(),translate:()=>openTranslate(),converse:()=>{$$(".ov").forEach(o=>o.remove());openConverse()},offMap:()=>openOfflineMap(),
   plMenu:el=>{const p=placeFrom(el.dataset.p);if(p)openPlaceMenu(p)},plDrv:el=>{const p=placeFrom(el.dataset.p);if(p)openDriver(p)},plGo:el=>{const p=placeFrom(el.dataset.p);if(p)plGo(p)},
   plCab:el=>{const p=placeFrom(el.dataset.p);if(p)plCab(p)},plTr:el=>{const p=placeFrom(el.dataset.p);if(p)plTr(p)},
   plCabPick:()=>pickPlace(`${ic("car")} Cab to…`,plCab),plGoPick:()=>pickPlace(`${ic("compass")} Directions to…`,plGo),
