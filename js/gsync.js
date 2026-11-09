@@ -116,7 +116,7 @@ const cTz=(z,f)=>{if(typeof z!=="string"||!z)return f;if(!(z in _tzOk)){try{new 
 const cCur=v=>typeof v==="string"&&/^[A-Z]{3}$/.test(v)?v:HC();
 const cIds=a=>(Array.isArray(a)?a:[]).filter(x=>typeof x==="string"&&CLEAN_ID.test(x));
 const cList=(a,f,max=500)=>(Array.isArray(a)?a:[]).filter(x=>x&&typeof x==="object").slice(0,max).map(f);
-const KEEP_OBJ=new Set(["payments","names","itemIds","photoIds","splitWith","pack","ideas","people","rates","catBudgets","crew","sex"]);
+const KEEP_OBJ=new Set(["upi","payments","names","itemIds","photoIds","splitWith","pack","ideas","people","rates","catBudgets","crew","sex"]);
 function cleanRecord(s,r,tz){
   if(!r||typeof r!=="object"||typeof r.id!=="string"||!CLEAN_ID.test(r.id))return null;
   const o={};for(const[k,v]of Object.entries(r)){if(k==="sync"||k==="blob")continue;if(KEEP_OBJ.has(k)){o[k]=v;continue}
@@ -134,7 +134,8 @@ function cleanRecord(s,r,tz){
     if(r.sex&&typeof r.sex==="object")o.sex=Object.fromEntries(Object.entries(r.sex).filter(([,v])=>v==="m"||v==="f").map(([k,v])=>[cStr(k,200),v]));else delete o.sex}
   if(s==="memories"){if(o.mood&&!MOODS[o.mood])o.mood="";o.photoIds=cIds(r.photoIds);o.fav=!!r.fav}
   if(s==="files"){if(!/^[\w.+-]+\/[\w.+-]+$/.test(o.type||""))o.type="application/octet-stream";o.itemIds=cIds(r.itemIds);if(o.memId&&!CLEAN_ID.test(o.memId))delete o.memId;if(o.driveId&&!/^[\w-]{10,200}$/.test(o.driveId))delete o.driveId}
-  if(s==="trips"){o.tz=cTz(o.tz,S.settings?.homeTz||"Asia/Kolkata");if("localCur"in o)o.localCur=cCur(o.localCur);if(!["domestic","international",""].includes(o.type||""))o.type="";
+  if(s==="trips"){o.tz=cTz(o.tz,S.settings?.homeTz||"Asia/Kolkata");
+    if("upi"in r)o.upi=r.upi&&typeof r.upi==="object"&&!Array.isArray(r.upi)?Object.fromEntries(Object.entries(r.upi).filter(([k,v])=>typeof v==="string"&&/^[\w.-]{2,256}@[A-Za-z][A-Za-z0-9.]{2,64}$/.test(v)).slice(0,30).map(([k,v])=>[cStr(k,200),v])):{};if("localCur"in o)o.localCur=cCur(o.localCur);if(!["domestic","international",""].includes(o.type||""))o.type="";
     const num=x=>x&&typeof x==="object"&&!Array.isArray(x)?Object.fromEntries(Object.entries(x).filter(([k,v])=>Number.isFinite(+v)).slice(0,100).map(([k,v])=>[cStr(k,60),+v])):{};
     o.rates=Object.fromEntries(Object.entries(num(r.rates)).filter(([k])=>/^[A-Z]{3}$/.test(k)));if("catBudgets"in r)o.catBudgets=num(r.catBudgets);
     if("pack"in r)o.pack=cList(r.pack,x=>({id:CLEAN_ID.test(x.id||"")?x.id:uid(),cat:cStr(x.cat,80),text:cStr(x.text,500),done:!!x.done}),1000);

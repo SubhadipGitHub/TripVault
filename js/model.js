@@ -15,7 +15,7 @@ const ring=(pct,c="var(--ok)")=>{const r=26,C=2*Math.PI*r;return`<svg class="rin
 const pill=(t,c="")=>`<span class="pill ${c}">${t}</span>`;
 const mapUrl=q=>"https://www.google.com/maps/search/?api=1&query="+encodeURIComponent(q);
 /* Outbound "open in maps" link. Plain navigation, so the CSP's connect-src 'none' is untouched. */
-const mapLink=(q,lbl)=>q?`<a class="${lbl?"btn xs":"mapl"}" href="${esc(mapUrl(q))}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(q)} in Maps" title="Open in Maps">${ic("pin","sm")}${lbl?" "+lbl:""}</a>`:"";
+const mapLink=(q,lbl)=>q&&typeof placeKey==="function"?`<button type="button" class="${lbl?"btn xs":"mapl"}" data-a="plMenu" data-p="${esc(placeKey({name:q,addr:q}))}" aria-label="Places: ${esc(q)}" title="Directions, cab, driver card">${ic("pin","sm")}${lbl?" "+lbl:""}</button>`:q?`<a class="${lbl?"btn xs":"mapl"}" href="${esc(mapUrl(q))}" target="_blank" rel="noopener noreferrer" aria-label="Open ${esc(q)} in Maps" title="Open in Maps">${ic("pin","sm")}${lbl?" "+lbl:""}</a>`:"";
 const itemPlace=it=>it.kind==="hotel"?[it.name,it.address].filter(Boolean).join(", "):(it.kind==="activity"||it.kind==="transfer")?(it.location||""):it.kind==="car"?(it.pickup||it.name||""):(it.kind==="bus"||it.kind==="ferry")?[it.fromName,it.from].filter(Boolean).join(", "):"";
 const airportQ=c=>c?`${AP[c]?.names?.slice(-1)[0]||c} airport ${AP[c]?.city||""}`.trim():"";
 const refChip=r=>r?`<span class="mono copy small" data-copy="${esc(r)}" title="Copy">${esc(r)}</span>`:"";

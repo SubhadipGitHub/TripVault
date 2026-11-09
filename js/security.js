@@ -59,7 +59,7 @@ function showLock(){
 
 /* ===================== Settings ===================== */
 /* Settings: one sheet with tabs. openSettings(tab) opens a given tab (general, sync, backup, security, planner, emergency, privacy). */
-const SET_TABS=[["general","sliders","General"],["sync","share","Sync & sharing"],["backup","db","Backup & restore"],["security","lock","Security"],["planner","clock","Planner"],["emergency","heart","Emergency card"],["privacy","shield","Privacy & data"]];
+const SET_TABS=[["general","sliders","General"],["apps","phone","Apps"],["sync","share","Sync & sharing"],["backup","db","Backup & restore"],["security","lock","Security"],["planner","clock","Planner"],["emergency","heart","Emergency card"],["privacy","shield","Privacy & data"]];
 function openSettings(tab="general"){
   const s=S.settings;if(!SET_TABS.some(x=>x[0]===tab))tab="general";
   const P={
@@ -67,6 +67,7 @@ function openSettings(tab="general"){
    <label class="row mt" style="cursor:pointer"><input type="checkbox" name="optimizePhotos" ${s.optimizePhotos?"checked":""}> <span style="font-size:12.5px;color:var(--tx)">Resize memory photos to 1600px when saving (saves lots of space)</span></label>
    <div class="sep"></div><div class="h">${ic("eye")}<h2>Screenshot reader</h2></div>
    <div class="row"><button class="btn" id="ocrDl" type="button">${ic("download","sm")} ${S.meta.ocrReady?"Downloaded · refresh":`Download for offline (${OCR_SIZE})`}</button></div>`,
+   apps:`<div class="fg">${Sel("Maps","appMap",s.appMap||"google",APPS.map.map(a=>[a.id,a.name]))}${Sel("Cabs","appCab",s.appCab||"",[["","Auto by country"],...APPS.cab.map(a=>[a.id,a.name])])}${Sel("UPI payments","appPay",s.appPay||"upi",APPS.pay.map(a=>[a.id,a.name]))}${Sel("Translate to","appLang",s.appLang||"",[["","Auto by country"],...Object.entries(PHRASES).map(([k,[n]])=>[k,n]),["en","English"]])}</div>`,
    sync:`<div id="gsHubBody">${gsHubBody()}</div>`,
    backup:backupPane(),
    security:`${Vault.protected?`<div class="note ok">${ic("shield")}<div><b>Encrypted</b> · locks after ${s.autoLock?s.autoLock+" min":"no time"} idle</div></div><div class="row wrap mt"><button class="btn" id="chPass">${ic("key","sm")} Change passphrase</button><button class="btn" id="lockNow">${ic("lock","sm")} Lock now</button><button class="btn ghost" id="offPass">${ic("unlock","sm")} Remove lock</button></div>`
@@ -81,7 +82,7 @@ function openSettings(tab="general"){
    <div class="fg mt">${F("Name","emgName",s.emgName)}${F("Blood group","emgBlood",s.emgBlood,{ph:"B+"})}${F("Allergies","emgAllergy",s.emgAllergy,{full:1,ph:"Penicillin, peanuts…"})}${F("Medical conditions / medicines","emgMed",s.emgMed,{full:1,ph:"Asthma (inhaler in bag)…"})}
    ${F("Emergency contact","emgContact",s.emgContact,{ph:"Riya (spouse)"})}${F("Contact phone","emgPhone",s.emgPhone,{type:"tel",ph:"+91 98…"})}${F("Insurer & policy no.","emgIns",s.emgIns)}${F("Insurance helpline","emgHelp",s.emgHelp,{type:"tel"})}</div>`,
    privacy:privacyPane()};
-  const FIELD_TABS=new Set(["general","security","planner","emergency"]);
+  const FIELD_TABS=new Set(["general","apps","security","planner","emergency"]);
   const ov=sheet({title:`${ic("sliders")} Settings`,cls:"settings",help:"settings."+tab,body:`<div class="stabs" role="tablist" aria-label="Settings sections">${SET_TABS.map(([k,i,l])=>`<button type="button" role="tab" class="stab" id="st-${k}" data-tab="${k}" aria-controls="sp-${k}" aria-selected="${k===tab}" tabindex="${k===tab?0:-1}">${ic(i,"sm")}<span>${l}</span></button>`).join("")}</div>
    ${SET_TABS.map(([k])=>`<section class="spane" role="tabpanel" id="sp-${k}" data-pane="${k}" aria-labelledby="st-${k}" ${k===tab?"":"hidden"}>${P[k]}</section>`).join("")}
    <div class="small dim mt">Trip Vault ${typeof TV_VERSION==="string"?TV_VERSION:""} · private by design · <a href="#" data-a="about">About</a></div>`,

@@ -44,8 +44,9 @@ function settleCard(t){
    
    ${ppl.length<2?`<div class="small muted">Add at least two people to split costs.</div>`:S2.total?`<div class="small muted">${fmtM(S2.total)} of logged expenses shared by ${ppl.length}</div>
     <div class="mt">${ppl.map(p=>`<div class="catbar"><div class="nm" style="width:auto;flex:1">${esc(p)}</div><div class="small muted">paid ${fmtM(S2.paid[p])} · share ${fmtM(S2.owe[p])}</div></div>`).join("")}</div>
+    ${HC()==="INR"?`<details class="mt upi-ids" ${S.upiOpen?"open":""}><summary class="small">${ic("wallet","sm")} UPI IDs</summary><div class="fg mt">${ppl.map(p=>`<div><label>${esc(p)}</label><input data-upi="${esc(p)}" value="${esc((t.upi||{})[p]||"")}" placeholder="name@bank" inputmode="email" autocomplete="off"></div>`).join("")}</div></details>`:""}
     ${S2.skipped?`<div class="small" style="color:var(--warn)">${S2.skipped} expense${S2.skipped>1?"s":""} not counted: set the exchange rate above.</div>`:""}
-    ${S2.pay.length?S2.pay.map(x=>`<div class="li"><div class="b"><div class="t">${esc(x.from)} <span class="dim">pays</span> ${esc(x.to)}</div></div><div class="r serif" style="font-size:18px;font-weight:700">${fmtM(x.v)}</div></div>`).join(""):`<div class="note ok mt">${ic("check")}<div>Everyone is square.</div></div>`}`:`<div class="small muted">No expenses with “Paid by” yet.</div>`}</div>`;
+    ${S2.pay.length?S2.pay.map(x=>`<div class="li"><div class="b"><div class="t">${esc(x.from)} <span class="dim">pays</span> ${esc(x.to)}</div></div><div class="r"><div class="serif" style="font-size:18px;font-weight:700">${fmtM(x.v)}</div>${upiPayBtn(t,x)}</div></div>`).join(""):`<div class="note ok mt">${ic("check")}<div>Everyone is square.</div></div>`}`:`<div class="small muted">No expenses with “Paid by” yet.</div>`}</div>`;
 }
 
 /* ---------- cost export: CSV and printable expense report ---------- */

@@ -60,7 +60,7 @@ function startList(t){
 function viewToday(t){
   const ph=tripPhase(t),nx=nextUp(t,ph.p==="during"?3:2);let h=bpHero(t);
   const chk=readiness(t),sc=chk.filter(c=>c.lv!=="info"),okN=sc.filter(c=>c.lv==="ok").length,pct=sc.length?okN/sc.length*100:100,B=budgetOf(t);
-  h+=`<div style="height:12px"></div>`+startList(t);
+  h+=`<div style="height:12px"></div>`+groundCard(t)+startList(t);
   if(ph.p==="after"||(ph.p==="during"&&tripMems(t.id).length))h+=`<div class="mt">${wrappedCta(t)}</div>`;
   if(ph.p==="during"){const d=ph.today,m=dayModel(t,d);
     h+=`<div class="card"><div class="h">${ic("camera")}<h2>Capture the moment</h2></div><textarea class="prose" id="qmT" style="min-height:64px" placeholder="${esc(PROMPTS[new Date().getDate()%PROMPTS.length])}"></textarea><div class="row mt"><label class="btn" style="margin:0">${ic("image","sm")} Photos<input type="file" id="qmF" accept="image/*" multiple hidden></label><span class="sp"></span><button class="btn pri" data-a="quickMem">${ic("check","sm")} Save</button></div></div>`;
