@@ -149,7 +149,11 @@ addEventListener("hashchange",()=>{if(location.hash.startsWith("#join="))consume
 /* Updates: check when the app comes back to the front; when a new version takes over an open page, offer a reload. */
 if("serviceWorker"in navigator&&location.protocol.startsWith("http")){
   let had=!!navigator.serviceWorker.controller;
-  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!had){had=true;return}updateBar()});
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!had){had=true;warmCrew();return}updateBar()});
+  /* three.js isn't precached. On the very first visit it can load before the service worker controls the page,
+     which bypasses the cache; ask the worker to cache it so the crew still works offline. (The page itself
+     can't fetch it: the CSP's connect-src leaves out 'self' on purpose.) */
+  const warmCrew=()=>AV.ld?.then(()=>navigator.serviceWorker.controller?.postMessage("warm-crew"),()=>{});
   addEventListener("load",()=>navigator.serviceWorker.register("sw.js").then(r=>{document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")r.update().catch(()=>{})})}).catch(()=>{}))}
 function updateBar(){if($("#updBar"))return;const d=document.createElement("div");d.id="updBar";d.className="updbar";d.setAttribute("role","status");
   d.innerHTML=`${ic("sparkle","sm")}<span>Trip Vault was updated</span><button class="btn xs pri" data-a="reloadApp">Reload</button><button class="ibtn" data-a="updClose" aria-label="Later">${ic("x","sm")}</button>`;document.body.append(d)}
