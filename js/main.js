@@ -18,6 +18,8 @@ const A={
   go:el=>go(el.dataset.v),
   vsub:el=>{S.sub=el.dataset.s;S.meta.sub=S.sub;saveMeta();render()},
   avPoke:()=>AV.poke(),
+  acct:()=>openAcctMenu(),gsHub:()=>openAcctMenu(),profile:()=>{$$(".ov").forEach(o=>o.remove());openProfile()},about:()=>openAbout(),
+  privacyNotice:()=>openNotice(),noticeOk:()=>noticeAck(),backupTab:()=>{$$(".ov").forEach(o=>o.remove());openSettings("backup")},
   gsShare:el=>{const t=S.trips.find(x=>x.id===el.dataset.trip)||curTrip();$$(".ov").forEach(o=>o.remove());openShare(t)},
   gsChip:el=>{const t=S.trips.find(x=>x.id===el.dataset.trip);if(!t)return;const s=GS.st[t.id];if(!gsOn()||s?.state==="paused")syncTrip(t,{interactive:true});else openShare(t)},
   day:el=>{const kb=document.activeElement===el;S.day=el.dataset.d;render();if(kb)$(`.calc[data-d="${S.day}"]`)?.focus({preventScroll:true})},

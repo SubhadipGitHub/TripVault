@@ -5,9 +5,11 @@ const fromB64=(s,type)=>{const b=atob(s);const u=new Uint8Array(b.length);for(le
 function dl(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
 async function encryptBackup(json,pass){const salt=crypto.getRandomValues(new Uint8Array(16)),iter=600000,key=await Crypt.derive(pass,salt,iter);const ct=await Crypt.enc(key,new TextEncoder().encode(json));const h=new Uint8Array(24);h.set([84,86,66,49]);h.set(salt,4);new DataView(h.buffer).setUint32(20,iter,true);return new Blob([h,ct],{type:"application/octet-stream"})}
 async function decryptBackup(buf,pass){const salt=new Uint8Array(buf.slice(4,20)),iter=new DataView(buf).getUint32(20,true),key=await Crypt.derive(pass,salt,iter);return new TextDecoder().decode(await Crypt.dec(key,buf.slice(24)))}
-function openBackup(){const mb=(S.files.reduce((a,f)=>a+(f.size||0),0)/1048576).toFixed(1);const t=curTrip();
+/* Backup & restore lives in Settings → Backup & restore. */
+function openBackup(){openSettings("backup")}
+function backupPane(){const mb=(S.files.reduce((a,f)=>a+(f.size||0),0)/1048576).toFixed(1);const t=curTrip();
   const dirty=S.meta.dirty&&(!S.meta.lastBackup||S.meta.dirty>S.meta.lastBackup);
-  const ov=sheet({title:`${ic("db")} Backup & restore`,body:`
+  return`
    <div class="note ${dirty?"warn":"ok"}">${ic(dirty?"alert":"check")}<div>${S.meta.lastBackup?`Last full backup: <b>${new Date(S.meta.lastBackup).toLocaleString()}</b>`:"<b>No backup yet.</b>"}${dirty?" · changes since then":S.meta.lastBackup?" · up to date":""}<div class="small muted">Your vault lives only in this browser. Export before clearing browser data, switching phones or travelling. Save the file somewhere you trust (your drive, a USB stick).</div></div></div>
    <label class="row mt" style="cursor:pointer"><input type="checkbox" id="bEnc" ${hasCrypto?"checked":"disabled"}> <span style="font-size:12.5px;color:var(--tx)">${ic("lock","sm")} Encrypt the backup with a passphrase <span class="dim">(recommended — backups contain passports and tickets)</span></span></label>
    <div class="grid mt" style="gap:8px">
@@ -17,9 +19,10 @@ function openBackup(){const mb=(S.files.reduce((a,f)=>a+(f.size||0),0)/1048576).
    <div class="h">${ic("phone")}<h2>Phone to phone, no internet</h2></div>
    <div class="small muted">Move trips to another phone with Trip Vault open: this screen shows a stream of QR codes, the other phone reads them with its camera. Encrypted with a one-time code.</div>
    <div class="row wrap mt"><button class="btn" id="qrSend">${ic("share","sm")} Send by QR</button><button class="btn" id="qrRecv">${ic("camera","sm")} Receive by QR</button></div><div class="sep"></div>
-   ${gsBackupBlock()}<div class="h">${ic("upload")}<h2>Restore from a backup</h2></div>
-   <label class="drop" style="padding:16px">${ic("upload")} <b>Choose a Trip Vault backup (.tvault or .json)</b><div class="small muted">You'll see what changes before anything is written</div><input type="file" id="bIn" accept=".json,.tvault,application/json,application/octet-stream" hidden></label>`});
-  $("#qrSend",ov).onclick=()=>{ov.remove();openSendQR()};$("#gsJoinB",ov).onclick=()=>{ov.remove();openJoin()};$("#qrRecv",ov).onclick=()=>{ov.remove();openReceiveQR()};
+   <div class="h">${ic("upload")}<h2>Restore from a backup</h2></div>
+   <label class="drop" style="padding:16px">${ic("upload")} <b>Choose a Trip Vault backup (.tvault or .json)</b><div class="small muted">You'll see what changes before anything is written</div><input type="file" id="bIn" accept=".json,.tvault,application/json,application/octet-stream" hidden></label>`}
+function backupWire(ov){const t=curTrip();
+  $("#qrSend",ov).onclick=()=>{ov.remove();openSendQR()};$("#qrRecv",ov).onclick=()=>{ov.remove();openReceiveQR()};
   $("#bAll",ov).onclick=()=>exportVault(null,ov);$("#bTrip",ov)?.addEventListener("click",()=>exportVault(t.id,ov));
   $("#bIn",ov).onchange=e=>{const f=e.target.files[0];if(f){ov.remove();previewImport(f)}}}
 /* The backup object shared by file export and phone-to-phone transfer.

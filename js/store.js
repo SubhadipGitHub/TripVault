@@ -87,17 +87,19 @@ const Vault={
   get protected(){return !!Crypt.info},
   async readLock(){const r=await DB.get("meta","lock");Crypt.info=r?.v||null},
   async enable(pass){ // encrypt everything currently in memory, then flip the switch
+    const kr=typeof kcRaw==="function"?await kcRaw():null;
     const salt=crypto.getRandomValues(new Uint8Array(16)),iter=600000;
     const key=await Crypt.derive(pass,salt,iter);
     const chk=await Crypt.enc(key,new TextEncoder().encode(MAGIC));
     Crypt.info={salt:Array.from(salt),iter,chk};
     await DB.put("meta",{k:"lock",v:Crypt.info}); // lock record first: mixed plain/sealed rows stay readable if interrupted
-    Crypt.key=key;await this.rewriteAll();
+    Crypt.key=key;await this.rewriteAll();if(kr)await kcStore(kr);
   },
   async disable(){
+    const kr=typeof kcRaw==="function"?await kcRaw():null;
     Crypt.key=null; // seal() becomes a pass-through
     await this.rewriteAll();
-    await DB.del("meta","lock");Crypt.info=null;
+    await DB.del("meta","lock");Crypt.info=null;if(kr)await kcStore(kr);
   },
   async rewriteAll(){for(const s of DATA_STORES){await DB.putMany(s,S[s])}},
   async unlock(pass){

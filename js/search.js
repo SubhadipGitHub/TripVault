@@ -20,10 +20,13 @@ function searchActions(){return[
   {type:"action",id:"a:emg",title:"Emergency card",icon:"heart",text:"emergency medical id blood group allergy contact insurance helpline",run:()=>openEmgCard()},
   {type:"action",id:"a:ics",title:"Export itinerary to calendar (.ics)",icon:"cal",text:"calendar ics google apple outlook export reminders",run:()=>exportICS()},
   {type:"action",id:"a:share",title:"Share this trip (Google Drive)",icon:"share",text:"share trip google drive partner group family invite sync together",run:()=>openShare()},
-  {type:"action",id:"a:hub",title:"Sharing & sync status",icon:"user",text:"google account signed in connected sync status recent changes who added",run:()=>openHub()},
+  {type:"action",id:"a:hub",title:"Sharing & sync status",icon:"user",text:"google account signed in connected sync status recent changes who added",run:()=>openSettings("sync")},
   {type:"action",id:"a:qrs",title:"Send trips to another phone (QR)",icon:"share",text:"transfer phone qr send move sync another device",run:()=>openSendQR()},
   {type:"action",id:"a:qrr",title:"Receive trips from another phone (QR)",icon:"camera",text:"transfer phone qr receive scan move sync another device import",run:()=>openReceiveQR()},
   {type:"action",id:"a:backup",title:"Backup & restore",icon:"db",text:"backup restore export import json encrypted",run:()=>openBackup()},
+  {type:"action",id:"a:privacy",title:"Privacy & your data",icon:"shield",text:"privacy dpdp data protection consent delete erase my data download notice grievance",run:()=>openSettings("privacy")},
+  {type:"action",id:"a:about",title:"About Trip Vault",icon:"info",text:"about version help contact feedback grievance licences",run:()=>openAbout()},
+  {type:"action",id:"a:profile",title:"Profile",icon:"user",text:"profile name account offline",run:()=>openProfile()},
   {type:"action",id:"a:set",title:"Settings",icon:"sliders",text:"settings theme lock passphrase buffers timezone",run:()=>openSettings()},
   ...(Vault.protected?[{type:"action",id:"a:lock",title:"Lock vault now",icon:"lock",text:"lock secure passphrase",run:()=>Vault.lock()}]:[{type:"action",id:"a:setlock",title:"Protect vault with a passphrase",icon:"lock",text:"lock encrypt passphrase password secure privacy",run:()=>openSettings()}])
 ]}

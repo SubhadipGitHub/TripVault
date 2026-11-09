@@ -11,9 +11,9 @@ function render(){
   $$("#nav [data-v]").forEach(b=>b.classList.toggle("on",b.dataset.v===S.view));
   $("#lockBtn").classList.toggle("hide",!Vault.protected);
   const app=$("#app"),y=scrollY,key=S.view+":"+(S.sub||"");
-  if(!t){app.innerHTML=viewWelcome();RV.last="";AV.attach();return}
+  if(!t){app.innerHTML=noticeBanner()+viewWelcome();RV.last="";AV.attach();return}
   const V={today:viewToday,plan:viewPlan,vault:viewVault,memories:viewMemories}[S.view]||viewToday;
-  app.innerHTML=`<div class="${RV.last===key?"":"rise"}">${V(t)}</div>`;
+  app.innerHTML=`<div class="${RV.last===key?"":"rise"}">${noticeBanner()}${V(t)}</div>`;
   if(RV.last===key)scrollTo(0,y);RV.last=key;AV.attach();
 }
 const SUBS={ideas:"ideas",book:"bookings",bookings:"bookings",money:"money",docs:"docs",pack:"pack"};
@@ -26,10 +26,10 @@ function go(v){
 function viewWelcome(){return`<div class="card welcome rise">${avSlot(null,"wel")}
   <div class="eyebrow">Welcome aboard</div>
   <h1 style="margin-top:8px">Every trip, <em>one private vault.</em></h1>
-  <p class="muted" style="max-width:56ch;margin-top:12px;font-size:15px">Tickets, stays, passports, payments, the day-by-day plan and your memories — searchable in one place, for domestic and international trips. No account. No cloud. It all stays on this device.</p>
+  <p class="muted" style="max-width:56ch;margin-top:12px;font-size:15px">Tickets, stays, passports, payments, the day-by-day plan and your memories — searchable in one place, for domestic and international trips. No account needed. It all stays on this device unless you connect your own Google Drive.</p>
   <div class="trust">
     <div>${ic("check","sm")} Works offline, install it like an app</div>
-    <div>${ic("check","sm")} Nothing is uploaded, ever</div>
+    <div>${ic("check","sm")} Nothing is uploaded unless you choose</div>
     <div>${ic("check","sm")} Optional AES-256 passphrase lock</div>
     <div>${ic("check","sm")} Export backups and a shareable Wrapped</div></div>
   <div class="row wrap" style="margin-top:16px"><div style="width:150px"><label>Language</label><select data-home="lang"><option value="en">English</option><option value="hi" ${S.settings.lang==="hi"?"selected":""}>हिन्दी</option></select></div><div style="width:150px"><label>Home currency</label><select data-home="homeCur">${CURS.map(c=>`<option ${c===HC()?"selected":""}>${c}</option>`).join("")}</select></div><div style="min-width:200px;flex:1;max-width:280px"><label>Home timezone</label><select data-home="homeTz">${TZS.map(z=>`<option value="${z}" ${z===S.settings.homeTz?"selected":""}>${tzShort(z)} · ${offLabel(z)}</option>`).join("")}</select></div></div>
