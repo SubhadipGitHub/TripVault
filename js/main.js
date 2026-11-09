@@ -97,7 +97,7 @@ matchMedia("(min-width:900px)").addEventListener?.("change",()=>{if(S.view==="pl
 document.addEventListener("change",async e=>{
   const r=e.target.closest("[data-rate]");if(r){const t=curTrip();t.rates={...(t.rates||{})};const v=+r.value;if(v>0)t.rates[r.dataset.rate]=v;else delete t.rates[r.dataset.rate];await saveTrip(t);render();toast(`Rate saved: 1 ${r.dataset.rate} = ${sym(HC())}${v}`)}});
 let _emgT=null;
-document.addEventListener("change",async e=>{const hm2=e.target.closest("[data-home]");if(hm2){S.settings={...S.settings,[hm2.dataset.home]:hm2.value};await DB.put("meta",{k:"settings",v:S.settings});if(hm2.dataset.home==="lang"){location.reload();return}toast("Saved");return}
+document.addEventListener("change",async e=>{const hm2=e.target.closest("[data-home]");if(hm2){S.settings={...S.settings,[hm2.dataset.home]:hm2.value};await DB.put("meta",{k:"settings",v:S.settings});toast("Saved");return}
   const up=e.target.closest("[data-upi]");if(up){const t=curTrip(),v=up.value.trim();if(v&&!UPI_RE.test(v)){toast("That doesn't look like a UPI ID (name@bank)","bad");return}
     t.upi={...(t.upi||{})};if(v)t.upi[up.dataset.upi]=v;else delete t.upi[up.dataset.upi];await saveTrip(t);render();return}
   const pp=e.target.closest("[data-people]");if(pp){const t=curTrip();t.people=pp.value.split(/\s*,\s*/).filter(Boolean);await saveTrip(t);render()}});
@@ -138,7 +138,7 @@ async function consumeLaunch(){
   await Vault.readLock();
   if(Vault.protected){const st=await DB.get("meta","settings");S.settings={...DEF_SET,...(st?.v||{})};applyTheme()}
   if(Vault.locked){const m=await DB.get("meta","state");S.meta=m?.v||{};showLock();return}
-  await loadAll();applyTheme();S.view=({book:"vault",money:"vault",docs:"vault"}[S.meta.view])||S.meta.view||"today";S.sub=S.meta.sub||({book:"bookings",money:"money",docs:"docs"})[S.meta.view]||"bookings";S.psub=S.meta.psub||"days";
+  await loadAll();dropUiLang();applyTheme();S.view=({book:"vault",money:"vault",docs:"vault"}[S.meta.view])||S.meta.view||"today";S.sub=S.meta.sub||({book:"bookings",money:"money",docs:"docs"})[S.meta.view]||"bookings";S.psub=S.meta.psub||"days";
   if(S.sub==="ideas"){S.view="plan";S.psub="ideas";S.sub="bookings"} // Ideas moved from Vault to Plan
   if(!["today","plan","vault","memories"].includes(S.view))S.view="today";
   render();armIdle();if(!location.hash.startsWith("#join="))AV.intro(curTrip());gsBoot();consumeLaunch();if(!location.hash.startsWith("#join="))tourMaybe();

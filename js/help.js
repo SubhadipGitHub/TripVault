@@ -9,27 +9,21 @@ const TOUR=[
  {ic:"cal",c:"#1f9d6b",t:"Your days, planned",d:"A calendar and a timeline for each day, with travel buffers and free time to fill."},
  {ic:"shield",c:"#8a5cf6",t:"Vault and memories",d:"Bookings, documents, money, ideas and packing. Photos and notes become your trip's Wrapped."},
  {ic:"lock",c:"#c4880f",t:"Your data stays here",d:"Everything stays on this device unless you connect your own Google Drive.",privacy:1}];
-const TOUR_HI={"Every trip, one private vault":"हर यात्रा, एक निजी तिजोरी","Tickets, stays, IDs, money, plans and memories, together.":"टिकट, ठहराव, पहचान-पत्र, पैसा, योजना और यादें, एक साथ।",
- "Add in a tap":"एक टैप में जोड़ें","Drop a ticket, PDF, email or screenshot. Smart import fills in the details for you to check.":"टिकट, PDF, ईमेल या स्क्रीनशॉट डालें। स्मार्ट इम्पोर्ट जानकारी भर देता है, आप जाँच लें।",
- "Your days, planned":"आपके दिन, योजनाबद्ध","A calendar and a timeline for each day, with travel buffers and free time to fill.":"हर दिन का कैलेंडर और टाइमलाइन, यात्रा के बफ़र और खाली समय के साथ।",
- "Vault and memories":"तिजोरी और यादें","Bookings, documents, money, ideas and packing. Photos and notes become your trip's Wrapped.":"बुकिंग, दस्तावेज़, पैसा, आइडिया और पैकिंग। फ़ोटो और नोट्स आपकी यात्रा का Wrapped बनते हैं।",
- "Your data stays here":"आपका डेटा यहीं रहता है","Everything stays on this device unless you connect your own Google Drive.":"जब तक आप अपनी Google Drive नहीं जोड़ते, सब कुछ इसी डिवाइस पर रहता है।"};
-const tourT=s=>hiOn()&&TOUR_HI[s]?TOUR_HI[s]:s;
 const tourDue=()=>!Vault.locked&&S.settings&&!S.meta.tourV&&!S.meta.noticeV;
 async function tourDone(){S.meta.tourV=TOUR_V;S.meta.noticeV=Math.max(S.meta.noticeV||0,NOTICE_V);S.meta.noticeAt||=Date.now();await saveMeta()}
 function openTour(){
   if($("#tour"))return;let i=0;const last=TOUR.length-1;
   const ov=sheet({title:"",cls:"tour",onClose:()=>tourDone(),body:`<div id="tour" class="tour-w"><div class="tour-track">${TOUR.map((c,k)=>`<section class="tour-c" aria-roledescription="slide" aria-label="${k+1} of ${TOUR.length}">
       <div class="tour-art" style="--tc:${c.c}">${ic(c.ic,"lg")}</div>
-      <h2>${esc(tourT(c.t))}</h2><p>${esc(tourT(c.d))}</p>${c.privacy?`<button class="btn xs ghost" data-a="privacyNotice">${ic("shield","sm")} ${L2("Privacy notice","गोपनीयता सूचना")}</button>`:""}</section>`).join("")}</div>
+      <h2>${esc(c.t)}</h2><p>${esc(c.d)}</p>${c.privacy?`<button class="btn xs ghost" data-a="privacyNotice">${ic("shield","sm")} Privacy notice</button>`:""}</section>`).join("")}</div>
     <div class="tour-dots" role="tablist">${TOUR.map((_,k)=>`<button role="tab" data-dot="${k}" aria-label="Card ${k+1}"></button>`).join("")}</div></div>`,
-    foot:`<button class="btn ghost" id="tourSkip">${L2("Skip","छोड़ें")}</button><span class="sp"></span><button class="btn" id="tourBack">${ic("back","sm")}</button><button class="btn pri" id="tourNext"></button>`});
+    foot:`<button class="btn ghost" id="tourSkip">Skip</button><span class="sp"></span><button class="btn" id="tourBack">${ic("back","sm")}</button><button class="btn pri" id="tourNext"></button>`});
   ov.setAttribute("aria-label","Welcome tour");$(".sh",ov).remove();
   const trk=$(".tour-track",ov),nx=$("#tourNext",ov),bk=$("#tourBack",ov);
   const go=k=>{i=Math.max(0,Math.min(last,k));trk.style.transform=`translateX(${-i*100}%)`;$$("[data-dot]",ov).forEach((d,k2)=>d.setAttribute("aria-selected",k2===i));
     bk.style.visibility=i?"visible":"hidden";$$(".tour-c",ov).forEach((c,k2)=>c.setAttribute("aria-hidden",k2!==i));
-    nx.innerHTML=i<last?`${L2("Next","आगे")} ${ic("arrow","sm")}`:S.trips.length?L2("Done","हो गया"):`${ic("sparkle","sm")} ${L2("Explore a sample","नमूना देखें")}`;
-    $("#tourNew",ov)?.remove();if(i===last&&!S.trips.length)nx.insertAdjacentHTML("beforebegin",`<button class="btn" id="tourNew">${ic("plus","sm")} ${L2("Start a trip","ट्रिप शुरू करें")}</button>`)};
+    nx.innerHTML=i<last?`Next ${ic("arrow","sm")}`:S.trips.length?"Done":`${ic("sparkle","sm")} Explore a sample`;
+    $("#tourNew",ov)?.remove();if(i===last&&!S.trips.length)nx.insertAdjacentHTML("beforebegin",`<button class="btn" id="tourNew">${ic("plus","sm")} Start a trip</button>`)};
   const end=async a=>{ov.remove();await tourDone();if(a==="sample")loadSample();else if(a==="new")A.newTrip()};
   ov.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
     if(b.dataset.dot)go(+b.dataset.dot);else if(b.id==="tourBack")go(i-1);else if(b.id==="tourSkip")end();else if(b.id==="tourNew")end("new");
@@ -75,5 +69,5 @@ function helpKey(){const s=topSheet();if(s?.dataset.help)return s.dataset.help;i
   if(S.view==="plan"&&S.psub==="ideas")return"plan.ideas";return HELP[S.view]?S.view:"today"}
 function openHelp(key){key=HELP[key]?key:helpKey();const[title,pts]=HELP[key];
   sheet({title:`${ic("info")} ${esc(title)}`,cls:"help",body:`<div class="help-l">${pts.map(([i,h,d])=>`<div class="help-i"><span class="kic sm" style="--c:var(--acc)">${ic(i,"sm")}</span><div><b>${esc(h)}</b><p>${esc(d)}</p></div></div>`).join("")}</div>
-    <div class="row wrap mt" style="gap:6px"><button class="btn xs" data-a="tour">${ic("play","sm")} ${L2("Take the tour","टूर देखें")}</button><button class="btn xs ghost" data-a="privacyNotice">${ic("shield","sm")} ${L2("Privacy notice","गोपनीयता सूचना")}</button><button class="btn xs ghost" data-a="about">${ic("book","sm")} About Trip Vault</button></div>`,
-    foot:`<button class="btn pri" data-close>${L2("Got it","समझ गया")}</button>`})}
+    <div class="row wrap mt" style="gap:6px"><button class="btn xs" data-a="tour">${ic("play","sm")} Take the tour</button><button class="btn xs ghost" data-a="privacyNotice">${ic("shield","sm")} Privacy notice</button><button class="btn xs ghost" data-a="about">${ic("book","sm")} About Trip Vault</button></div>`,
+    foot:`<button class="btn pri" data-close>Got it</button>`})}

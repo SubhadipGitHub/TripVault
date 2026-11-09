@@ -52,7 +52,7 @@ function showLock(){
   f.onsubmit=async e=>{e.preventDefault();if(!inp.value)return;const b=f.querySelector("button");b.disabled=true;$("#lke",d).textContent="";
     const ok=await Vault.unlock(inp.value);
     if(!ok){await new Promise(r=>setTimeout(r,500));$("#lke",d).textContent="That passphrase didn't work.";b.disabled=false;inp.select();return}
-    inp.value="";await loadAll();applyTheme();d.remove();S.view=S.meta.view||"today";S.sub=S.meta.sub||"bookings";S.psub=S.meta.psub||"days";if(S.sub==="ideas"){S.view="plan";S.psub="ideas";S.sub="bookings"}armIdle();render();AV.intro(curTrip());gsBoot();consumeLaunch()};
+    inp.value="";await loadAll();dropUiLang();applyTheme();d.remove();S.view=S.meta.view||"today";S.sub=S.meta.sub||"bookings";S.psub=S.meta.psub||"days";if(S.sub==="ideas"){S.view="plan";S.psub="ideas";S.sub="bookings"}armIdle();render();AV.intro(curTrip());gsBoot();consumeLaunch()};
   $("#lkEmg",d)?.addEventListener("click",()=>openEmgCard());
   $("#lkw",d).onclick=async()=>{if(confirm("Erase everything stored by Trip Vault in this browser? This cannot be undone. Restore later from a backup file."))await wipeAll()};
 }
@@ -65,7 +65,7 @@ const SET_ALIAS={planner:"general",emergency:"security"};
 function openSettings(tab="general"){
   const s=S.settings,sect=SET_ALIAS[tab]?tab:"";tab=SET_ALIAS[tab]||tab;if(!SET_TABS.some(x=>x[0]===tab))tab="general";
   const P={
-   general:`<div class="fg">${Sel("Home currency","homeCur",s.homeCur||"INR",CURS)}${Sel("Appearance","theme",s.theme,[["auto","Match my device"],["dark","Midnight"],["light","Parchment"]])}${Sel("Language","lang",s.lang||"en",[["en","English"],["hi","हिन्दी (beta)"]])}${Sel("Character animations","anim",s.anim||"full",[["full","Full (intro + idle)"],["calm","Calm (no intro)"],["off","Off"]])}</div>
+   general:`<div class="fg">${Sel("Home currency","homeCur",s.homeCur||"INR",CURS)}${Sel("Appearance","theme",s.theme,[["auto","Match my device"],["dark","Midnight"],["light","Parchment"]])}${Sel("Character animations","anim",s.anim||"full",[["full","Full (intro + idle)"],["calm","Calm (no intro)"],["off","Off"]])}</div>
    <label class="row mt" style="cursor:pointer"><input type="checkbox" name="optimizePhotos" ${s.optimizePhotos?"checked":""}> <span style="font-size:12.5px;color:var(--tx)">Resize memory photos to 1600px when saving (saves lots of space)</span></label>
    <div class="sep"></div><div class="h">${ic("eye")}<h2>Screenshot reader</h2></div>
    <div class="row"><button class="btn" id="ocrDl" type="button">${ic("download","sm")} ${S.meta.ocrReady?"Downloaded · refresh":`Download for offline (${OCR_SIZE})`}</button></div>
@@ -101,8 +101,7 @@ function openSettings(tab="general"){
   privacyWire(ov);wipeWire(ov);aiPaneWire(ov);
   $("#stSv",ov).onclick=async()=>{const g=gather(ov);const n={...S.settings,...g};["minGap","preIntl","preDom","postIntl","postDom","trainPre","autoLock"].forEach(k=>n[k]=Math.max(0,+n[k]||0));n.minGap=Math.max(15,n.minGap);
     if(hm(n.sleep)<=hm(n.wake)){toast("Day end must be after start","bad");return}
-    const relang=(n.lang||"en")!==(S.settings.lang||"en");
-    S.settings=n;await DB.put("meta",{k:"settings",v:n});if(relang){location.reload();return}applyTheme();armIdle();ov.remove();render();toast("Settings saved")};
+    delete n.lang;S.settings=n;await DB.put("meta",{k:"settings",v:n});applyTheme();armIdle();ov.remove();render();toast("Settings saved")};
   return ov}
 function wipeWire(ov){$("#wipe",ov)?.addEventListener("click",async()=>{if(!(await gate({title:"Erase the whole vault?",plan:[`Delete ${S.trips.length} trip(s), ${S.items.length} entries, ${S.memories.length} memories and ${S.files.length} file(s) from this browser`,"Reset settings and remove the passphrase"],irreversible:`Everything. ${S.meta.lastBackup?"Last backup: "+new Date(S.meta.lastBackup).toLocaleString():"No backup has ever been exported."}`,ok:"Erase all"})))return;await wipeAll()})}
 /* Re-draw one tab after an action changed what it shows. */

@@ -76,7 +76,7 @@ The **Entry points** column lists where each feature was reached from in v1.5. *
 | Help (?), tour, About | `help.js`, `profile.js` | header ?, sheet ?, account menu (Help & tour, About us) | header ?, sheet ?, account menu → **Help & about** (Tour, Privacy notice and About buttons) | Merged |
 | Day planner + buffers | `security.js` | Settings → Planner tab | Settings → **General** → Day planner | Merged |
 | Travel crew (3D characters) | `avatars.js`, `vendor/three` | Welcome, Today, Memories, empty states, Wrapped | unchanged | Remove candidate (see below) |
-| Hindi interface (beta) | `i18n.js` | Welcome, Settings → General | unchanged | **Remove (follow-up PR)** |
+| Hindi interface (beta) | `i18n.js` | Welcome, Settings → General | **removed in v1.7**; the privacy notice keeps its Hindi version | Removed |
 
 ## Duplication found (v1.5 entry points per action)
 
@@ -131,7 +131,7 @@ Old deep links still work. `openSettings("planner")` and `openSettings("emergenc
 
 ## Open recommendations (not done in v1.6)
 
-1. **Remove the Hindi UI** in a separate PR. Delete `js/i18n.js`, the `L2()`, `TOUR_HI` and `hiOn` call sites, both language pickers, the script tag and its SW shell entry, and migrate a stored `lang:"hi"` to `"en"`. Its coverage is already partial, and these v1.6 strings have no translation: Trip, Days, Ideas, More, Travel kit, Trip menu and its rows, Sync & devices, Backup & storage, Help & about, Emergency contacts, Day planner.
+1. ~~**Remove the Hindi UI**~~ **Done in v1.7.** The privacy notice keeps its Hindi version (a toggle inside the notice), because the DPDP Act lets people read the notice in an Eighth Schedule language. The interface is English only, and a stored interface language is dropped on launch. The original plan was to delete `js/i18n.js`, the `L2()`, `TOUR_HI` and `hiOn` call sites, both language pickers, the script tag and its SW shell entry, and migrate a stored `lang:"hi"` to `"en"`. Its coverage is already partial, and these v1.6 strings have no translation: Trip, Days, Ideas, More, Travel kit, Trip menu and its rows, Sync & devices, Backup & storage, Help & about, Emergency contacts, Day planner.
 2. **Merge Getting started into Trip readiness.** Both are checklists on Today, and two of the five Getting started steps (travel documents, backup) are also readiness checks.
 3. **Make the travel crew opt-in, or at least lazy.** Remove `three.*.min.js` from the precache, load it on first use, and default `anim` to "calm" (no intro). This saves 720 KB on every install and gets the tour on screen sooner.
 4. **One exchange-rate input.** Trip settings has a free-text `MYR=19.2, USD=84.5` field, and Money has per-currency inputs. Keep the Money inputs and drop the text field.

@@ -1,8 +1,10 @@
 "use strict";
 /* ===================== Render root ===================== */
 const RV={last:""};
+/* The Hindi interface was removed in 1.7: drop a stored interface-language setting (trip and Translate languages are separate). */
+function dropUiLang(){if(S.settings&&"lang"in S.settings){delete S.settings.lang;DB.put("meta",{k:"settings",v:S.settings}).catch(()=>{})}}
 function applyTheme(){
-  document.documentElement.dataset.theme=S.settings?.theme||"auto";i18nInit();
+  document.documentElement.dataset.theme=S.settings?.theme||"auto";
   const m=document.querySelector("meta[name=theme-color]");if(m)requestAnimationFrame(()=>{m.content=getComputedStyle(document.documentElement).getPropertyValue("--bg").trim()||"#0a0d14"});
 }
 function render(){
@@ -31,7 +33,7 @@ function viewWelcome(){return`<div class="card welcome rise">${avSlot(null,"wel"
   <div class="eyebrow">Welcome aboard</div>
   <h1 style="margin-top:8px">Every trip, <em>one private vault.</em></h1>
   <p class="muted" style="max-width:48ch;margin-top:12px;font-size:15px">Tickets, stays, IDs, money, plans and memories. Private, on this device.</p>
-  <div class="row wrap" style="margin-top:16px"><div style="width:150px"><label>Language</label><select data-home="lang"><option value="en">English</option><option value="hi" ${S.settings.lang==="hi"?"selected":""}>हिन्दी</option></select></div><div style="width:150px"><label>Home currency</label><select data-home="homeCur">${CURS.map(c=>`<option ${c===HC()?"selected":""}>${c}</option>`).join("")}</select></div><div style="min-width:200px;flex:1;max-width:280px"><label>Home timezone</label><select data-home="homeTz">${TZS.map(z=>`<option value="${z}" ${z===S.settings.homeTz?"selected":""}>${tzShort(z)} · ${offLabel(z)}</option>`).join("")}</select></div></div>
+  <div class="row wrap" style="margin-top:16px"><div style="width:150px"><label>Home currency</label><select data-home="homeCur">${CURS.map(c=>`<option ${c===HC()?"selected":""}>${c}</option>`).join("")}</select></div><div style="min-width:200px;flex:1;max-width:280px"><label>Home timezone</label><select data-home="homeTz">${TZS.map(z=>`<option value="${z}" ${z===S.settings.homeTz?"selected":""}>${tzShort(z)} · ${offLabel(z)}</option>`).join("")}</select></div></div>
   <div class="row wrap" style="margin-top:16px"><button class="btn pri lg" data-a="import">${ic("zap")} Import a booking</button><button class="btn lg" data-a="newTrip">${ic("plus")} Start a trip</button><button class="btn lg ghost" data-a="loadSample">${ic("sparkle")} Explore a sample</button></div></div>
   <div class="card"><div class="h">${ic("lock")}<h2>Set up in 30 seconds</h2></div>
    <div class="li" style="border:0;padding-top:0">${kic("doc")}<div class="b"><div class="t">Lock the vault ${Vault.protected?pill("on","ok"):pill("recommended","warn")}</div><div class="d">Encrypts everything on this device</div></div>${Vault.protected?"":`<button class="btn" data-a="setupLock">${ic("key","sm")} Set passphrase</button>`}</div>

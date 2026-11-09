@@ -5,8 +5,6 @@
    does, letting them withdraw, and letting them see, export and erase their data. */
 const NOTICE_V=1,NOTICE_DATE="2026-11-09",CONSENT_V=1;
 const TV_REPO="https://github.com/SubhadipGitHub/TripVault",TV_ISSUES=TV_REPO+"/issues";
-const hiOn=()=>(S.settings?.lang||"en")==="hi";
-const L2=(en,hi)=>hiOn()&&hi?hi:en; // long texts carry both languages (the notice may be read in English or Hindi)
 
 /* ---------- the full notice ---------- */
 const NOTICE=[
@@ -39,11 +37,11 @@ const NOTICE=[
   `${TV_ISSUES} पर इश्यू खोलें (कृपया वहाँ व्यक्तिगत डेटा न डालें)। हम 30 दिनों में जवाब देने का प्रयास करते हैं। संतुष्ट न होने पर आप भारत के डेटा संरक्षण बोर्ड से शिकायत कर सकते हैं।`]];
 const linkify=s=>esc(s).replace(esc(TV_ISSUES),`<a href="${TV_ISSUES}" target="_blank" rel="noopener noreferrer">${esc(TV_ISSUES.replace("https://",""))}</a>`);
 function openNotice(){
-  const ov=sheet({title:`${ic("shield")} ${L2("Privacy notice","गोपनीयता सूचना")}`,cls:"wide",body:`
-   <div class="row wrap" style="gap:6px;margin-bottom:6px"><span class="small dim">${L2("Version","संस्करण")} ${NOTICE_V} · ${esc(fmtDs(NOTICE_DATE))}</span><span class="sp"></span>
-    <button class="btn xs" id="ntLang">${hiOn()?"Read in English":"हिन्दी में पढ़ें"}</button></div>
-   <div id="ntBody">${noticeHtml(hiOn())}</div>`,foot:`<button class="btn pri" data-close>${L2("Close","बंद करें")}</button>`});
-  let hi=hiOn();$("#ntLang",ov).onclick=e=>{hi=!hi;$("#ntBody",ov).innerHTML=noticeHtml(hi);e.currentTarget.textContent=hi?"Read in English":"हिन्दी में पढ़ें"}}
+  const ov=sheet({title:`${ic("shield")} Privacy notice`,cls:"wide",body:`
+   <div class="row wrap" style="gap:6px;margin-bottom:6px"><span class="small dim">Version ${NOTICE_V} · ${esc(fmtDs(NOTICE_DATE))}</span><span class="sp"></span>
+    <button class="btn xs" id="ntLang" lang="hi">हिन्दी में पढ़ें</button></div>
+   <div id="ntBody">${noticeHtml(false)}</div>`,foot:`<button class="btn pri" data-close>Close</button>`});
+  let hi=false;$("#ntLang",ov).onclick=e=>{hi=!hi;const b=$("#ntBody",ov);b.innerHTML=noticeHtml(hi);b.lang=hi?"hi":"en";e.currentTarget.textContent=hi?"Read in English":"हिन्दी में पढ़ें";e.currentTarget.lang=hi?"en":"hi"}}
 function noticeHtml(hi){return NOTICE.map(([h,hh,p,ph])=>`<div class="h mt"><h2>${esc(hi?hh:h)}</h2></div><p class="small" style="line-height:1.6;margin:4px 0 0">${linkify(hi?ph:p)}</p>`).join("")}
 
 /* ---------- consent before anything goes to Google ---------- */
@@ -51,17 +49,17 @@ const consentNow=()=>{const c=(S.meta.consents||[]).at(-1);return c&&!c.withdraw
 let _consentP=null;
 function gsConsent(){if(consentNow())return Promise.resolve(true);if(_consentP)return _consentP;
   _consentP=new Promise(res=>{let done=false;const fin=v=>{if(done)return;done=true;_consentP=null;res(v)};
-    const L=[L2("Your chosen trips, their bookings, documents, memories, photos and attachments are encrypted on this device and saved to your own Google Drive.","आपकी चुनी हुई ट्रिप, उनकी बुकिंग, दस्तावेज़, यादें, फ़ोटो और अटैचमेंट इसी डिवाइस पर एन्क्रिप्ट होकर आपकी अपनी Google Drive में सेव होते हैं।"),
-      L2("Google stores them but can't read them. Google sees your email, the emails of people you share a trip with, and file sizes and times. Drive data may be stored outside India.","Google इन्हें रखता है पर पढ़ नहीं सकता। Google को आपका ईमेल, जिनसे आप ट्रिप शेयर करते हैं उनके ईमेल, और फ़ाइलों का आकार व समय दिखता है। Drive का डेटा भारत के बाहर रखा जा सकता है।"),
-      L2("Only people you share a trip with (by email and invite link) can open it. You choose which trips sync.","केवल वे लोग ट्रिप खोल सकते हैं जिनसे आप उसे (ईमेल और इनवाइट लिंक से) शेयर करते हैं। कौन-सी ट्रिप सिंक हों, यह आप चुनते हैं।"),
-      L2("Withdraw any time in Settings → Privacy & data, and delete what's in your Drive.","सेटिंग्स → गोपनीयता और डेटा में कभी भी सहमति वापस लें, और अपनी Drive का डेटा हटाएँ।")];
-    const ov=sheet({title:`${ic("shield")} ${L2("Connect Google Drive?","Google Drive जोड़ें?")}`,onClose:()=>fin(false),body:`
-      <p class="small muted" style="margin:0 0 8px">${L2("Before anything leaves this device:","इस डिवाइस से कुछ भी बाहर जाने से पहले:")}</p>
+    const L=["Your chosen trips, their bookings, documents, memories, photos and attachments are encrypted on this device and saved to your own Google Drive.",
+      "Google stores them but can't read them. Google sees your email, the emails of people you share a trip with, and file sizes and times. Drive data may be stored outside India.",
+      "Only people you share a trip with (by email and invite link) can open it. You choose which trips sync.",
+      "Withdraw any time in Settings → Privacy & data, and delete what's in your Drive."];
+    const ov=sheet({title:`${ic("shield")} Connect Google Drive?`,onClose:()=>fin(false),body:`
+      <p class="small muted" style="margin:0 0 8px">Before anything leaves this device:</p>
       <ul class="small plan" style="line-height:1.55;padding-left:18px;margin:0">${L.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>
-      <label class="row mt" style="cursor:pointer;align-items:flex-start"><input type="checkbox" id="cOk"> <span class="small" style="color:var(--tx)">${L2("I agree to this use of my data for syncing and sharing trips.","मैं ट्रिप सिंक और शेयर करने के लिए अपने डेटा के इस उपयोग से सहमत हूँ।")}</span></label>
-      <label class="row mt" style="cursor:pointer;align-items:flex-start"><input type="checkbox" id="cAge"> <span class="small" style="color:var(--tx)">${L2("I'm 18 or older, or a parent or guardian is setting this up.","मेरी उम्र 18 या उससे अधिक है, या माता-पिता/अभिभावक इसे सेट कर रहे हैं।")}</span></label>
-      <div class="small dim mt"><a href="#" id="cRead">${L2("Read the full privacy notice","पूरी गोपनीयता सूचना पढ़ें")}</a></div>`,
-      foot:`<button class="btn" id="cNo">${L2("Not now","अभी नहीं")}</button><button class="btn pri" id="cYes" disabled>${ic("unlock","sm")} ${L2("Agree & connect","सहमत हूँ, जोड़ें")}</button>`});
+      <label class="row mt" style="cursor:pointer;align-items:flex-start"><input type="checkbox" id="cOk"> <span class="small" style="color:var(--tx)">I agree to this use of my data for syncing and sharing trips.</span></label>
+      <label class="row mt" style="cursor:pointer;align-items:flex-start"><input type="checkbox" id="cAge"> <span class="small" style="color:var(--tx)">I'm 18 or older, or a parent or guardian is setting this up.</span></label>
+      <div class="small dim mt"><a href="#" id="cRead">Read the full privacy notice</a></div>`,
+      foot:`<button class="btn" id="cNo">Not now</button><button class="btn pri" id="cYes" disabled>${ic("unlock","sm")} Agree & connect</button>`});
     const yes=$("#cYes",ov),upd=()=>{yes.disabled=!($("#cOk",ov).checked&&$("#cAge",ov).checked)};$("#cOk",ov).onchange=upd;$("#cAge",ov).onchange=upd;
     $("#cRead",ov).onclick=e=>{e.preventDefault();openNotice()};
     $("#cNo",ov).onclick=()=>{ov.remove();fin(false)};
@@ -71,38 +69,38 @@ function gsConsent(){if(consentNow())return Promise.resolve(true);if(_consentP)r
 async function consentEmail(e){const c=consentNow();if(c&&e&&c.email!==e){c.email=e;await saveMeta()}}
 /* Withdraw: stop all Google processing now; optionally erase what's in Drive first. */
 async function withdrawConsent(){
-  const ok=await gate({title:L2("Withdraw consent for Google sync?","Google सिंक की सहमति वापस लें?"),plan:[L2("Disconnects Google and stops syncing and sharing on this device","Google अलग होगा और इस डिवाइस पर सिंक व शेयरिंग रुकेगी"),L2("Your trips stay on this device","आपकी ट्रिप इसी डिवाइस पर रहेंगी"),L2("To also erase the copies in your Drive, use “Delete my Google Drive data” first","Drive की कॉपी भी मिटाने के लिए पहले “मेरा Google Drive डेटा हटाएँ” इस्तेमाल करें")],ok:L2("Withdraw","वापस लें"),danger:false});
+  const ok=await gate({title:"Withdraw consent for Google sync?",plan:["Disconnects Google and stops syncing and sharing on this device","Your trips stay on this device","To also erase the copies in your Drive, use “Delete my Google Drive data” first"],ok:"Withdraw",danger:false});
   if(!ok)return false;
   const c=consentNow();if(c)c.withdrawnAt=Date.now();
   for(const t of gsLinked()){delete t.sync;delete GS.st[t.id];await DB.put("trips",t)}
   S.meta.gsAll=false;delete S.meta.kc;GS.kc=null;GAuth.revoke();await saveMeta();render();gsPaint();
-  toast(L2("Consent withdrawn. Google is disconnected","सहमति वापस ली गई। Google अलग कर दिया गया"),"info");return true}
+  toast("Consent withdrawn. Google is disconnected","info");return true}
 
 /* ---------- see my data ---------- */
 function dataSummary(){const n=(a)=>a.length,byKind=k=>S.items.filter(i=>i.kind===k).length,mb=(S.files.reduce((a,f)=>a+(f.size||0),0)/1048576).toFixed(1);
   const people=new Set(S.items.flatMap(i=>i.names||[]).concat(S.trips.flatMap(t=>t.people||[]))).size,s=S.settings||{},syn=gsLinked();
-  return[[L2("Trips","ट्रिप"),n(S.trips),L2("this device","यह डिवाइस")],
-   [L2("Bookings","बुकिंग"),S.items.filter(i=>!["expense","doc"].includes(i.kind)).length,""],[L2("Expenses","खर्च"),byKind("expense"),""],
-   [L2("Documents (IDs, passports, visas, insurance)","दस्तावेज़ (पहचान, पासपोर्ट, वीज़ा, बीमा)"),byKind("doc"),""],[L2("Memories","यादें"),n(S.memories),""],
-   [L2("Files and photos","फ़ाइलें और फ़ोटो"),`${n(S.files)} · ${mb} MB`,""],[L2("People named in bookings and trips","बुकिंग और ट्रिप में नामित लोग"),people,""],
-   [L2("Emergency card","आपातकालीन कार्ड"),emgFields().length?L2("filled in","भरा हुआ"):L2("empty","खाली"),s.emgOn?L2("also shown on the lock screen, unencrypted","लॉक स्क्रीन पर भी, बिना एन्क्रिप्शन"):""],
-   [L2("Profile name","प्रोफ़ाइल नाम"),esc(profName()||"—"),""],
-   [L2("Synced to your Google Drive","आपकी Google Drive में सिंक"),syn.length?`${syn.length} ${L2("trip(s)","ट्रिप")}`:L2("none","कोई नहीं"),syn.length?esc(syn.map(t=>t.name).join(", ")):""],
-   [L2("People you share trips with","जिनसे आप ट्रिप शेयर करते हैं"),new Set(syn.flatMap(t=>(t.sync.members||[]).map(m=>m.email).concat(t.sync.role==="owner"?[]:[t.sync.owner]))).size,""],
-   [L2("Encryption on this device","इस डिवाइस पर एन्क्रिप्शन"),Vault.protected?L2("on (passphrase)","चालू (पासफ़्रेज़)"):L2("off","बंद"),""]]}
-function openMyData(){sheet({title:`${ic("eye")} ${L2("My data","मेरा डेटा")}`,body:`  ${dataSummary().map(([k,v,d])=>`<div class="li"><div class="b"><div class="t" style="font-weight:500">${esc(k)}</div>${d?`<div class="d">${d}</div>`:""}</div><div class="r"><b>${v}</b></div></div>`).join("")}`,
-  foot:`<button class="btn" data-close>${L2("Close","बंद करें")}</button><button class="btn pri" data-a="backupTab">${ic("download","sm")} ${L2("Download a copy","कॉपी डाउनलोड करें")}</button>`})}
+  return[["Trips",n(S.trips),"this device"],
+   ["Bookings",S.items.filter(i=>!["expense","doc"].includes(i.kind)).length,""],["Expenses",byKind("expense"),""],
+   ["Documents (IDs, passports, visas, insurance)",byKind("doc"),""],["Memories",n(S.memories),""],
+   ["Files and photos",`${n(S.files)} · ${mb} MB`,""],["People named in bookings and trips",people,""],
+   ["Emergency card",emgFields().length?"filled in":"empty",s.emgOn?"also shown on the lock screen, unencrypted":""],
+   ["Profile name",esc(profName()||"—"),""],
+   ["Synced to your Google Drive",syn.length?`${syn.length} trip(s)`:"none",syn.length?esc(syn.map(t=>t.name).join(", ")):""],
+   ["People you share trips with",new Set(syn.flatMap(t=>(t.sync.members||[]).map(m=>m.email).concat(t.sync.role==="owner"?[]:[t.sync.owner]))).size,""],
+   ["Encryption on this device",Vault.protected?"on (passphrase)":"off",""]]}
+function openMyData(){sheet({title:`${ic("eye")} My data`,body:`  ${dataSummary().map(([k,v,d])=>`<div class="li"><div class="b"><div class="t" style="font-weight:500">${esc(k)}</div>${d?`<div class="d">${d}</div>`:""}</div><div class="r"><b>${v}</b></div></div>`).join("")}`,
+  foot:`<button class="btn" data-close>Close</button><button class="btn pri" data-a="backupTab">${ic("download","sm")} Download a copy</button>`})}
 
 /* ---------- Settings → Privacy & data ---------- */
 function privacyPane(){const cs=S.meta.consents||[],cur=consentNow();
-  return`<div class="row wrap" style="gap:6px"><button class="btn" data-a="privacyNotice">${ic("file","sm")} ${L2("Privacy notice","गोपनीयता सूचना")}</button><button class="btn" id="pvSee">${ic("eye","sm")} ${L2("See my data","मेरा डेटा देखें")}</button><button class="btn" data-a="backupTab">${ic("download","sm")} ${L2("Download a copy","कॉपी डाउनलोड करें")}</button></div>
-   <div class="h mt">${ic("check")}<h2>${L2("Consent","सहमति")}</h2></div>
-   ${cs.length?cs.slice(-5).reverse().map(c=>`<div class="li"><div class="b"><div class="t" style="font-weight:500">${L2("Google Drive sync and sharing","Google Drive सिंक और शेयरिंग")}</div><div class="d">${L2("Given","दी गई")} ${esc(new Date(+c.at||0).toLocaleString())}${c.email?` · ${esc(String(c.email).slice(0,200))}`:""}${c.withdrawnAt?` · ${L2("withdrawn","वापस ली गई")} ${esc(new Date(+c.withdrawnAt||0).toLocaleString())}`:""}</div></div>${c===cur?pill(L2("active","सक्रिय"),"ok"):""}</div>`).join("")
-     :`<div class="small muted">${L2("Google not connected","Google नहीं जुड़ा")}</div>`}
-   ${cur?`<div class="row mt"><button class="btn" id="pvWd">${ic("x","sm")} ${L2("Withdraw consent","सहमति वापस लें")}</button></div>`:""}
-   <div class="h mt">${ic("trash")}<h2>${L2("Erase","मिटाएँ")}</h2></div>
-   <div class="row wrap" style="gap:6px">${gsReady()?`<button class="btn bad" id="pvDrive">${ic("trash","sm")} ${L2("Delete my Google Drive data","मेरा Google Drive डेटा हटाएँ")}</button>`:""}<button class="btn bad" id="wipe">${ic("trash","sm")} ${L2("Erase everything on this device","इस डिवाइस से सब मिटाएँ")}</button></div>
-   <div class="small muted mt">${L2("Questions or grievances:","सवाल या शिकायत:")} <a href="${TV_ISSUES}" target="_blank" rel="noopener noreferrer">GitHub Issues</a></div>`}
+  return`<div class="row wrap" style="gap:6px"><button class="btn" data-a="privacyNotice">${ic("file","sm")} Privacy notice</button><button class="btn" id="pvSee">${ic("eye","sm")} See my data</button><button class="btn" data-a="backupTab">${ic("download","sm")} Download a copy</button></div>
+   <div class="h mt">${ic("check")}<h2>Consent</h2></div>
+   ${cs.length?cs.slice(-5).reverse().map(c=>`<div class="li"><div class="b"><div class="t" style="font-weight:500">Google Drive sync and sharing</div><div class="d">Given ${esc(new Date(+c.at||0).toLocaleString())}${c.email?` · ${esc(String(c.email).slice(0,200))}`:""}${c.withdrawnAt?` · withdrawn ${esc(new Date(+c.withdrawnAt||0).toLocaleString())}`:""}</div></div>${c===cur?pill("active","ok"):""}</div>`).join("")
+     :`<div class="small muted">Google not connected</div>`}
+   ${cur?`<div class="row mt"><button class="btn" id="pvWd">${ic("x","sm")} Withdraw consent</button></div>`:""}
+   <div class="h mt">${ic("trash")}<h2>Erase</h2></div>
+   <div class="row wrap" style="gap:6px">${gsReady()?`<button class="btn bad" id="pvDrive">${ic("trash","sm")} Delete my Google Drive data</button>`:""}<button class="btn bad" id="wipe">${ic("trash","sm")} Erase everything on this device</button></div>
+   <div class="small muted mt">Questions or grievances: <a href="${TV_ISSUES}" target="_blank" rel="noopener noreferrer">GitHub Issues</a></div>`}
 function privacyWire(ov){
   $("#pvSee",ov)?.addEventListener("click",()=>openMyData());
   $("#pvWd",ov)?.addEventListener("click",async()=>{if(await withdrawConsent())settingsRefresh(ov,"privacy")});
