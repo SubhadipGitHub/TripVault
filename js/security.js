@@ -8,16 +8,16 @@ const PASS_LBL=["Too weak","Weak","Okay","Strong","Excellent"],PASS_COL=["var(--
 function promptNewPass({title="Set a passphrase",ok="Encrypt my vault",current=false,note=""}={}){
   return new Promise(res=>{let done=false;
     const ov=sheet({title:`${ic("key")} ${title}`,body:`
-     ${current?`<div><label>Current passphrase</label><input type="password" id="pwOld" autocomplete="current-password"></div>`:""}
-     <div class="${current?"mt":""}"><label>${current?"New passphrase":"Passphrase"}</label><input type="password" id="pw1" autocomplete="new-password" placeholder="At least 8 characters — a few random words works well"><div class="strength"><i id="pwBar"></i></div><div class="small dim" id="pwLbl"></div></div>
-     <div class="mt"><label>Repeat passphrase</label><input type="password" id="pw2" autocomplete="new-password"></div>
+     ${current?`<div><label for="pwOld">Current passphrase${reqMark}</label><input type="password" id="pwOld" required aria-required="true" autocomplete="current-password"></div>`:""}
+     <div class="${current?"mt":""}"><label for="pw1">${current?"New passphrase":"Passphrase"}${reqMark}</label><input type="password" id="pw1" required aria-required="true" autocomplete="new-password" placeholder="At least 8 characters — a few random words works well"><div class="strength"><i id="pwBar"></i></div><div class="small dim" id="pwLbl"></div></div>
+     <div class="mt"><label for="pw2">Repeat passphrase${reqMark}</label><input type="password" id="pw2" required aria-required="true" autocomplete="new-password"></div>
      <div class="note warn mt">${ic("alert")}<div>${note||"<b>There is no “forgot passphrase”.</b> Everything is encrypted on this device with a key made from it. Lose it and the data can't be opened, only restored from a backup."}</div></div>
      <label class="row mt" style="cursor:pointer;margin-bottom:0"><input type="checkbox" id="pwAck"> <span style="font-size:12.5px;color:var(--tx)">I understand it can't be recovered</span></label><div class="small" style="color:var(--bad);min-height:18px;margin-top:6px" id="pwErr"></div>`,
      foot:`<button class="btn" data-close>Cancel</button><button class="btn pri" id="pwGo">${ic("lock","sm")} ${ok}</button>`,onClose:()=>{if(!done)res(null)}});
     const p1=$("#pw1",ov),upd=()=>{const sc=p1.value?passScore(p1.value):0;$("#pwBar",ov).style.cssText=`width:${p1.value?(sc+1)*20:0}%;background:${PASS_COL[sc]}`;$("#pwLbl",ov).textContent=p1.value?PASS_LBL[sc]:""};p1.addEventListener("input",upd);
-    $("#pwGo",ov).onclick=async()=>{const err=m=>$("#pwErr",ov).textContent=m;
-      if(current&&!(await Vault.unlock($("#pwOld",ov).value)))return err("Current passphrase is wrong.");
-      if(p1.value.length<8)return err("Use at least 8 characters.");if(p1.value!==$("#pw2",ov).value)return err("The two passphrases don't match.");if(!$("#pwAck",ov).checked)return err("Please confirm you understand.");
+    $("#pwGo",ov).onclick=async()=>{const err=(m,f)=>{$("#pwErr",ov).textContent=m;clearErrors(ov);if(f){const el=fieldError(ov,f,esc(m));el?.focus()}};
+      if(current&&!(await Vault.unlock($("#pwOld",ov).value)))return err("Current passphrase is wrong.","#pwOld");
+      if(p1.value.length<8)return err("Use at least 8 characters.","#pw1");if(p1.value!==$("#pw2",ov).value)return err("The two passphrases don't match.","#pw2");if(!$("#pwAck",ov).checked)return err("Please confirm you understand.");
       done=true;ov.remove();res(p1.value)}})}
 function promptPass(title,ok="Continue"){
   return new Promise(res=>{let done=false;const ov=sheet({title:`${ic("key")} ${title}`,body:`<label>Passphrase</label><input type="password" id="pwX" autocomplete="current-password"><div class="small" style="color:var(--bad);min-height:18px;margin-top:6px" id="pwE"></div>`,foot:`<button class="btn" data-close>Cancel</button><button class="btn pri" id="pwOk">${ok}</button>`,onClose:()=>{if(!done)res(null)}});
@@ -100,7 +100,7 @@ function openSettings(tab="general"){
   if(gsReady())gsHubWire($('[data-pane="sync"]',ov),()=>ov.remove());
   privacyWire(ov);wipeWire(ov);aiPaneWire(ov);
   $("#stSv",ov).onclick=async()=>{const g=gather(ov);const n={...S.settings,...g};["minGap","preIntl","preDom","postIntl","postDom","trainPre","autoLock"].forEach(k=>n[k]=Math.max(0,+n[k]||0));n.minGap=Math.max(15,n.minGap);
-    if(hm(n.sleep)<=hm(n.wake)){toast("Day end must be after start","bad");return}
+    clearErrors(ov);if(hm(n.sleep)<=hm(n.wake)){$(`.stab[data-tab="general"]`,ov)?.click();return failSave(ov,[{k:"sleep",msg:"Must be after Day starts"}],"Day end must be after day start")}
     delete n.lang;S.settings=n;await DB.put("meta",{k:"settings",v:n});applyTheme();armIdle();ov.remove();render();toast("Settings saved")};
   return ov}
 function wipeWire(ov){$("#wipe",ov)?.addEventListener("click",async()=>{if(!(await gate({title:"Erase the whole vault?",plan:[`Delete ${S.trips.length} trip(s), ${S.items.length} entries, ${S.memories.length} memories and ${S.files.length} file(s) from this browser`,"Reset settings and remove the passphrase"],irreversible:`Everything. ${S.meta.lastBackup?"Last backup: "+new Date(S.meta.lastBackup).toLocaleString():"No backup has ever been exported."}`,ok:"Erase all"})))return;await wipeAll()})}

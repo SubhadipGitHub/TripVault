@@ -6,7 +6,7 @@ const IDEA_CATS=["See","Eat","Do","Shop","Stay","Other"];
 function viewIdeas(t){
   const L=t.ideas||[];
   let h=`<div class="card"><div class="h">${ic("compass")}<h2>Ideas · ${L.length}</h2></div>
-   <div class="fg"><div class="full"><label>Idea</label><input id="idT" placeholder="Petronas skybridge, Jalan Alor night market…"></div>
+   <div class="fg"><div class="full"><label for="idT">Idea${reqMark}</label><input id="idT" placeholder="Petronas skybridge, Jalan Alor night market…" required aria-required="true"></div>
    <div><label>Type</label><select id="idC">${IDEA_CATS.map(c=>`<option>${c}</option>`).join("")}</select></div><div><label>Place / area (for maps)</label><input id="idP" placeholder="KLCC, Kuala Lumpur"></div>
    <div class="full"><label>Note</label><input id="idN" placeholder="Book ahead, closed Mondays…"></div></div>
    <div class="row mt"><span class="sp"></span><button class="btn pri" data-a="ideaAdd">${ic("plus","sm")} Add idea</button></div></div>`;
