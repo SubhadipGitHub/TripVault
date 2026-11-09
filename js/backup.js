@@ -5,7 +5,7 @@ const fromB64=(s,type)=>{const b=atob(s);const u=new Uint8Array(b.length);for(le
 function dl(blob,name){const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500)}
 async function encryptBackup(json,pass){const salt=crypto.getRandomValues(new Uint8Array(16)),iter=600000,key=await Crypt.derive(pass,salt,iter);const ct=await Crypt.enc(key,new TextEncoder().encode(json));const h=new Uint8Array(24);h.set([84,86,66,49]);h.set(salt,4);new DataView(h.buffer).setUint32(20,iter,true);return new Blob([h,ct],{type:"application/octet-stream"})}
 async function decryptBackup(buf,pass){const salt=new Uint8Array(buf.slice(4,20)),iter=new DataView(buf).getUint32(20,true),key=await Crypt.derive(pass,salt,iter);return new TextDecoder().decode(await Crypt.dec(key,buf.slice(24)))}
-/* Backup & restore lives in Settings → Backup & restore. */
+/* Backup & restore lives in Settings → Backup & storage. */
 function openBackup(){openSettings("backup")}
 function backupPane(){const mb=(S.files.reduce((a,f)=>a+(f.size||0),0)/1048576).toFixed(1);const t=curTrip();
   const dirty=S.meta.dirty&&(!S.meta.lastBackup||S.meta.dirty>S.meta.lastBackup);
@@ -20,11 +20,14 @@ function backupPane(){const mb=(S.files.reduce((a,f)=>a+(f.size||0),0)/1048576).
    
    <div class="row wrap mt"><button class="btn" id="qrSend">${ic("share","sm")} Send by QR</button><button class="btn" id="qrRecv">${ic("camera","sm")} Receive by QR</button></div><div class="sep"></div>
    <div class="h">${ic("upload")}<h2>Restore from a backup</h2></div>
-   <label class="drop" style="padding:16px">${ic("upload")} <b>Choose a Trip Vault backup (.tvault or .json)</b><div class="small muted">You'll see what changes before anything is written</div><input type="file" id="bIn" accept=".json,.tvault,application/json,application/octet-stream" hidden></label>`}
+   <label class="drop" style="padding:16px">${ic("upload")} <b>Choose a Trip Vault backup (.tvault or .json)</b><div class="small muted">You'll see what changes before anything is written</div><input type="file" id="bIn" accept=".json,.tvault,application/json,application/octet-stream" hidden></label>
+   <div class="sep"></div><div class="h">${ic("db")}<h2>Storage on this device</h2></div><div id="stor" class="small muted">Checking…</div><div class="row wrap mt"><button class="btn" data-a="persist">${ic("shield","sm")} Keep data persistent</button></div>`}
+/* Space used and whether the browser may clear it (Settings → Backup & storage). */
+async function storFill(el){if(!el)return;let s="";try{const est=await navigator.storage?.estimate?.();if(est)s+=`Using ${(est.usage/1048576).toFixed(1)} MB of ~${(est.quota/1073741824).toFixed(1)} GB available. `;const p=await navigator.storage?.persisted?.();s+=p?`<span style="color:var(--ok)">Persistent</span>`:`<span style="color:var(--warn)">Not persistent: the browser may clear it</span>`}catch(e){s="Storage info unavailable."}el.innerHTML=s||"Storage info unavailable."}
 function backupWire(ov){const t=curTrip();
   $("#qrSend",ov).onclick=()=>{ov.remove();openSendQR()};$("#qrRecv",ov).onclick=()=>{ov.remove();openReceiveQR()};
   $("#bAll",ov).onclick=()=>exportVault(null,ov);$("#bTrip",ov)?.addEventListener("click",()=>exportVault(t.id,ov));
-  $("#bIn",ov).onchange=e=>{const f=e.target.files[0];if(f){ov.remove();previewImport(f)}}}
+  $("#bIn",ov).onchange=e=>{const f=e.target.files[0];if(f){ov.remove();previewImport(f)}};storFill($("#stor",ov))}
 /* The backup object shared by file export and phone-to-phone transfer.
    o.files=false leaves attachments and photos out; o.settings=false leaves settings out. */
 async function buildBackup(tripId,o={}){

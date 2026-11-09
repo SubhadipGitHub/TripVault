@@ -10,17 +10,21 @@ function render(){
   $("#tsName").textContent=t?t.name:"No trip yet";$("#tsMeta").textContent=t?tripMeta(t):"tap to start";
   $$("#nav [data-v]").forEach(b=>b.classList.toggle("on",b.dataset.v===S.view));
   $("#lockBtn").classList.toggle("hide",!Vault.protected);
-  const app=$("#app"),y=scrollY,key=S.view+":"+(S.sub||"");
+  const app=$("#app"),y=scrollY,key=S.view+":"+((S.view==="plan"?S.psub:S.sub)||"");
   if(!t){app.innerHTML=viewWelcome();RV.last="";AV.attach();return}
   const V={today:viewToday,plan:viewPlan,vault:viewVault,memories:viewMemories}[S.view]||viewToday;
   app.innerHTML=`<div class="${RV.last===key?"":"rise"}">${V(t)}</div>`;
   if(RV.last===key)scrollTo(0,y);RV.last=key;AV.attach();
 }
-const SUBS={ideas:"ideas",book:"bookings",bookings:"bookings",money:"money",docs:"docs",pack:"pack"};
+const SUBS={book:"bookings",bookings:"bookings",money:"money",docs:"docs",pack:"pack"};
+/* go("ideas") opens Plan → Ideas; go("money"), go("docs"), … open that Vault tab. */
 function go(v){
-  if(SUBS[v]){S.sub=SUBS[v];v="vault"}
-  S.view=v;S.meta.view=v;S.meta.sub=S.sub;saveMeta();render();scrollTo(0,0);
+  if(v==="ideas"||v==="days"){S.psub=v;v="plan"}
+  else if(SUBS[v]){S.sub=SUBS[v];v="vault"}
+  S.view=v;S.meta.view=v;S.meta.sub=S.sub;S.meta.psub=S.psub;saveMeta();render();scrollTo(0,0);
 }
+/* Pill sub-tabs shared by Plan and Vault */
+const subTabs=(tabs,cur,act)=>`<div class="subtabs" role="tablist">${tabs.map(([k,i,l,n])=>`<button role="tab" aria-selected="${cur===k}" class="${cur===k?"on":""}" data-a="${act}" data-s="${k}">${ic(i,"sm")} ${l}${n!==""?` <span class="dim">${n}</span>`:""}</button>`).join("")}</div>`;
 
 /* ===================== Welcome / first run ===================== */
 function viewWelcome(){return`<div class="card welcome rise">${avSlot(null,"wel")}
@@ -43,7 +47,7 @@ function bpHero(t){
   else route=`<div class="serif" style="font-size:30px;line-height:1.1;font-weight:700;margin:6px 0 4px">${esc(t.dest||t.name)}</div><div class="small muted">Add a flight or train to see your route</div>`;
   const stub=ph.p==="before"?`<div class="u">${intl?"Departs in":"Leaves in"}</div><div class="n">${ph.days}</div><div class="u">${ph.days===1?"day":"days"}</div>`:ph.p==="during"?`<div class="u">Now on</div><div class="n">Day ${ph.day}</div><div class="u">of ${ph.of}</div>`:ph.p==="after"?`<div class="u">Trip</div><div class="n" style="font-size:26px">Done</div><div class="stamp ok" style="margin-top:6px">Wrapped</div>`:`<div class="u">No dates</div><div class="n">—</div>`;
   return`<div class="bp"><span class="notch t"></span><span class="notch b"></span>
-   <div class="main"><div class="row wrap" style="gap:8px"><span class="eyebrow">${intl?"International":"Domestic"} · ${esc(t.name)}</span>${gsChip(t)}<span class="sp"></span><button class="btn xs ghost" data-a="editTrip" aria-label="Edit trip">${ic("edit","sm")} Edit</button></div>${route}
+   <div class="main"><div class="row wrap" style="gap:8px"><span class="eyebrow">${intl?"International":"Domestic"} · ${esc(t.name)}</span>${gsChip(t)}<span class="sp"></span><button class="btn xs ghost" data-a="tripMenu" aria-haspopup="dialog" aria-label="Trip menu: settings, share, export and more">${ic("sliders","sm")} Trip</button></div>${route}
     <div class="bpx"><div class="meta"><div>Dates<b>${s?fmtDs(s)+" – "+fmtDs(e):"Not set"}</b></div><div>Nights<b>${nights}</b></div><div>Travellers<b>${names.length||crewOf(t).crew.length}</b></div></div>${avSlot(t)}</div>${clocks(t)}</div>
    <div class="stub">${stub}<div class="bar2"></div></div></div>`}
 function startList(t){
@@ -59,9 +63,8 @@ function startList(t){
 }
 function viewToday(t){
   const ph=tripPhase(t),nx=nextUp(t,ph.p==="during"?3:2);let h=bpHero(t);
-  const chk=readiness(t),sc=chk.filter(c=>c.lv!=="info"),okN=sc.filter(c=>c.lv==="ok").length,pct=sc.length?okN/sc.length*100:100,B=budgetOf(t);
+  const chk=readiness(t),sc=chk.filter(c=>c.lv!=="info"),okN=sc.filter(c=>c.lv==="ok").length,pct=sc.length?okN/sc.length*100:100;
   h+=`<div style="height:12px"></div>`+groundCard(t)+startList(t);
-  if(ph.p==="after"||(ph.p==="during"&&tripMems(t.id).length))h+=`<div class="mt">${wrappedCta(t)}</div>`;
   if(ph.p==="during"){const d=ph.today,m=dayModel(t,d);
     h+=`<div class="card"><div class="h">${ic("camera")}<h2>Capture the moment</h2></div><textarea class="prose" id="qmT" style="min-height:64px" placeholder="${esc(PROMPTS[new Date().getDate()%PROMPTS.length])}"></textarea><div class="row mt"><label class="btn" style="margin:0">${ic("image","sm")} Photos<input type="file" id="qmF" accept="image/*" multiple hidden></label><span class="sp"></span><button class="btn pri" data-a="quickMem">${ic("check","sm")} Save</button></div></div>`;
     h+=`<div class="card"><div class="h">${ic("cal")}<h2>Today · ${fmtD(d)}</h2><span class="sp"></span><span class="small" style="color:var(--ok)">${dur(m.free)} free</span></div>${tlBar(m,d)}${dayList(m,d,t)}</div>`;
@@ -69,23 +72,19 @@ function viewToday(t){
   const hasPass=ph.p!=="after"&&nextPassIdx(passList(t))>=0;
   if(nx.length)h+=`<div class="card"><div class="h">${ic("clock")}<h2>Next up</h2><span class="sp"></span>${hasPass?`<button class="btn xs" data-a="pass">${ic("phone","sm")} Show pass</button>`:""}</div>${nx.map(evCard).join("")}</div>`;
   h+=comingUp(t);
-  h+=`<div class="grid g2 mt"><div class="kpi" style="--c:var(--ok)"><div class="l">${ic("check","sm")} Paid</div><div class="v">${fmtM(B.paid)}</div><div class="s">of ${fmtM(B.committed)} committed</div></div><div class="kpi" style="--c:var(--warn)"><div class="l">${ic("clock","sm")} Pending</div><div class="v">${fmtM(B.pending)}</div><div class="s">${B.dues[0]?.p.due?"next due "+fmtDs(B.dues[0].p.due):B.dues.length+" open"}</div></div></div>`;
   if(ph.p!=="after"){const lab=pct>=90?"Cleared":pct>=60?"Almost":"Check",col=pct>=90?"var(--ok)":pct>=60?"var(--warn)":"var(--bad)";
     h+=`<div class="card"><div class="ready"><div class="stampbox" style="--c:${col}"><div><b>${Math.round(pct)}%</b><small>${lab}</small></div></div><div><div class="serif" style="font-weight:700;font-size:20px">Trip readiness</div><div class="small muted">${okN} of ${sc.length} checks passed${chk.length-sc.length?` · ${chk.length-sc.length} tips`:""}</div></div></div>
     ${chk.map(c=>`<div class="chk">${ic(c.lv==="ok"?"check":c.lv==="info"?"info":"alert")}<div class="sp" style="color:${c.lv==="ok"?"var(--tx2)":c.lv==="bad"?"var(--bad)":c.lv==="warn"?"var(--warn)":"var(--tx2)"}">${c.txt}</div>${c.act||""}</div>`).join("").replace(/<svg class="ic "><use href="#i-check"\/><\/svg>/g,`<svg class="ic" style="color:var(--ok)"><use href="#i-check"/></svg>`)}</div>`}
-  h+=`<div class="card"><div class="h">${ic("zap")}<h2>Quick actions</h2></div><div class="grid g2">
-    <button class="btn" data-a="import">${ic("upload")} Import booking</button><button class="btn" data-a="add" data-k="expense">${ic("tag")} Log expense</button>
-    <button class="btn" data-a="newMem">${ic("camera")} Capture memory</button><button class="btn" data-a="copyItin">${ic("copy")} Copy itinerary</button>
-    <button class="btn" data-a="ics">${ic("cal")} Add to calendar</button><button class="btn" data-a="gsShare">${ic("share")} ${t.sync?.fileId?"Shared trip":"Share trip"}</button></div></div>`;
+  if(ph.p==="after"||(ph.p==="during"&&tripMems(t.id).length))h+=`<div class="mt">${wrappedCta(t)}</div>`;
   return h}
 
 /* ===================== Vault (bookings · documents · money · packing) ===================== */
 function viewVault(t){
-  if(!["bookings","docs","money","pack","ideas"].includes(S.sub))S.sub="bookings";
+  if(!["bookings","docs","money","pack"].includes(S.sub))S.sub="bookings";
   const nb=tripItems(t.id).filter(i=>i.kind!=="doc"&&i.kind!=="expense").length,nd=tripItems(t.id).filter(i=>i.kind==="doc").length+S.files.filter(f=>f.tripId===t.id&&!f.memId).length;
-  const tabs=[["bookings","list","Bookings",nb],["docs","shield","Documents",nd],["money","wallet","Money",""],["ideas","compass","Ideas",(t.ideas||[]).length||""],["pack","bag","Packing",(t.pack||[]).length?`${t.pack.filter(p=>p.done).length}/${t.pack.length}`:""]];
-  const body={bookings:viewBook,docs:viewDocs,money:t=>viewMoney(t)+dailySpend(t)+exportCard(t)+settleCard(t),pack:viewPacking,ideas:viewIdeas}[S.sub](t);
-  return`<div class="subtabs" role="tablist">${tabs.map(([k,i,l,n])=>`<button role="tab" aria-selected="${S.sub===k}" class="${S.sub===k?"on":""}" data-a="vsub" data-s="${k}">${ic(i,"sm")} ${l}${n!==""?` <span class="dim">${n}</span>`:""}</button>`).join("")}</div>${body}`;
+  const tabs=[["bookings","list","Bookings",nb],["docs","shield","Documents",nd],["money","wallet","Money",""],["pack","bag","Packing",(t.pack||[]).length?`${t.pack.filter(p=>p.done).length}/${t.pack.length}`:""]];
+  const body={bookings:viewBook,docs:viewDocs,money:t=>viewMoney(t)+settleCard(t)+dailySpend(t)+exportCard(t),pack:viewPacking}[S.sub](t);
+  return subTabs(tabs,S.sub,"vsub")+body;
 }
 
 /* ---------- packing & essentials ---------- */
@@ -105,17 +104,18 @@ function packSets(t){const others=S.trips.filter(x=>x.id!==t.id&&x.pack?.length)
    ${others.length?`<div class="row mt"><select id="pkFrom" aria-label="Copy packing items from another trip">${others.map(o=>`<option value="${o.id}">${esc(o.name)} · ${o.pack.length} items</option>`).join("")}</select><button class="btn xs" data-a="packCopy">${ic("copy","sm")} Copy items</button></div>`:""}`}
 function viewPacking(t){
   const intl=isIntlTrip(t);
-  if(!t.pack)return`<div class="card empty">${crewArt(t,"cheer",kic("transfer"))}<b>Pack without the panic</b><div class="row mt" style="justify-content:center"><button class="btn pri" data-a="packStart">${ic("bag")} Start ${intl?"international":"domestic"} list</button><button class="btn" data-a="packBlank">Blank list</button></div><div style="text-align:left">${packSets(t)}</div></div>${essentials(t)}`;
+  if(!t.pack)return`<div class="card empty">${crewArt(t,"cheer",kic("transfer"))}<b>Pack without the panic</b><div class="row mt" style="justify-content:center"><button class="btn pri" data-a="packStart">${ic("bag")} Start ${intl?"international":"domestic"} list</button><button class="btn" data-a="packBlank">Blank list</button></div><div style="text-align:left">${packSets(t)}</div></div>`;
   const done=t.pack.filter(p=>p.done).length,pct=t.pack.length?done/t.pack.length*100:0;const cats=[...new Set(t.pack.map(p=>p.cat||"Other"))];
   return`<div class="card"><div class="h">${ic("bag")}<h2>Packing · ${done}/${t.pack.length}</h2><span class="sp"></span><button class="btn xs ghost" data-a="packReset">Reset</button></div><div class="bar" style="margin-bottom:8px"><i style="width:${pct}%;background:var(--ok)"></i></div>
    ${cats.map(c=>`<div class="eyebrow" style="margin-top:12px">${esc(c)}</div>${t.pack.filter(p=>(p.cat||"Other")===c).map(p=>`<div class="pk ${p.done?"done":""}" data-a="packToggle" data-id="${p.id}" role="checkbox" aria-checked="${p.done}" tabindex="0"><span class="cb">${ic("check","sm")}</span><span class="tx">${esc(p.text)}</span><button class="x ibtn" style="width:28px;height:28px;border:0;background:none" data-a="packDel" data-id="${p.id}" aria-label="Remove">${ic("x","sm")}</button></div>`).join("")}`).join("")}
-   <div class="row mt"><input id="pkNew" placeholder="Add an item…" list="pkCats-l"><datalist id="pkCats-l">${cats.map(c=>`<option value="${esc(c)}">`).join("")}</datalist><select id="pkCat" style="width:auto">${[...new Set([...cats,"Documents","Money","Tech","Health","Clothing","Toiletries","Other"])].map(c=>`<option>${esc(c)}</option>`).join("")}</select><button class="btn pri" data-a="packAdd">${ic("plus","sm")}</button></div>${packSets(t)}</div>${essentials(t)}`;
+   <div class="row mt"><input id="pkNew" placeholder="Add an item…" list="pkCats-l"><datalist id="pkCats-l">${cats.map(c=>`<option value="${esc(c)}">`).join("")}</datalist><select id="pkCat" style="width:auto">${[...new Set([...cats,"Documents","Money","Tech","Health","Clothing","Toiletries","Other"])].map(c=>`<option>${esc(c)}</option>`).join("")}</select><button class="btn pri" data-a="packAdd">${ic("plus","sm")}</button></div>${packSets(t)}</div>`;
 }
-function essentials(t){
-  const intl=isIntlTrip(t),cur=convCur(t),r=cur?rate(t,cur):null;
-  return`<div class="card"><div class="h">${ic("alert")}<h2>Emergency & essentials</h2><span class="sp"></span><button class="btn xs" data-a="emgView">${ic("heart","sm")} Emergency card</button></div><label>Emergency contacts</label><textarea class="prose" id="emg" data-save="emergency" style="min-height:96px" placeholder="Insurance claim line: …&#10;Hotel: …&#10;Embassy: …&#10;Family contact: …">${esc(t.emergency||"")}</textarea>
-   ${cur?`<div class="sep"></div><div class="h">${ic("rupee")}<h2>Quick converter</h2></div>${r?`<div class="row"><div class="sp"><label>${sym(HC())} ${HC()}</label><input type="number" inputmode="decimal" id="cvI" data-conv="inr" placeholder="0"></div><span class="dim">=</span><div class="sp"><label>${cur}</label><input type="number" inputmode="decimal" id="cvL" data-conv="loc" placeholder="0"></div></div><div class="small dim mt">1 ${cur} = ${r} ${HC()}</div>`:`<div class="small muted">Set the ${cur} rate in Money</div>`}`:intl?`<div class="small dim mt">Choose a local currency in Trip settings to enable the converter.</div>`:""}</div>`;
-}
+/* Per-trip emergency notes (Documents tab). The global medical-ID card lives in Settings → Security. */
+function emgNotes(t){
+  return`<div class="card"><div class="h">${ic("alert")}<h2>Emergency contacts</h2><span class="sp"></span><button class="btn xs" data-a="emgView">${ic("heart","sm")} Emergency card</button></div><textarea class="prose" id="emg" data-save="emergency" aria-label="Emergency contacts for this trip" style="min-height:96px" placeholder="Insurance claim line: …&#10;Hotel: …&#10;Embassy: …&#10;Family contact: …">${esc(t.emergency||"")}</textarea></div>`}
+/* Quick converter (Money tab, under Exchange rates) */
+function converter(t){const cur=convCur(t),r=cur?rate(t,cur):null;if(!cur||!r)return"";
+  return`<div class="sep"></div><div class="h">${ic("rupee")}<h2>Quick converter</h2></div><div class="row"><div class="sp"><label>${sym(HC())} ${HC()}</label><input type="number" inputmode="decimal" id="cvI" data-conv="inr" placeholder="0"></div><span class="dim">=</span><div class="sp"><label>${cur}</label><input type="number" inputmode="decimal" id="cvL" data-conv="loc" placeholder="0"></div></div><div class="small dim mt">1 ${cur} = ${r} ${HC()}</div>`}
 
 /* ===================== Views carried over from the original app ===================== */
 function clocks(t){const td=todayIn(t.tz||"Asia/Kolkata");const ltz=dayTz(t,td)||t.tz;const home=S.settings.homeTz;if(!ltz||ltz===home)return"";
@@ -181,7 +181,9 @@ function calGrid(t,days,models,td){
   return`<div class="cal" data-trip="${esc(t.id)}">${nav?`<div class="calnav"><button type="button" class="ibtn" data-a="calNav" data-n="-1" aria-label="Previous month" ${i<=0?"disabled":""}>${ic("back","sm")}</button><span class="small muted">${fmtDs(first)} – ${fmtDs(last)}</span><button type="button" class="ibtn" data-a="calNav" data-n="1" aria-label="Next month" ${end>=months.length-1?"disabled":""}>${ic("arrow","sm")}</button></div>`:""}
    <div class="calms">${show.map((ym,j)=>calMonth(ym,inTrip,models,td,first,last,j?"second":"")).join("")}</div>
    <div class="callg small dim"><span><i class="sw t-travel"></i>Travel</span><span><i class="sw t-stay"></i>Stay</span><span><i class="sw t-act"></i>Activities</span><span><i class="sw t-free"></i>Free to plan</span><span><i class="sw today"></i>Today</span><span><i class="sw off"></i>Not in trip</span></div></div>`}
-function viewPlan(t){
+function viewPlan(t){if(S.psub!=="ideas")S.psub="days";
+  return subTabs([["days","cal","Days",""],["ideas","compass","Ideas",(t.ideas||[]).length||""]],S.psub,"psub")+(S.psub==="ideas"?viewIdeas(t):planDays(t))}
+function planDays(t){
   const days=tripDays(t);if(!days.length)return`<div class="card empty">${crewArt(t,"idle",kic("activity"))}<b>No dates yet</b><div class="small">Import a booking or set trip dates to see the day-by-day plan.</div><div class="row mt" style="justify-content:center"><button class="btn pri" data-a="import">${ic("zap")} Import</button><button class="btn" data-a="editTrip">Set dates</button></div></div>`;
   const td=todayIn(t.tz||"Asia/Kolkata");if(!S.day||!days.includes(S.day))S.day=days.includes(td)?td:days[0];
   const models=Object.fromEntries(days.map(d=>[d,dayModel(t,d)]));const totFree=days.reduce((a,d)=>a+models[d].free,0);
@@ -222,7 +224,7 @@ function viewMoney(t){
    <div class="row small muted wrap" style="margin-top:6px;gap:12px"><span><i style="display:inline-block;width:8px;height:8px;background:var(--ok);border-radius:2px"></i> Paid</span><span><i style="display:inline-block;width:8px;height:8px;background:var(--warn);border-radius:2px"></i> Pending</span><span><i style="display:inline-block;width:8px;height:8px;background:var(--line2);border-radius:2px"></i> Unallocated</span></div></div>`;
   if(B.unconv.length)h+=`<div class="note warn mt">${ic("alert")}<div>${B.unconv.length} amount${B.unconv.length>1?"s":""} in ${[...new Set(B.unconv.map(x=>x.p.cur))].join(", ")} not counted — set the rate below.</div></div>`;
   const curs=[...new Set([t.localCur,t.expCur,...Object.keys(B.curs)].filter(c=>c&&c!==HC()))];
-  if(curs.length)h+=`<div class="card"><div class="h">${ic("globe")}<h2>Exchange rates</h2><span class="sp"></span><span class="small dim">${HC()} per 1 unit</span></div><div class="grid g3">${curs.map(c=>`<div><label>1 ${c} = ${HC()}</label><input type="number" step="0.0001" min="0" data-rate="${c}" value="${t.rates?.[c]??""}" placeholder="e.g. ${c==="USD"?"84.5":c==="MYR"?"19.2":"0"}"></div>`).join("")}</div>${B.curs&&Object.keys(B.curs).length?`<div class="small muted mt">${Object.entries(B.curs).map(([c,v])=>`${fmtM(v,c)}`).join(" · ")} booked</div>`:""}</div>`;
+  if(curs.length)h+=`<div class="card"><div class="h">${ic("globe")}<h2>Exchange rates</h2><span class="sp"></span><span class="small dim">${HC()} per 1 unit</span></div><div class="grid g3">${curs.map(c=>`<div><label>1 ${c} = ${HC()}</label><input type="number" step="0.0001" min="0" data-rate="${c}" value="${t.rates?.[c]??""}" placeholder="e.g. ${c==="USD"?"84.5":c==="MYR"?"19.2":"0"}"></div>`).join("")}</div>${B.curs&&Object.keys(B.curs).length?`<div class="small muted mt">${Object.entries(B.curs).map(([c,v])=>`${fmtM(v,c)}`).join(" · ")} booked</div>`:""}${converter(t)}</div>`;
   h+=`<div class="grid gd2 mt" style="grid-template-columns:1fr"><div class="card"><div class="h">${ic("clock")}<h2>Pending payments</h2></div>${B.dues.length?B.dues.map(x=>{const od=x.p.due&&x.p.due<todayIn("Asia/Kolkata");return`<div class="li"><div class="b tap" data-a="item" data-id="${x.it.id}"><div class="t">${kic(x.it.kind,1)} ${esc(itemTitle(x.it))}</div><div class="d">${fmtM(x.p.pend,x.p.cur)}${x.p.cur!==HC()?` ≈ ${fmtM(x.inr)}`:""} · ${x.p.due?`<span style="color:${od?"var(--bad)":"var(--warn)"}">${od?"overdue since":"due"} ${fmtD(x.p.due)}</span>`:"no due date"}</div></div><button class="btn xs ok" data-a="markPaid" data-id="${x.it.id}">${ic("check","sm")} Mark paid</button></div>`}).join(""):`<div class="small muted">Nothing pending.</div>`}</div>
    <div class="card"><div class="h">${ic("layers")}<h2>Where it goes</h2><span class="sp"></span><button class="btn xs ghost" data-a="catBud">${ic("sliders","sm")} Limits</button></div>${catBars(t,B)}</div></div>`;
   const ex=tripItems(t.id).filter(i=>i.kind==="expense").sort((a,b)=>(b.date||"").localeCompare(a.date||""));const exT=ex.reduce((a,i)=>a+(toINR(t,i.cost,i.cur)||0),0);
@@ -240,6 +242,5 @@ function viewDocs(t){
     return`<div class="li tap" data-a="item" data-id="${d.id}">${kic("doc")}<div class="b"><div class="t">${esc(d.title||d.docType)} ${st}</div><div class="d">${esc(itemSub(d))}${d.names?.length?" · "+esc(d.names.join(", ")):""}</div></div><div class="r">${refChip(d.ref)}</div></div>`}).join(""):`<div class="small muted">No documents yet</div>`;
   h+=`</div><div class="card"><div class="h">${ic("clip")}<h2>Files in this trip</h2><span class="sp"></span><span class="small dim">${files.length} · ${(files.reduce((a,f)=>a+(f.size||0),0)/1048576).toFixed(1)} MB</span></div>`;
   h+=files.length?files.map(f=>{const its=S.items.filter(i=>(f.itemIds||[]).includes(i.id));return`<div class="li"><span class="kic sm k-doc">${ic(f.type?.startsWith("image/")?"eye":"file","sm")}</span><div class="b"><div class="t" style="font-weight:550;word-break:break-all">${esc(f.name)}</div><div class="d">${(f.size/1024).toFixed(0)} KB · ${new Date(f.createdAt).toLocaleDateString()} · ${its.length?its.map(i=>esc(itemTitle(i))).join(", "):"<span class='dim'>not linked</span>"}</div><div class="small dim mono" title="SHA-256 used for duplicate detection">#${f.hash.slice(0,12)}</div></div><div class="r row" style="gap:4px"><button class="ibtn" data-a="openFile" data-id="${f.id}" title="Open">${ic("eye")}</button><button class="ibtn" data-a="delFile" data-id="${f.id}" title="Delete">${ic("trash")}</button></div></div>`}).join(""):`<div class="small muted">No files yet</div>`;
-  h+=`</div><div class="card"><div class="h">${ic("db")}<h2>Storage on this device</h2></div><div id="stor" class="small muted">Checking…</div><div class="row wrap mt"><button class="btn" data-a="persist">${ic("shield")} Keep data persistent</button><button class="btn" data-a="backup">${ic("download")} Backup / restore</button></div></div>`;
-  setTimeout(async()=>{const el=$("#stor");if(!el)return;let s="";try{const est=await navigator.storage?.estimate?.();if(est)s+=`Using ${(est.usage/1048576).toFixed(1)} MB of ~${(est.quota/1073741824).toFixed(1)} GB available. `;const p=await navigator.storage?.persisted?.();s+=p?`<span style="color:var(--ok)">Persistent</span>`:`<span style="color:var(--warn)">Not persistent: the browser may clear it</span>`}catch(e){s="Storage info unavailable."}el.innerHTML=s},0);
+  h+=`</div>`+emgNotes(t);
   return h}

@@ -5,7 +5,7 @@ const IDEA_CATS=["See","Eat","Do","Shop","Stay","Other"];
 /* Places to see / eat / do. Schedule one and it becomes an activity in the plan. */
 function viewIdeas(t){
   const L=t.ideas||[];
-  let h=`<div class="card"><div class="h">${ic("compass")}<h2>Ideas · ${L.length}</h2><span class="sp"></span><button class="btn xs ghost" data-a="places">${ic("pin","sm")} Places</button><button class="btn xs ghost" data-a="phrases">${ic("book","sm")} Phrases</button></div>
+  let h=`<div class="card"><div class="h">${ic("compass")}<h2>Ideas · ${L.length}</h2></div>
    <div class="fg"><div class="full"><label>Idea</label><input id="idT" placeholder="Petronas skybridge, Jalan Alor night market…"></div>
    <div><label>Type</label><select id="idC">${IDEA_CATS.map(c=>`<option>${c}</option>`).join("")}</select></div><div><label>Place / area (for maps)</label><input id="idP" placeholder="KLCC, Kuala Lumpur"></div>
    <div class="full"><label>Note</label><input id="idN" placeholder="Book ahead, closed Mondays…"></div></div>
@@ -21,9 +21,9 @@ function dailySpend(t){
   for(const e of ex){const v=toINR(t,e.cost,e.cur);if(v==null){skipped++;continue}by[e.date]=(by[e.date]||0)+v}
   const days=Object.keys(by).sort();if(!days.length)return"";
   const mx=Math.max(...Object.values(by)),tot=Object.values(by).reduce((a,b)=>a+b,0),avg=tot/days.length;
-  return`<div class="card"><div class="h">${ic("tag")}<h2>Spend by day</h2><span class="sp"></span><span class="small muted">avg ${fmtM(avg)}/day</span></div>
+  return`<details class="card fold"><summary class="h">${ic("tag")}<h2>Spend by day</h2><span class="sp"></span><span class="small muted">avg ${fmtM(avg)}/day</span></summary>
    ${days.map(d=>`<div class="catbar"><div class="nm" style="width:64px">${fmtDs(d)}</div><div class="bar"><i style="width:${by[d]/mx*100}%;background:${by[d]>avg*1.5?"var(--warn)":"var(--expense)"}"></i></div><div class="am">${fmtM(by[d])}</div></div>`).join("")}
-   <div class="small dim">${skipped?`${skipped} not counted (no exchange rate)`:""}</div></div>`;
+   <div class="small dim">${skipped?`${skipped} not counted (no exchange rate)`:""}</div></details>`;
 }
 
 async function duplicateTrip(){

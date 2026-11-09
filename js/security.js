@@ -52,44 +52,46 @@ function showLock(){
   f.onsubmit=async e=>{e.preventDefault();if(!inp.value)return;const b=f.querySelector("button");b.disabled=true;$("#lke",d).textContent="";
     const ok=await Vault.unlock(inp.value);
     if(!ok){await new Promise(r=>setTimeout(r,500));$("#lke",d).textContent="That passphrase didn't work.";b.disabled=false;inp.select();return}
-    inp.value="";await loadAll();applyTheme();d.remove();S.view=S.meta.view||"today";S.sub=S.meta.sub||"bookings";armIdle();render();AV.intro(curTrip());gsBoot();consumeLaunch()};
+    inp.value="";await loadAll();applyTheme();d.remove();S.view=S.meta.view||"today";S.sub=S.meta.sub||"bookings";S.psub=S.meta.psub||"days";if(S.sub==="ideas"){S.view="plan";S.psub="ideas";S.sub="bookings"}armIdle();render();AV.intro(curTrip());gsBoot();consumeLaunch()};
   $("#lkEmg",d)?.addEventListener("click",()=>openEmgCard());
   $("#lkw",d).onclick=async()=>{if(confirm("Erase everything stored by Trip Vault in this browser? This cannot be undone. Restore later from a backup file."))await wipeAll()};
 }
 
 /* ===================== Settings ===================== */
-/* Settings: one sheet with tabs. openSettings(tab) opens a given tab (general, sync, backup, security, planner, emergency, privacy). */
-const SET_TABS=[["general","sliders","General"],["apps","phone","Apps"],["sync","share","Sync & sharing"],["backup","db","Backup & restore"],["security","lock","Security"],["planner","clock","Planner"],["emergency","heart","Emergency card"],["privacy","shield","Privacy & data"]];
+/* Settings: one sheet with tabs. openSettings(tab) opens a given tab (general, apps, sync, backup, security, privacy).
+   The day planner is a section of General and the emergency card a section of Security; their old tab names still work. */
+const SET_TABS=[["general","sliders","General"],["apps","phone","Apps"],["sync","share","Sync & devices"],["backup","db","Backup & storage"],["security","lock","Security"],["privacy","shield","Privacy & data"]];
+const SET_ALIAS={planner:"general",emergency:"security"};
 function openSettings(tab="general"){
-  const s=S.settings;if(!SET_TABS.some(x=>x[0]===tab))tab="general";
+  const s=S.settings,sect=SET_ALIAS[tab]?tab:"";tab=SET_ALIAS[tab]||tab;if(!SET_TABS.some(x=>x[0]===tab))tab="general";
   const P={
    general:`<div class="fg">${Sel("Home currency","homeCur",s.homeCur||"INR",CURS)}${Sel("Appearance","theme",s.theme,[["auto","Match my device"],["dark","Midnight"],["light","Parchment"]])}${Sel("Language","lang",s.lang||"en",[["en","English"],["hi","हिन्दी (beta)"]])}${Sel("Character animations","anim",s.anim||"full",[["full","Full (intro + idle)"],["calm","Calm (no intro)"],["off","Off"]])}</div>
    <label class="row mt" style="cursor:pointer"><input type="checkbox" name="optimizePhotos" ${s.optimizePhotos?"checked":""}> <span style="font-size:12.5px;color:var(--tx)">Resize memory photos to 1600px when saving (saves lots of space)</span></label>
    <div class="sep"></div><div class="h">${ic("eye")}<h2>Screenshot reader</h2></div>
-   <div class="row"><button class="btn" id="ocrDl" type="button">${ic("download","sm")} ${S.meta.ocrReady?"Downloaded · refresh":`Download for offline (${OCR_SIZE})`}</button></div>`,
+   <div class="row"><button class="btn" id="ocrDl" type="button">${ic("download","sm")} ${S.meta.ocrReady?"Downloaded · refresh":`Download for offline (${OCR_SIZE})`}</button></div>
+   <div class="sep"></div><div class="h" id="ss-planner">${ic("clock")}<h2>Day planner</h2></div><div class="fg f4">
+   ${F("Day starts","wake",s.wake,{type:"time"})}${F("Day ends","sleep",s.sleep,{type:"time"})}${F("Min. free slot (min)","minGap",s.minGap,{type:"number"})}${TZsel("Home timezone","homeTz",s.homeTz)}</div>
+   <div class="h mt">${ic("plane")}<h2>Travel buffers (minutes)</h2></div><div class="fg f4">${F("Before intl flight","preIntl",s.preIntl,{type:"number"})}${F("Before domestic","preDom",s.preDom,{type:"number"})}${F("After intl arrival","postIntl",s.postIntl,{type:"number"})}${F("After domestic","postDom",s.postDom,{type:"number"})}${F("Before train","trainPre",s.trainPre,{type:"number"})}</div>`,
    apps:`<div class="fg">${Sel("Maps","appMap",s.appMap||"google",APPS.map.map(a=>[a.id,a.name]))}${Sel("Cabs","appCab",s.appCab||"",[["","Auto by country"],...APPS.cab.map(a=>[a.id,a.name])])}${Sel("UPI payments","appPay",s.appPay||"upi",APPS.pay.map(a=>[a.id,a.name]))}${Sel("Translate to","appLang",s.appLang||"",[["","Auto by country"],...langOpts(),["en","English"]])}</div><div id="aiPane">${aiPaneHtml()}</div>`,
    sync:`<div id="gsHubBody">${gsHubBody()}</div>`,
    backup:backupPane(),
    security:`${Vault.protected?`<div class="note ok">${ic("shield")}<div><b>Encrypted</b> · locks after ${s.autoLock?s.autoLock+" min":"no time"} idle</div></div><div class="row wrap mt"><button class="btn" id="chPass">${ic("key","sm")} Change passphrase</button><button class="btn" id="lockNow">${ic("lock","sm")} Lock now</button><button class="btn ghost" id="offPass">${ic("unlock","sm")} Remove lock</button></div>`
      :`<div class="note warn">${ic("alert")}<div><b>Not locked.</b> Data on this device isn't encrypted.</div></div><div class="row mt"><button class="btn pri" id="onPass" ${hasCrypto?"":"disabled"}>${ic("lock","sm")} Set a passphrase</button></div>`}
    <div class="fg mt">${Sel("Auto-lock after idle","autoLock",s.autoLock,[[0,"Never"],[1,"1 minute"],[5,"5 minutes"],[15,"15 minutes"],[60,"1 hour"]])}</div>
-`,
-   planner:`<div class="h">${ic("clock")}<h2>Day planner</h2></div><div class="fg f4">
-   ${F("Day starts","wake",s.wake,{type:"time"})}${F("Day ends","sleep",s.sleep,{type:"time"})}${F("Min. free slot (min)","minGap",s.minGap,{type:"number"})}${TZsel("Home timezone","homeTz",s.homeTz)}</div>
-   <div class="h mt">${ic("plane")}<h2>Travel buffers (minutes)</h2></div><div class="fg f4">${F("Before intl flight","preIntl",s.preIntl,{type:"number"})}${F("Before domestic","preDom",s.preDom,{type:"number"})}${F("After intl arrival","postIntl",s.postIntl,{type:"number"})}${F("After domestic","postDom",s.postDom,{type:"number"})}${F("Before train","trainPre",s.trainPre,{type:"number"})}</div>`,
-   emergency:`<label class="row" style="cursor:pointer"><input type="checkbox" name="emgOn" ${s.emgOn?"checked":""}> <span style="font-size:12.5px;color:var(--tx)">Show an <b>Emergency info</b> button on the lock screen</span></label>
+   <div class="sep"></div><div class="h" id="ss-emergency">${ic("heart")}<h2>Emergency card</h2></div>
+   <label class="row" style="cursor:pointer"><input type="checkbox" name="emgOn" ${s.emgOn?"checked":""}> <span style="font-size:12.5px;color:var(--tx)">Show an <b>Emergency info</b> button on the lock screen</span></label>
    <div class="note warn mt">${ic("alert")}<div>Stored <b>unencrypted</b> so it can show on the lock screen.</div></div>
    <div class="fg mt">${F("Name","emgName",s.emgName)}${F("Blood group","emgBlood",s.emgBlood,{ph:"B+"})}${F("Allergies","emgAllergy",s.emgAllergy,{full:1,ph:"Penicillin, peanuts…"})}${F("Medical conditions / medicines","emgMed",s.emgMed,{full:1,ph:"Asthma (inhaler in bag)…"})}
    ${F("Emergency contact","emgContact",s.emgContact,{ph:"Riya (spouse)"})}${F("Contact phone","emgPhone",s.emgPhone,{type:"tel",ph:"+91 98…"})}${F("Insurer & policy no.","emgIns",s.emgIns)}${F("Insurance helpline","emgHelp",s.emgHelp,{type:"tel"})}</div>`,
    privacy:privacyPane()};
-  const FIELD_TABS=new Set(["general","apps","security","planner","emergency"]);
+  const FIELD_TABS=new Set(["general","apps","security"]);
   const ov=sheet({title:`${ic("sliders")} Settings`,cls:"settings",help:"settings."+tab,body:`<div class="stabs" role="tablist" aria-label="Settings sections">${SET_TABS.map(([k,i,l])=>`<button type="button" role="tab" class="stab" id="st-${k}" data-tab="${k}" aria-controls="sp-${k}" aria-selected="${k===tab}" tabindex="${k===tab?0:-1}">${ic(i,"sm")}<span>${l}</span></button>`).join("")}</div>
    ${SET_TABS.map(([k])=>`<section class="spane" role="tabpanel" id="sp-${k}" data-pane="${k}" aria-labelledby="st-${k}" ${k===tab?"":"hidden"}>${P[k]}</section>`).join("")}
    <div class="small dim mt">Trip Vault ${typeof TV_VERSION==="string"?TV_VERSION:""} · private by design · <a href="#" data-a="about">About</a></div>`,
    foot:`<button class="btn" data-close>Close</button><button class="btn pri" id="stSv">Save</button>`});
   const show=k=>{$$(".stab",ov).forEach(b=>{const on=b.dataset.tab===k;b.setAttribute("aria-selected",on);b.tabIndex=on?0:-1});$$(".spane",ov).forEach(p=>p.hidden=p.dataset.pane!==k);
     $("#stSv",ov).hidden=!FIELD_TABS.has(k);ov.dataset.tab=k;ov.dataset.help="settings."+k;$(`.stab[data-tab="${k}"]`,ov)?.scrollIntoView({block:"nearest",inline:"nearest"})};
-  show(tab);
+  show(tab);if(sect)setTimeout(()=>$(`#ss-${sect}`,ov)?.scrollIntoView({block:"start"}),60);
   $(".stabs",ov).addEventListener("click",e=>{const b=e.target.closest(".stab");if(b)show(b.dataset.tab)});
   $(".stabs",ov).addEventListener("keydown",e=>{if(!["ArrowRight","ArrowLeft"].includes(e.key))return;const b=$$(".stab",ov),i=b.indexOf(document.activeElement);if(i<0)return;const n=b[(i+(e.key==="ArrowRight"?1:-1)+b.length)%b.length];n.focus();show(n.dataset.tab);e.preventDefault()});
   $("[name=homeTz]",ov).options[0].remove();$("#ocrDl",ov).onclick=e=>ocrPrepare(e.currentTarget);
@@ -111,7 +113,7 @@ function settingsRefresh(ov,k){const p=$(`[data-pane="${k}"]`,ov);if(!p)return;i
 function emgFields(){const s=S.settings||{};return[["Name",s.emgName],["Blood group",s.emgBlood],["Allergies",s.emgAllergy],["Medical conditions / medicines",s.emgMed],["Emergency contact",s.emgContact,s.emgPhone],["Insurance",s.emgIns,s.emgHelp]].filter(r=>r[1]||r[2])}
 const emgHas=()=>!!S.settings?.emgOn&&emgFields().length>0;
 function openEmgCard(){
-  const L=emgFields();if(!L.length){toast("Add your details under Settings → Emergency card","info");if(!Vault.locked)openSettings();return}
+  const L=emgFields();if(!L.length){toast("Add your details under Settings → Security → Emergency card","info");if(!Vault.locked)openSettings("emergency");return}
   const tel=p=>p?`<a class="btn xs" href="tel:${esc(p.replace(/[^\d+]/g,""))}">${ic("phone","sm")} ${esc(p)}</a>`:"";
   sheet({title:`${ic("heart")} Emergency card`,body:`<div class="emg">${L.map(([l,v,p])=>`<div class="emg-r"><small>${l}</small>${v?`<b>${esc(v)}</b>`:""}${tel(p)}</div>`).join("")}</div>
-   <div class="small dim mt">${S.settings.emgOn?"Also available from the lock screen.":"Not shown on the lock screen (turn it on in Settings)."} Edit it in Settings.</div>`})}
+   <div class="small dim mt">${S.settings.emgOn?"Also available from the lock screen.":"Not shown on the lock screen (turn it on in Settings → Security)."} Edit it in Settings → Security.</div>`})}

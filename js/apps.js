@@ -92,12 +92,24 @@ function openTranslate(){const t=curTrip(),L=tripLangPref(t);
     <div class="row wrap mt" style="gap:6px"><button class="btn pri" id="trGo">${ic("globe","sm")} Google Translate · ${esc(langName(L))}</button><button class="btn" data-a="converse">${ic("mic","sm")} Conversation</button><button class="btn" data-a="phrases">${ic("book","sm")} Phrases</button></div>`,foot:`<button class="btn" data-close>Close</button>`});
   $("#trGo",ov).onclick=()=>{const v=$("#trT",ov).value.trim();window.open(translateUrl(v||" ",L),"_blank","noopener,noreferrer")}}
 
-/* ---------- Today: On the ground (from the day before the trip until it ends) ---------- */
-function groundCard(t){const ph=tripPhase(t);if(ph.p==="after"||ph.p==="none")return"";const near=ph.p==="during"||ph.days<=1;
-  const upi=near&&HC()==="INR"&&Object.keys(t.upi||{}).length>0&&isTouch();
-  const tile=(a,i,l)=>`<button class="gtile" data-a="${a}">${ic(i)}<span>${l}</span></button>`;
+/* ---------- Today: On the ground / Get ready (from the day before the trip until it ends) ----------
+   Three tiles for the moment, and More for the whole Travel kit. */
+const gtile=(a,i,l)=>`<button class="gtile" data-a="${a}">${ic(i)}<span>${l}</span></button>`;
+const groundNear=t=>{const ph=tripPhase(t);return ph.p==="during"||(ph.p==="before"&&ph.days<=1)};
+function groundCard(t){const ph=tripPhase(t);if(ph.p==="after"||ph.p==="none")return"";const near=groundNear(t);
+  const top=near?gtile("plCabPick","car","Cab")+gtile("plGoPick","compass","Directions")+gtile("translate","globe","Translate"):gtile("translate","globe","Translate")+gtile("phrases","book","Phrases")+gtile("offMap","download","Offline map");
   return`<div class="card"><div class="h">${ic("compass")}<h2>${near?"On the ground":"Get ready"}</h2><span class="sp"></span><button class="ibtn hq" data-a="help" data-k="ground" aria-label="Help">?</button></div>
-   <div class="gtiles">${near?tile("plCabPick","car","Cab")+tile("plGoPick","compass","Directions"):""}${tile("translate","globe","Translate")}${tile("converse","mic","Talk")}${tile("phrases","book","Phrases")}${tile("places","pin","Places")}${tile("offMap","download","Offline map")}${upi?tile("payUpi","wallet","Pay"):""}</div></div>`}
+   <div class="gtiles">${top}${gtile("kit","layers","More")}</div></div>`}
+/* Travel kit: every on-the-trip tool, grouped. From Today's More tile, or search. */
+function openKit(){const t=curTrip();if(!t){toast("Start a trip first","info");return}
+  const upi=HC()==="INR"&&Object.keys(t.upi||{}).length>0&&isTouch(),pass=passList(t).length>0;
+  const grp=(h,tiles)=>`<div class="eyebrow" style="margin:14px 0 8px">${h}</div><div class="gtiles">${tiles}</div>`;
+  const ov=sheet({title:`${ic("compass")} Travel kit`,help:"ground",body:
+    grp("Getting around",gtile("plCabPick","car","Cab")+gtile("plGoPick","compass","Directions")+gtile("places","pin","Places")+gtile("offMap","download","Offline map"))+
+    grp("Language",gtile("translate","globe","Translate")+gtile("converse","mic","Talk")+gtile("phrases","book","Phrases"))+
+    grp("Essentials",(pass?gtile("pass","phone","Show pass"):"")+gtile("emgView","heart","Emergency card")+(upi?gtile("payUpi","wallet","Pay by UPI"):"")),
+    foot:`<button class="btn pri" data-close>Close</button>`});
+  ov.addEventListener("click",e=>{if(e.target.closest(".gtile"))ov.remove()});return ov}
 /* Where-to picker for the Cab and Directions tiles: tonight's stay first. */
 function pickPlace(title,run){const t=curTrip(),P=tripPlaces(t);if(!P.length){toast("Add a stay or a place first","info");return}
   const ov=sheet({title,body:P.map((p,i)=>`<button class="li tap pick" data-i="${i}" style="width:100%;text-align:left"><div class="b"><div class="t">${esc(p.name)}${p.tonight?pill("tonight","ok"):""}</div>${p.addr!==p.name?`<div class="d">${esc(p.addr)}</div>`:""}</div></button>`).join(""),foot:`<button class="btn" data-close>Cancel</button>`});
