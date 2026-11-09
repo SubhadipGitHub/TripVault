@@ -43,7 +43,7 @@ function tripCC(t){if(!t)return homeCC();const h=homeCC();
 /* Cab apps for a country, the person's choice first. */
 function cabsFor(cc){const ids=[...new Set([appPref("cab"),...(CAB_BY_CC[cc]??["uber"])].filter(Boolean))];return ids.map(i=>appById("cab",i)).filter(Boolean)}
 const mapApp=()=>appById("map",appPref("map"))||APPS.map[0];
-const translateUrl=(text,lang)=>`https://translate.google.com/?sl=auto&tl=${enc(lang||"en")}&text=${enc(text)}&op=translate`;
+const translateUrl=(text,lang)=>`https://translate.google.com/?sl=auto&tl=${enc(gtCode(lang))}&text=${enc(text)}&op=translate`;
 function upiUrl(id,{pa,pn,am,tn}){const a=appById("pay",id)||APPS.pay[0];
   return`${a.scheme}?pa=${enc(pa)}&pn=${enc(pn||pa)}${am?`&am=${enc((Math.round(am*100)/100).toFixed(2))}`:""}&cu=INR&tn=${enc(String(tn||"Trip Vault").slice(0,60))}`}
 const UPI_RE=/^[\w.-]{2,256}@[A-Za-z][A-Za-z0-9.]{2,64}$/;
@@ -89,7 +89,7 @@ function destCity(t){if(!t)return"";const h=homeCC();const f=tripItems(t.id).fil
   const out=f.find(i=>AP[i.to].cc!==h)||f[0];return out?AP[out.to].city:(t.dest||"").split(",")[0].trim()}
 function openTranslate(){const t=curTrip(),L=tripLangPref(t);
   const ov=sheet({title:`${ic("globe")} Translate`,help:"phrases",body:`<label for="trT">Text</label><textarea id="trT" style="min-height:90px" placeholder="Type or paste"></textarea>
-    <div class="row wrap mt" style="gap:6px"><button class="btn pri" id="trGo">${ic("globe","sm")} Google Translate · ${esc((PHRASES[L]||[L.toUpperCase()])[0])}</button><button class="btn" data-a="phrases">${ic("book","sm")} Phrases</button></div>`,foot:`<button class="btn" data-close>Close</button>`});
+    <div class="row wrap mt" style="gap:6px"><button class="btn pri" id="trGo">${ic("globe","sm")} Google Translate · ${esc(langName(L))}</button><button class="btn" data-a="converse">${ic("mic","sm")} Conversation</button><button class="btn" data-a="phrases">${ic("book","sm")} Phrases</button></div>`,foot:`<button class="btn" data-close>Close</button>`});
   $("#trGo",ov).onclick=()=>{const v=$("#trT",ov).value.trim();window.open(translateUrl(v||" ",L),"_blank","noopener,noreferrer")}}
 
 /* ---------- Today: On the ground (from the day before the trip until it ends) ---------- */
@@ -97,7 +97,7 @@ function groundCard(t){const ph=tripPhase(t);if(ph.p==="after"||ph.p==="none")re
   const upi=near&&HC()==="INR"&&Object.keys(t.upi||{}).length>0&&isTouch();
   const tile=(a,i,l)=>`<button class="gtile" data-a="${a}">${ic(i)}<span>${l}</span></button>`;
   return`<div class="card"><div class="h">${ic("compass")}<h2>${near?"On the ground":"Get ready"}</h2><span class="sp"></span><button class="ibtn hq" data-a="help" data-k="ground" aria-label="Help">?</button></div>
-   <div class="gtiles">${near?tile("plCabPick","car","Cab")+tile("plGoPick","compass","Directions"):""}${tile("translate","globe","Translate")}${tile("phrases","book","Phrases")}${tile("places","pin","Places")}${tile("offMap","download","Offline map")}${upi?tile("payUpi","wallet","Pay"):""}</div></div>`}
+   <div class="gtiles">${near?tile("plCabPick","car","Cab")+tile("plGoPick","compass","Directions"):""}${tile("translate","globe","Translate")}${tile("converse","mic","Talk")}${tile("phrases","book","Phrases")}${tile("places","pin","Places")}${tile("offMap","download","Offline map")}${upi?tile("payUpi","wallet","Pay"):""}</div></div>`}
 /* Where-to picker for the Cab and Directions tiles: tonight's stay first. */
 function pickPlace(title,run){const t=curTrip(),P=tripPlaces(t);if(!P.length){toast("Add a stay or a place first","info");return}
   const ov=sheet({title,body:P.map((p,i)=>`<button class="li tap pick" data-i="${i}" style="width:100%;text-align:left"><div class="b"><div class="t">${esc(p.name)}${p.tonight?pill("tonight","ok"):""}</div>${p.addr!==p.name?`<div class="d">${esc(p.addr)}</div>`:""}</div></button>`).join(""),foot:`<button class="btn" data-close>Cancel</button>`});

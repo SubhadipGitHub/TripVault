@@ -253,7 +253,7 @@ function openTrip(t,isNew){const ov=sheet({title:isNew?"New trip":"Trip settings
   ${F(`Total budget (${sym(HC()).trim()})`,"budget",t.budget||"",{type:"number"})}${Sel("Local currency","localCur",t.localCur||HC(),CURS)}
   ${F(`Exchange rates (${HC()} per unit)`,"rates",ratesStr(t.rates),{full:1,ph:"MYR=19.2, USD=84.5"})}
   <div class="full h mt" style="margin-bottom:0"><h2>Defaults</h2></div>
-  ${Sel("Spend in","expCur",t.expCur||"",[["","Auto"],...CURS])}${Sel("Language","lang",isLang(t.lang)?t.lang:"",[["","Auto"],...Object.entries(PHRASES).map(([k,[n]])=>[k,n]),["en","English"]])}</div>`,
+  ${Sel("Spend in","expCur",t.expCur||"",[["","Auto"],...CURS])}${Sel("Language","lang",isLang(t.lang)?t.lang:"",[["","Auto"],...langOpts(),["en","English"]])}</div>`,
   foot:`${isNew?"":`<button class="btn" data-a="gsShare" data-trip="${esc(t.id)}">${ic("share","sm")} ${t.sync?.fileId?"Shared":"Share"}</button><button class="btn" data-a="dupTrip" style="margin-right:auto">${ic("copy","sm")} Duplicate</button><button class="btn bad" id="tDel">${ic("trash","sm")} Delete trip</button>`}<button class="btn" data-close>Cancel</button><button class="btn pri" id="tSv">${ic("check","sm")} Save</button>`});
   $("[name=tz]",ov).options[0].textContent="Auto (from bookings)";
   /* Who's going: solo / couple / group, and him or her for each traveller (drives the crew characters) */
