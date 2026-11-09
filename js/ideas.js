@@ -23,7 +23,7 @@ function dailySpend(t){
   const mx=Math.max(...Object.values(by)),tot=Object.values(by).reduce((a,b)=>a+b,0),avg=tot/days.length;
   return`<div class="card"><div class="h">${ic("tag")}<h2>Spend by day</h2><span class="sp"></span><span class="small muted">avg ${fmtM(avg)}/day</span></div>
    ${days.map(d=>`<div class="catbar"><div class="nm" style="width:64px">${fmtDs(d)}</div><div class="bar"><i style="width:${by[d]/mx*100}%;background:${by[d]>avg*1.5?"var(--warn)":"var(--expense)"}"></i></div><div class="am">${fmtM(by[d])}</div></div>`).join("")}
-   <div class="small dim">Logged expenses only. Amber means well above your average.${skipped?` ${skipped} not counted (no exchange rate).`:""}</div></div>`;
+   <div class="small dim">${skipped?`${skipped} not counted (no exchange rate)`:""}</div></div>`;
 }
 
 async function duplicateTrip(){

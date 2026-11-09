@@ -653,4 +653,30 @@ span.avsnap{display:contents}
 .gstrip{align-items:center}.gstrip .gstick{width:18px;height:18px;flex:none;accent-color:var(--acc)}
 .gstrip .d .gsst{display:inline-block;width:8px;height:8px;margin:0 3px 0 0;vertical-align:0}.gsst[data-s=none]{background:var(--line2)}
 /* first-launch privacy note */
-.pnote{border-color:color-mix(in srgb,var(--ok) 35%,var(--line));margin-bottom:12px}
+
+/* Nothing may widen the screen: buttons and long words wrap inside sheets and cards */
+.btn{max-width:100%}
+.sb .btn,.card .btn{white-space:normal;overflow-wrap:anywhere;text-align:center}
+.sb,.card,.note{overflow-wrap:anywhere}
+.sb .row>*,.li .b,.note>div{min-width:0}
+/* ? help button: in the header and in sheet headers */
+.ibtn.hq{font:700 16px/1 var(--sans);color:var(--tx2)}
+.sh .ibtn.hq{width:34px;height:34px;margin-left:auto;margin-right:6px}
+.sh .ibtn.hq+.ibtn{margin-left:0}
+@media(max-width:466px){.top .ibtn.hq{width:34px;height:34px;font-size:15px}}
+.help-l{display:flex;flex-direction:column;gap:14px}
+.help-i{display:flex;gap:12px;align-items:flex-start}.help-i b{display:block;font-weight:650}.help-i p{margin:2px 0 0;color:var(--tx2);font-size:13.5px;line-height:1.5}
+/* first-run tour */
+.sheet.tour{max-width:440px;overflow:hidden}
+.sheet.tour .sb{padding-top:22px;overflow:hidden}
+.tour-w{overflow:hidden}
+.tour-track{display:flex;transition:transform .35s cubic-bezier(.2,.8,.2,1);touch-action:pan-y}
+.tour-c{flex:0 0 100%;display:flex;flex-direction:column;align-items:center;text-align:center;padding:4px 10px 6px;gap:6px}
+.tour-art{width:132px;height:132px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--tc) 16%,transparent);color:var(--tc);margin-bottom:8px;overflow:hidden}
+.tour-art .ic{width:54px;height:54px}
+.tour-c h2{font:700 21px/1.25 var(--serif);margin:4px 0 0;text-transform:none;letter-spacing:0;color:var(--tx)}
+.tour-c p{margin:0;color:var(--tx2);font-size:14.5px;line-height:1.5;max-width:32ch}
+.tour-dots{display:flex;justify-content:center;gap:7px;margin-top:16px}
+.tour-dots button{width:8px;height:8px;border-radius:50%;background:var(--line2);padding:0}
+.tour-dots button[aria-selected=true]{background:var(--acc);width:22px;border-radius:5px}
+@media(prefers-reduced-motion:reduce){.tour-track{transition:none}}

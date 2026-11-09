@@ -10,14 +10,14 @@ function openBackup(){openSettings("backup")}
 function backupPane(){const mb=(S.files.reduce((a,f)=>a+(f.size||0),0)/1048576).toFixed(1);const t=curTrip();
   const dirty=S.meta.dirty&&(!S.meta.lastBackup||S.meta.dirty>S.meta.lastBackup);
   return`
-   <div class="note ${dirty?"warn":"ok"}">${ic(dirty?"alert":"check")}<div>${S.meta.lastBackup?`Last full backup: <b>${new Date(S.meta.lastBackup).toLocaleString()}</b>`:"<b>No backup yet.</b>"}${dirty?" · changes since then":S.meta.lastBackup?" · up to date":""}<div class="small muted">Your vault lives only in this browser. Export before clearing browser data, switching phones or travelling. Save the file somewhere you trust (your drive, a USB stick).</div></div></div>
-   <label class="row mt" style="cursor:pointer"><input type="checkbox" id="bEnc" ${hasCrypto?"checked":"disabled"}> <span style="font-size:12.5px;color:var(--tx)">${ic("lock","sm")} Encrypt the backup with a passphrase <span class="dim">(recommended — backups contain passports and tickets)</span></span></label>
+   <div class="note ${dirty?"warn":"ok"}">${ic(dirty?"alert":"check")}<div>${S.meta.lastBackup?`Last full backup: <b>${new Date(S.meta.lastBackup).toLocaleString()}</b>`:"<b>No backup yet.</b>"}${S.meta.lastBackup?(dirty?" · changes since then":" · up to date"):""}</div></div>
+   <label class="row mt" style="cursor:pointer"><input type="checkbox" id="bEnc" ${hasCrypto?"checked":"disabled"}> <span style="font-size:12.5px;color:var(--tx)">${ic("lock","sm")} Encrypt with a passphrase</span></label>
    <div class="grid mt" style="gap:8px">
-    <button class="btn pri" id="bAll" style="justify-content:center">${ic("download")} Export everything · ${S.trips.length} trips, ${S.items.length} entries, ${S.memories.length} memories, ${S.files.length} files (${mb} MB)</button>
-    ${t?`<button class="btn" id="bTrip" style="justify-content:center">${ic("download")} Export only “${esc(t.name)}”</button>`:""}
-   </div><div class="sep"></div>
+    <button class="btn pri" id="bAll" style="justify-content:center">${ic("download")} Export everything</button>
+    ${t?`<button class="btn" id="bTrip" style="justify-content:center">${ic("download")} Export this trip</button>`:""}
+   </div><div class="small dim mt">${S.trips.length} trip${S.trips.length===1?"":"s"} · ${S.items.length} entries · ${S.memories.length} memories · ${S.files.length} files · ${mb} MB</div><div class="sep"></div>
    <div class="h">${ic("phone")}<h2>Phone to phone, no internet</h2></div>
-   <div class="small muted">Move trips to another phone with Trip Vault open: this screen shows a stream of QR codes, the other phone reads them with its camera. Encrypted with a one-time code.</div>
+   
    <div class="row wrap mt"><button class="btn" id="qrSend">${ic("share","sm")} Send by QR</button><button class="btn" id="qrRecv">${ic("camera","sm")} Receive by QR</button></div><div class="sep"></div>
    <div class="h">${ic("upload")}<h2>Restore from a backup</h2></div>
    <label class="drop" style="padding:16px">${ic("upload")} <b>Choose a Trip Vault backup (.tvault or .json)</b><div class="small muted">You'll see what changes before anything is written</div><input type="file" id="bIn" accept=".json,.tvault,application/json,application/octet-stream" hidden></label>`}
