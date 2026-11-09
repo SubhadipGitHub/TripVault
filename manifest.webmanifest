@@ -2,6 +2,7 @@
   "name": "Trip Vault",
   "short_name": "Trip Vault",
   "description": "A private, offline-first home for your trip plans, documents, expenses and memories.",
+  "id": "./",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
@@ -11,6 +12,22 @@
   "categories": [
     "travel",
     "productivity"
+  ],
+  "screenshots": [
+    {
+      "src": "assets/screenshot-narrow.png",
+      "sizes": "780x1688",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Today: your next flight, countdown and travel tools"
+    },
+    {
+      "src": "assets/screenshot-wide.png",
+      "sizes": "1440x900",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Plan: trip calendar and day timeline with free time"
+    }
   ],
   "icons": [
     {

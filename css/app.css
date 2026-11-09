@@ -740,3 +740,7 @@ details.fold>summary::-webkit-details-marker{display:none}
 details.fold>summary::after{content:"";width:8px;height:8px;border-right:2px solid var(--tx3);border-bottom:2px solid var(--tx3);transform:rotate(45deg);margin:0 4px 4px 8px;transition:transform .15s}
 details.fold[open]>summary{margin-bottom:10px}
 details.fold[open]>summary::after{transform:rotate(-135deg);margin-bottom:0}
+/* Install steps sheet */
+.inst-l{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:12px}
+.inst-l li{display:flex;gap:11px;align-items:flex-start}
+.inst-l .inst-t{font-weight:650;display:block}.inst-l p{margin:2px 0 0;line-height:1.5}

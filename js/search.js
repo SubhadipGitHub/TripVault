@@ -35,6 +35,7 @@ function searchActions(){return[
   {type:"action",id:"a:qrr",title:"Receive trips from another phone (QR)",icon:"camera",text:"transfer phone qr receive scan move sync another device import",run:()=>openReceiveQR()},
   {type:"action",id:"a:backup",title:"Backup & restore",icon:"db",text:"backup restore export import json encrypted storage persistent space",run:()=>openBackup()},
   {type:"action",id:"a:privacy",title:"Privacy & your data",icon:"shield",text:"privacy dpdp data protection consent delete erase my data download notice grievance",run:()=>openSettings("privacy")},
+  ...(canOfferInstall()?[{type:"action",id:"a:install",title:"Install Trip Vault as an app",icon:"download",text:"install app home screen desktop pwa add to dock taskbar offline icon",run:()=>openInstall()}]:[]),
   {type:"action",id:"a:about",title:"About Trip Vault",icon:"info",text:"about version help contact feedback grievance licences",run:()=>openAbout()},
   {type:"action",id:"a:profile",title:"Profile",icon:"user",text:"profile name account offline",run:()=>openProfile()},
   {type:"action",id:"a:set",title:"Settings",icon:"sliders",text:"settings theme lock passphrase buffers timezone",run:()=>openSettings()},
