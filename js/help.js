@@ -1,0 +1,72 @@
+"use strict";
+/* ===================== Help: a short first-run tour, and a ? for every page =====================
+   Explanations live here instead of on the screens, so pages stay short. The header ? opens the help
+   for whatever is on screen (the top sheet if one is open, otherwise the page and Vault tab). */
+const TOUR_V=1;
+const TOUR=[
+ {ic:"plane",c:"var(--acc)",t:"Every trip, one private vault",d:"Tickets, stays, IDs, money, plans and memories, together."},
+ {ic:"zap",c:"#2f7de1",t:"Add in a tap",d:"Drop a ticket, PDF, email or screenshot. Smart import fills in the details for you to check."},
+ {ic:"cal",c:"#1f9d6b",t:"Your days, planned",d:"A calendar and a timeline for each day, with travel buffers and free time to fill."},
+ {ic:"shield",c:"#8a5cf6",t:"Vault and memories",d:"Bookings, documents, money, ideas and packing. Photos and notes become your trip's Wrapped."},
+ {ic:"lock",c:"#c4880f",t:"Your data stays here",d:"Everything stays on this device unless you connect your own Google Drive.",privacy:1}];
+const TOUR_HI={"Every trip, one private vault":"हर यात्रा, एक निजी तिजोरी","Tickets, stays, IDs, money, plans and memories, together.":"टिकट, ठहराव, पहचान-पत्र, पैसा, योजना और यादें, एक साथ।",
+ "Add in a tap":"एक टैप में जोड़ें","Drop a ticket, PDF, email or screenshot. Smart import fills in the details for you to check.":"टिकट, PDF, ईमेल या स्क्रीनशॉट डालें। स्मार्ट इम्पोर्ट जानकारी भर देता है, आप जाँच लें।",
+ "Your days, planned":"आपके दिन, योजनाबद्ध","A calendar and a timeline for each day, with travel buffers and free time to fill.":"हर दिन का कैलेंडर और टाइमलाइन, यात्रा के बफ़र और खाली समय के साथ।",
+ "Vault and memories":"तिजोरी और यादें","Bookings, documents, money, ideas and packing. Photos and notes become your trip's Wrapped.":"बुकिंग, दस्तावेज़, पैसा, आइडिया और पैकिंग। फ़ोटो और नोट्स आपकी यात्रा का Wrapped बनते हैं।",
+ "Your data stays here":"आपका डेटा यहीं रहता है","Everything stays on this device unless you connect your own Google Drive.":"जब तक आप अपनी Google Drive नहीं जोड़ते, सब कुछ इसी डिवाइस पर रहता है।"};
+const tourT=s=>hiOn()&&TOUR_HI[s]?TOUR_HI[s]:s;
+const tourDue=()=>!Vault.locked&&S.settings&&!S.meta.tourV&&!S.meta.noticeV;
+async function tourDone(){S.meta.tourV=TOUR_V;S.meta.noticeV=Math.max(S.meta.noticeV||0,NOTICE_V);S.meta.noticeAt||=Date.now();await saveMeta()}
+function openTour(){
+  if($("#tour"))return;let i=0;const last=TOUR.length-1;
+  const ov=sheet({title:"",cls:"tour",onClose:()=>tourDone(),body:`<div id="tour" class="tour-w"><div class="tour-track">${TOUR.map((c,k)=>`<section class="tour-c" aria-roledescription="slide" aria-label="${k+1} of ${TOUR.length}">
+      <div class="tour-art" style="--tc:${c.c}">${ic(c.ic,"lg")}</div>
+      <h2>${esc(tourT(c.t))}</h2><p>${esc(tourT(c.d))}</p>${c.privacy?`<button class="btn xs ghost" data-a="privacyNotice">${ic("shield","sm")} ${L2("Privacy notice","गोपनीयता सूचना")}</button>`:""}</section>`).join("")}</div>
+    <div class="tour-dots" role="tablist">${TOUR.map((_,k)=>`<button role="tab" data-dot="${k}" aria-label="Card ${k+1}"></button>`).join("")}</div></div>`,
+    foot:`<button class="btn ghost" id="tourSkip">${L2("Skip","छोड़ें")}</button><span class="sp"></span><button class="btn" id="tourBack">${ic("back","sm")}</button><button class="btn pri" id="tourNext"></button>`});
+  ov.setAttribute("aria-label","Welcome tour");$(".sh",ov).remove();
+  const trk=$(".tour-track",ov),nx=$("#tourNext",ov),bk=$("#tourBack",ov);
+  const go=k=>{i=Math.max(0,Math.min(last,k));trk.style.transform=`translateX(${-i*100}%)`;$$("[data-dot]",ov).forEach((d,k2)=>d.setAttribute("aria-selected",k2===i));
+    bk.style.visibility=i?"visible":"hidden";$$(".tour-c",ov).forEach((c,k2)=>c.setAttribute("aria-hidden",k2!==i));
+    nx.innerHTML=i<last?`${L2("Next","आगे")} ${ic("arrow","sm")}`:S.trips.length?L2("Done","हो गया"):`${ic("sparkle","sm")} ${L2("Explore a sample","नमूना देखें")}`;
+    $("#tourNew",ov)?.remove();if(i===last&&!S.trips.length)nx.insertAdjacentHTML("beforebegin",`<button class="btn" id="tourNew">${ic("plus","sm")} ${L2("Start a trip","ट्रिप शुरू करें")}</button>`)};
+  const end=async a=>{ov.remove();await tourDone();if(a==="sample")loadSample();else if(a==="new")A.newTrip()};
+  ov.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+    if(b.dataset.dot)go(+b.dataset.dot);else if(b.id==="tourBack")go(i-1);else if(b.id==="tourSkip")end();else if(b.id==="tourNew")end("new");
+    else if(b.id==="tourNext"){if(i<last)go(i+1);else end(S.trips.length?"":"sample")}});
+  ov.addEventListener("keydown",e=>{if(e.key==="ArrowRight")go(i+1);else if(e.key==="ArrowLeft")go(i-1)});
+  let x0=null;trk.addEventListener("pointerdown",e=>{x0=e.clientX});trk.addEventListener("pointerup",e=>{if(x0==null)return;const dx=e.clientX-x0;x0=null;if(Math.abs(dx)>40)go(i+(dx<0?1:-1))});
+  go(0);setTimeout(()=>nx.focus(),60)}
+/* First launch: after the crew intro has walked off. */
+function tourMaybe(){if(!tourDue())return;let n=0;const t=setInterval(()=>{if((!AV.introOn&&!$(".avintro"))||++n>40){clearInterval(t);if(tourDue()&&!$(".ov"))openTour()}},250)}
+
+/* ---------- help for each page and sheet ---------- */
+const HELP={
+ welcome:["Getting started",[["zap","Import a booking","Drop a PDF e-ticket, hotel email, IRCTC slip, SMS or a screenshot. Check what was read, then save."],["plus","Start a trip","Give it a name and dates; add bookings any time."],["sparkle","Explore a sample","A ready-made trip to try everything. Delete it from trip settings when done."],["lock","Private","No account. Data stays in this browser unless you connect Google Drive."]]],
+ today:["Today",[["compass","Trip card","Dates, countdown, the time where you're going and at home. Tap Edit to change the trip."],["clock","Next up","Your next flights, trains, check-ins and plans, with reminders and payment alerts."],["phone","Show pass","Opens tickets and boarding passes full screen for the gate."],["check","Getting started","A short checklist; hide it when you're done."],["share","Shared trips","The green chip shows who you share with and when it last synced. Tap it for options."]]],
+ plan:["Plan",[["cal","Calendar","Trip days are coloured; tap one to see it. Dots show travel, stays and activities."],["clock","Day timeline","Striped blocks are travel buffers (check-in, security, transfers). Change them in Settings → Planner."],["plus","Free time","Tap a free slot to add an activity that fits."],["copy","Copy","Copies the day-by-day plan as text to send anyone."]]],
+ "vault.bookings":["Bookings",[["layers","All your bookings","Flights, trains, buses, stays, cars, transfers and activities. Tap one to edit, see payments and attachments."],["alert","Duplicates","Possible duplicates are flagged so totals aren't counted twice."],["file","Files","Imported files are kept offline here; the same file is never stored twice."]]],
+ "vault.docs":["Documents",[["file","IDs and papers","Add passport, visa, insurance and IDs. Expiry is checked against your trip dates."],["lock","Keep them safe","Set a passphrase in Settings → Security to encrypt everything on this device."]]],
+ "vault.money":["Money",[["wallet","Budget and totals","Committed is bookings plus expenses; pending is what's still to pay."],["rupee","Exchange rate","Enter your forex or card rate for the local currency; totals convert with it."],["user","Split costs","Pick “Paid by” on an expense; shares are equal among the people ticked."],["download","Export","CSV for spreadsheets or a printable report for reimbursement."]]],
+ "vault.ideas":["Ideas",[["sparkle","Places and things to do","Collect ideas, then schedule one into a free slot on a day."]]],
+ "vault.pack":["Packing",[["bag","Lists","Tick items as you pack. Add a ready-made set; items you already have are skipped."]]],
+ memories:["Memories",[["camera","Capture","A photo, a line, a place and a mood. Photos are resized to save space (Settings → General)."],["star","Favourites","Star the best ones; they lead your Wrapped."],["play","Wrapped","Turn the trip into a story to keep or share."]]],
+ "settings.general":["General",[["rupee","Home currency","Budgets and totals are shown in it. Trip rates are “home currency per 1 unit”, so re-enter them after changing it."],["eye","Reading screenshots","The text reader downloads the first time you import an image. Get it now if you'll be offline."]]],
+ "settings.sync":["Sync & sharing",[["share","Sync trips","All trips, or only the ones you tick, are encrypted and saved to your own Google Drive."],["user","Share with people","Open a trip's row, add their Gmail and send them the invite link; it holds the key."],["phone","Other devices","Save your trip keys with a sync passphrase, then open your trips on another device with the same account."],["clock","Recent changes","What the others added or changed. Their entries show their coloured initial."]]],
+ "settings.backup":["Backup & restore",[["download","Export","Your vault lives only in this browser. Export before clearing browser data or switching phones. Encrypt the file: it holds passports and tickets."],["phone","Phone to phone","Send trips as a stream of QR codes to another phone, no internet needed."],["upload","Restore","Choose a backup file; you see what changes before anything is written."]]],
+ "settings.security":["Security",[["lock","Passphrase","Encrypts everything in this browser with AES-256. It can't be recovered if forgotten."],["clock","Auto-lock","Locks after the idle time you choose."],["alert","Limits","Malware, browser extensions or someone with your unlocked device can still see what's on screen."]]],
+ "settings.planner":["Planner",[["clock","Your day","Start and end times frame each day's free time."],["plane","Buffers","Time before and after flights and trains, shown as striped blocks. Many airlines close international check-in 60 minutes before departure."]]],
+ "settings.emergency":["Emergency card",[["heart","For helpers","A medical-ID style card for first responders."],["alert","Not encrypted","It can be shown from the lock screen, so it's stored without encryption. Add only what you'd put on a medical ID."]]],
+ "settings.privacy":["Privacy & data",[["shield","Private by design","No server, accounts, analytics or ads."],["eye","Your rights","See your data, download a copy, erase it here and in your Drive, or withdraw consent for Google sync."],["info","Questions","Open an issue on GitHub. You may also complain to the Data Protection Board of India."]]],
+ share:["Sharing a trip",[["share","How it works","The trip is encrypted with its code and kept in your Google Drive; people you add get access and an email from Google."],["key","Invite link","Send it separately (WhatsApp, SMS). It holds the key, so share it only with them."],["clock","Versions","Bring back an earlier version for everyone if something went wrong."],["x","Removing someone","Makes a new trip key; send the new link to everyone still in the trip."]]],
+ join:["Joining a trip",[["share","Invite link","Paste the link you were sent and sign in with the Gmail the trip was shared with."],["lock","Private","The trip is decrypted on this device with the code in the link."]]],
+ import:["Smart import",[["zap","What it reads","PDF e-tickets, emails (.eml), HTML, text and screenshots. Several at once is fine."],["check","Check before saving","Names, PNRs, dates and times are read for you to confirm. Duplicates are skipped."]]],
+ trip:["Trip settings",[["globe","Basics","Name, destination, dates and time zone."],["rupee","Money","Local currency and your exchange rate; budget per category."],["user","People","Who's travelling, used for splits and the travel crew."]]],
+ item:["Booking",[["edit","Details","Change anything that was read wrong."],["wallet","Payments","Add instalments with due dates; you're reminded before they're due."],["clip","Attachments","Tickets and PDFs stay offline with the booking."]]],
+ memory:["Memory",[["camera","Photos","Add a few photos; they're resized to save space."],["star","Favourite","Starred memories lead your Wrapped."]]]};
+function helpKey(){const s=topSheet();if(s?.dataset.help)return s.dataset.help;if(!curTrip())return"welcome";
+  if(S.view==="vault"){const k="vault."+(SUBS[S.sub]||S.sub||"bookings");return HELP[k]?k:"vault.bookings"}return HELP[S.view]?S.view:"today"}
+function openHelp(key){key=HELP[key]?key:helpKey();const[title,pts]=HELP[key];
+  sheet({title:`${ic("info")} ${esc(title)}`,cls:"help",body:`<div class="help-l">${pts.map(([i,h,d])=>`<div class="help-i"><span class="kic sm" style="--c:var(--acc)">${ic(i,"sm")}</span><div><b>${esc(h)}</b><p>${esc(d)}</p></div></div>`).join("")}</div>
+    <div class="row wrap mt" style="gap:6px"><button class="btn xs" data-a="tour">${ic("play","sm")} ${L2("Take the tour","टूर देखें")}</button><button class="btn xs ghost" data-a="privacyNotice">${ic("shield","sm")} ${L2("Privacy notice","गोपनीयता सूचना")}</button></div>`,
+    foot:`<button class="btn pri" data-close>${L2("Got it","समझ गया")}</button>`})}

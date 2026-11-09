@@ -19,7 +19,7 @@ const A={
   vsub:el=>{S.sub=el.dataset.s;S.meta.sub=S.sub;saveMeta();render()},
   avPoke:()=>AV.poke(),
   acct:()=>openAcctMenu(),gsHub:()=>openAcctMenu(),profile:()=>{$$(".ov").forEach(o=>o.remove());openProfile()},about:()=>openAbout(),
-  privacyNotice:()=>openNotice(),noticeOk:()=>noticeAck(),backupTab:()=>{$$(".ov").forEach(o=>o.remove());openSettings("backup")},
+  privacyNotice:()=>openNotice(),help:el=>openHelp(el?.closest?.(".ov")?.dataset.help||""),tour:()=>{$$(".ov").forEach(o=>o.remove());openTour()},backupTab:()=>{$$(".ov").forEach(o=>o.remove());openSettings("backup")},
   gsShare:el=>{const t=S.trips.find(x=>x.id===el.dataset.trip)||curTrip();$$(".ov").forEach(o=>o.remove());openShare(t)},
   gsChip:el=>{const t=S.trips.find(x=>x.id===el.dataset.trip);if(!t)return;const s=GS.st[t.id];if(!gsOn()||s?.state==="paused")syncTrip(t,{interactive:true});else openShare(t)},
   day:el=>{const kb=document.activeElement===el;S.day=el.dataset.d;render();if(kb)$(`.calc[data-d="${S.day}"]`)?.focus({preventScroll:true})},
@@ -102,7 +102,7 @@ document.addEventListener("drop",e=>{if(!$(".ov")&&!Vault.locked&&S.settings&&e.
    The service worker stores files shared to the installed app in Cache Storage (tv-share) and
    redirects here with ?share=1. Shortcuts open ./?a=<action>. Runs after boot, or after unlock. */
 async function consumeLaunch(){
-  if(location.hash.startsWith("#join=")&&!Vault.locked&&S.settings){const h=location.hash;history.replaceState(null,"",location.pathname+location.search);openJoin(location.origin+location.pathname+h);return}
+  if(location.hash.startsWith("#join=")&&!Vault.locked&&S.settings){const h=location.hash;$("#tour")?.closest(".ov")?.remove();history.replaceState(null,"",location.pathname+location.search);openJoin(location.origin+location.pathname+h);return}
   const q=new URLSearchParams(location.search),act=q.get("a");if(!q.has("share")&&!act)return;
   if(Vault.locked||!S.settings)return; // picked up again after unlock
   history.replaceState(null,"",location.pathname+location.hash);
@@ -130,7 +130,7 @@ async function consumeLaunch(){
   if(Vault.locked){const m=await DB.get("meta","state");S.meta=m?.v||{};showLock();return}
   await loadAll();applyTheme();S.view=({book:"vault",money:"vault",docs:"vault"}[S.meta.view])||S.meta.view||"today";S.sub=S.meta.sub||({book:"bookings",money:"money",docs:"docs"})[S.meta.view]||"bookings";
   if(!["today","plan","vault","memories"].includes(S.view))S.view="today";
-  render();armIdle();if(!location.hash.startsWith("#join="))AV.intro(curTrip());gsBoot();consumeLaunch();
+  render();armIdle();if(!location.hash.startsWith("#join="))AV.intro(curTrip());gsBoot();consumeLaunch();if(!location.hash.startsWith("#join="))tourMaybe();
 })();
 setInterval(()=>{if(S.cur&&(S.view==="today"||S.view==="plan")&&!$(".ov")&&!SEARCH.ov&&!WR.ov&&!Vault.locked&&document.visibilityState==="visible"&&!document.activeElement?.matches("input,select,textarea"))render()},60000);
 addEventListener("hashchange",()=>{if(location.hash.startsWith("#join="))consumeLaunch()}); // invite opened while Trip Vault is already open

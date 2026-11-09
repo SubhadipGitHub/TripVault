@@ -352,10 +352,8 @@ function gsStat(t){const s=t.sync,st=GS.st[t.id]||{};
 function gsSheetBody(t){
   if(!gsReady())return`<div class="note warn">${ic("info")}<div><b>Google sharing isn't set up in this copy of Trip Vault.</b><div class="small muted">Whoever hosts it adds a Google client ID, API key and project number to <span class="mono">js/sync-config.js</span>. See “Set up Google sharing” in the README.</div></div></div>`;
   const s=t.sync,st=GS.st[t.id]||{};
-  const privacy=`<div class="small dim mt">${ic("lock","sm")} Encrypted on this phone with the trip code before anything goes to Google. Google stores only scrambled data; the code travels in the invite link, never to Google. Sync runs while Trip Vault is open.</div>`;
-  if(!s?.fileId)return`<p class="muted">Share <b>${esc(t.name)}</b> with a partner or a group. Everyone can add bookings, expenses, packing, ideas, memories, attachments and photos, and changes sync both ways through Google Drive.</p>
-    <label class="mt" for="gsEm">Their Gmail addresses</label><input id="gsEm" type="email" multiple placeholder="partner@gmail.com, friend@gmail.com" autocomplete="off">
-    <div class="small dim" style="margin-top:4px">They get an email from Google Drive. You'll also get an invite link to send them; it holds the key.</div>
+  const privacy=`<div class="small dim mt">${ic("lock","sm")} Encrypted before upload</div>`;
+  if(!s?.fileId)return`<label for="gsEm">Their Gmail addresses</label><input id="gsEm" type="email" multiple placeholder="partner@gmail.com, friend@gmail.com" autocomplete="off">
     <label class="row mt" style="cursor:pointer;align-items:flex-start"><input type="checkbox" id="gsOkP"> <span class="small" style="color:var(--tx)">These people know I'm sharing this trip's details with them (names, ID numbers, photos)</span></label>${privacy}
     <div class="row mt"><span class="sp"></span><button class="btn pri" id="gsGo">${ic("share","sm")} Connect Google & share</button></div>`;
   const owner=s.role==="owner",mem=s.members||[];
@@ -365,17 +363,15 @@ function gsSheetBody(t){
    ${mem.length?mem.map(m=>`<div class="li">${gsAv(m.email)}<div class="b"><div class="t">${esc(m.email)}${m.email===(s.me||GS.email)?" (you)":""}</div></div>${owner?`<button class="btn xs ghost" data-gsrm="${esc(m.email)}">${ic("x","sm")} Remove</button>`:""}</div>`).join(""):`<div class="small muted">No one yet.</div>`}
    ${owner?`<div class="row mt"><input id="gsEm" type="email" placeholder="Add a Gmail address" autocomplete="off"><button class="btn" id="gsAdd">${ic("plus","sm")} Add</button></div>
      <label class="row" style="cursor:pointer;margin-top:6px"><input type="checkbox" id="gsOkP"> <span class="small" style="color:var(--tx)">They know I'm sharing this trip's details with them</span></label>`:""}
-   <div class="small dim mt">${ic("info","sm")} Entries the others add show their coloured initial; a ring in their colour means they changed it last.</div>
    <div class="h mt">${ic("key")}<h2>Invite link</h2></div>
    ${owner&&s.rekey?`<div class="note warn">${ic("key")}<div><b>New trip key after removing ${esc(s.rekey.removed)}.</b> Send this new link to ${mem.length?esc(mem.map(m=>m.email).join(", ")):"anyone you add"}; the old link no longer opens the trip. <button class="btn xs" id="gsRekeyDone">${ic("check","sm")} Done, I've sent it</button></div></div>`:""}
-   <div class="small muted">Send this to the people above (WhatsApp, SMS). It opens Trip Vault and holds the key to the trip, so share it only with them.</div>
    <div class="gsinv"><canvas id="gsQr" aria-label="Invite QR code"></canvas><div class="sp" style="min-width:0"><div class="mono small gslink" data-copy="${esc(gsLink(t))}">${esc(gsLink(t))}</div>
     <div class="small dim mt">Trip code: <b class="mono" data-copy="${esc(s.code)}">${esc(s.code)}</b></div>
     <div class="row wrap mt" style="gap:6px"><button class="btn xs" data-copy="${esc(gsLink(t))}">${ic("copy","sm")} Copy link</button>${navigator.share?`<button class="btn xs" id="gsShr">${ic("share","sm")} Send…</button>`:""}</div></div></div>
    ${privacy}`}
 function openShare(t=curTrip()){if(!t){toast("Create a trip first","bad");return}
   const s=t.sync,owner=s?.role==="owner";
-  const ov=sheet({title:`${ic("share")} ${s?.fileId?"Shared trip":"Share this trip"}`,body:gsSheetBody(t),
+  const ov=sheet({title:`${ic("share")} ${s?.fileId?"Shared trip":"Share this trip"}`,help:"share",body:gsSheetBody(t),
     foot:s?.fileId?`${owner?`<button class="btn bad" id="gsStop">Stop sharing</button>`:`<button class="btn bad" id="gsLeave">Leave</button>`}<button class="btn" id="gsHist">${ic("clock","sm")} Versions</button><span class="sp"></span><button class="btn" data-close>Close</button><button class="btn pri" id="gsNow">${ic("zap","sm")} Sync now</button>`:`<button class="btn" data-close>Close</button>`});
   const sb=$(".sb",ov);sb.id="gsSheet";sb.dataset.trip=t.id;
   const busy=async(btn,fn)=>{if(btn){btn.disabled=true;btn.dataset.l=btn.innerHTML;btn.innerHTML=`${ic("clock","sm")} Working…`}
@@ -398,9 +394,7 @@ function openShare(t=curTrip()){if(!t){toast("Create a trip first","bad");return
   $("#gsLeave",ov)?.addEventListener("click",async()=>{if(!(await gate({title:"Leave this shared trip?",plan:["You stop getting updates and your changes stop going to the others","The trip stays on this phone as your own copy"],ok:"Leave",danger:false})))return;
     await gsUnlink(t);ov.remove();render();gsPillPaint();toast("You left the shared trip")})}
 function openJoin(pre){if(!gsReady()){sheet({title:`${ic("share")} Join a shared trip`,body:gsSheetBody({})});return}
-  const ov=sheet({title:`${ic("share")} Join a shared trip`,body:`<p class="muted">Paste the invite link someone sent you. You'll sign in with the Google account they shared the trip with.</p>
-    <label for="gsInv">Invite link</label><textarea id="gsInv" class="mono" style="min-height:70px" placeholder="https://…#join=…">${esc(pre||"")}</textarea>
-    <div class="small dim mt">${ic("lock","sm")} The trip is decrypted on this phone with the code in the link. Google only stores scrambled data.</div>`,
+  const ov=sheet({title:`${ic("share")} Join a shared trip`,help:"join",body:`<label for="gsInv">Invite link</label><textarea id="gsInv" class="mono" style="min-height:70px" placeholder="https://…#join=…">${esc(pre||"")}</textarea>`,
     foot:`<button class="btn" data-close>Cancel</button><button class="btn pri" id="gsJoin">${ic("unlock","sm")} Connect Google & join</button>`});
   $("#gsJoin",ov).onclick=async e=>{const b=e.currentTarget,inv=gsParseInvite($("#gsInv",ov).value);if(!inv){toast("That doesn't look like a Trip Vault invite link","bad");return}
     b.disabled=true;b.innerHTML=`${ic("clock","sm")} Joining…`;
@@ -451,21 +445,19 @@ function gsTripRow(t,on,all){const sy=!!t.sync?.fileId,st=sy?GS.st[t.id]?.state|
 function gsHubBody(){
   if(!gsReady())return gsSheetBody({});
   const L=gsLinked(),[s,,tip]=gsOverall(),on=gsOn(),me=GS.email||L.find(t=>t.sync.me)?.sync.me||"",all=!!S.meta.gsAll;
-  const acct=`<div class="gshub-acct" data-s="${on?s:"off"}">${gsAv(on?me:profName(),"lg")}<div class="b"><div class="t">${on?esc(me||"Google account"):"Not connected"}</div><div class="small muted">${on?esc(tip):me?`Last signed in as ${esc(me)}. Connect to sync.`:"Offline profile. Connect Google Drive to sync trips across your devices and share them."}</div></div>
+  const acct=`<div class="gshub-acct" data-s="${on?s:"off"}">${gsAv(on?me:profName(),"lg")}<div class="b"><div class="t">${on?esc(me||"Google account"):"Not connected"}</div><div class="small muted">${on?esc(tip):me?`Last: ${esc(me)}`:"Offline profile"}</div></div>
     ${on?`<button class="btn xs ghost" id="gsHubOut">${ic("lock","sm")} Disconnect</button>`:`<button class="btn xs pri" id="gsHubIn">${ic("unlock","sm")} Connect</button>`}</div>`;
   const rec=L.flatMap(t=>(t.sync.recent||[]).map(c=>({...c,tn:t.name}))).sort((a,b)=>b.at-a.at).slice(0,10);
   return acct+`<div class="row wrap mt" style="gap:6px">${L.length&&on?`<button class="btn" id="gsHubSync">${ic("zap","sm")} Sync all now</button>`:""}<button class="btn" id="gsHubJoin">${ic("plus","sm")} Join a shared trip</button></div>
     <div class="h mt">${ic("share")}<h2>Sync my trips to Google Drive</h2></div>
     <div class="gseg" role="group" aria-label="Which trips sync"><button class="${all?"on":""}" data-gsmode="all" aria-pressed="${all}" ${on?"":"disabled"}>All trips</button><button class="${all?"":"on"}" data-gsmode="pick" aria-pressed="${!all}" ${on?"":"disabled"}>Chosen trips</button></div>
-    <div class="small dim" style="margin:6px 0 2px">${!on?"Connect Google Drive to choose which trips sync.":all?"Every trip syncs, including new ones. Switch to Chosen trips to leave some on this device only.":"Tick the trips to keep in your Drive. Each is encrypted with its own code; share any of them with people from its row."}</div>
+    ${on?"":`<div class="small dim" style="margin:6px 0 2px">Connect to choose trips</div>`}
     ${S.trips.length?S.trips.slice().sort((a,b)=>(a.start||"").localeCompare(b.start||"")).map(t=>gsTripRow(t,on,all)).join(""):`<div class="small muted">No trips yet.</div>`}
     <div class="h mt">${ic("phone")}<h2>Your other devices</h2></div>
-    <div class="small muted">${S.meta.kc?"Your trip keys are saved in your Drive, locked with your sync passphrase. On another phone or laptop: connect the same Google account, enter the passphrase, and choose which trips to open."
-      :"Save your trip keys in your Drive, locked with a sync passphrase only you know, to open your trips on your other phones and laptops. Google can't read them."}</div>
-    <div class="row wrap mt" style="gap:6px">${on?(S.meta.kc?`<button class="btn" id="gsKcOpen">${ic("download","sm")} Open trips from my other devices</button><button class="btn ghost" id="gsKcPass">${ic("key","sm")} Change sync passphrase</button>`
+    <div class="row wrap" style="gap:6px">${on?(S.meta.kc?`<button class="btn" id="gsKcOpen">${ic("download","sm")} Open trips from my other devices</button><button class="btn ghost" id="gsKcPass">${ic("key","sm")} Change sync passphrase</button>`
       :`<button class="btn" id="gsKcSet">${ic("key","sm")} Set up my other devices</button>`):""}</div>
     <div class="h mt">${ic("clock")}<h2>Recent changes from others</h2></div>
-    ${rec.length?rec.map(c=>`<div class="li gsrec">${gsAv(c.who,"sm")}<div class="b"><div class="t" style="font-weight:500"><b>${esc(gsName(c.who))}</b> ${esc(c.verb)} ${esc(c.what)}</div><div class="d">${esc(c.tn)} · ${gsAgo(c.at)}</div></div></div>`).join(""):`<div class="small muted">Nothing yet. When someone else adds or changes something, it shows here and their entries get their coloured initial.</div>`}`}
+    ${rec.length?rec.map(c=>`<div class="li gsrec">${gsAv(c.who,"sm")}<div class="b"><div class="t" style="font-weight:500"><b>${esc(gsName(c.who))}</b> ${esc(c.verb)} ${esc(c.what)}</div><div class="d">${esc(c.tn)} · ${gsAgo(c.at)}</div></div></div>`).join(""):`<div class="small muted">Nothing yet</div>`}`}
 function openHub(){openSettings("sync")}
 /* Wire the Sync & sharing pane (event delegation survives gsPaint re-rendering #gsHubBody). */
 function gsHubWire(pane,close){

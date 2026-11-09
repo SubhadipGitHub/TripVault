@@ -1,8 +1,8 @@
 "use strict";
 /* ===================== UI infrastructure ===================== */
 function toast(msg,kind="ok"){$$(".toast").forEach(t=>t.remove());const t=document.createElement("div");t.className="toast";t.innerHTML=`${ic(kind==="ok"?"check":kind==="bad"?"alert":"info","sm")}<span>${msg}</span>`;t.style.color=kind==="bad"?"var(--bad)":"";document.body.append(t);setTimeout(()=>t.remove(),2800)}
-function sheet({title,body,foot="",onClose,cls=""}){const ov=document.createElement("div");ov.className="ov";ov.setAttribute("role","dialog");ov.setAttribute("aria-modal","true");
-  ov.innerHTML=`<div class="sheet ${cls}"><div class="sh"><h3>${title}</h3><button class="ibtn" data-close>${ic("x")}</button></div><div class="sb">${body}</div>${foot?`<div class="sf">${foot}</div>`:""}</div>`;
+function sheet({title,body,foot="",onClose,cls="",help=""}){const ov=document.createElement("div");ov.className="ov";ov.setAttribute("role","dialog");ov.setAttribute("aria-modal","true");if(help)ov.dataset.help=help;
+  ov.innerHTML=`<div class="sheet ${cls}"><div class="sh"><h3>${title}</h3>${help?`<button class="ibtn hq" data-a="help" aria-label="Help">?</button>`:""}<button class="ibtn" data-close aria-label="Close">${ic("x")}</button></div><div class="sb">${body}</div>${foot?`<div class="sf">${foot}</div>`:""}</div>`;
   document.body.append(ov);const close=()=>{ov.remove();onClose?.()};ov.close=close;if(matchMedia("(min-width:760px)").matches)ov.querySelector("input:not([type=file]):not([type=checkbox]):not([type=radio]),textarea")?.focus();
   ov.addEventListener("mousedown",e=>{if(e.target===ov)ov._down=1});ov.addEventListener("click",e=>{if((e.target===ov&&ov._down)||e.target.closest("[data-close]"))close();ov._down=0});return ov}
 const topSheet=()=>$$(".ov").pop();

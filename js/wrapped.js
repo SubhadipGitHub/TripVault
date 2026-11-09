@@ -203,7 +203,7 @@ function makeZip(files){
 
 /* ---------- CTA on Today / Memories ---------- */
 function wrappedCta(t){const ph=tripPhase(t),ms=tripMems(t.id).length,ready=ph.p==="after"||ms>0;
-  return`<div class="wrapcta tap" data-a="wrapped" role="button" tabindex="0"><div><div class="eyebrow">${ph.p==="after"?"Your trip is done":"Preview"}</div><div class="ttl">${ph.p==="after"?"Your Trip Wrapped is ready":"See your Trip Wrapped"}</div><div class="small muted">${ready?"Story cards from your own bookings, spend and memories. Save them as images.":"Add memories and bookings to unlock it."}</div></div><span class="go">${ic("play")}</span></div>`}
+  return`<div class="wrapcta tap" data-a="wrapped" role="button" tabindex="0"><div><div class="eyebrow">${ph.p==="after"?"Your trip is done":"Preview"}</div><div class="ttl">${ph.p==="after"?"Your Trip Wrapped is ready":"See your Trip Wrapped"}</div><div class="small muted">${ready?"Story cards to save and share":"Add memories and bookings to unlock it."}</div></div><span class="go">${ic("play")}</span></div>`}
 
 /* ---------- printable trip book ---------- */
 function printTripBook(){

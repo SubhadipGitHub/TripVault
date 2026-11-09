@@ -41,7 +41,7 @@ function settleCard(t){
   const S2=settle(t),ppl=S2.ppl;
   return`<div class="card"><div class="h">${ic("user")}<h2>Split & settle up</h2></div>
    <label>Who's sharing costs? (comma separated)</label><input data-people value="${esc(ppl.join(", "))}" placeholder="Arjun, Riya, Meera">
-   <div class="small dim" style="margin:4px 0 8px">Pick “Paid by” when you log an expense. Each expense is shared equally by everyone, unless you open it and untick who it wasn't for.</div>
+   
    ${ppl.length<2?`<div class="small muted">Add at least two people to split costs.</div>`:S2.total?`<div class="small muted">${fmtM(S2.total)} of logged expenses shared by ${ppl.length}</div>
     <div class="mt">${ppl.map(p=>`<div class="catbar"><div class="nm" style="width:auto;flex:1">${esc(p)}</div><div class="small muted">paid ${fmtM(S2.paid[p])} · share ${fmtM(S2.owe[p])}</div></div>`).join("")}</div>
     ${S2.skipped?`<div class="small" style="color:var(--warn)">${S2.skipped} expense${S2.skipped>1?"s":""} not counted: set the exchange rate above.</div>`:""}
@@ -80,14 +80,13 @@ function printExpenseReport(){
 function exportCard(t){
   if(!tripItems(t.id).some(i=>i.kind!=="doc"&&payInfo(i).cost>0))return"";
   return`<div class="card"><div class="h">${ic("download")}<h2>Export costs</h2></div>
-   <div class="small muted">Every booking and expense with its amount, ${esc(HC())} value, who paid and how. Use it for reimbursement claims or a spreadsheet.</div>
    <div class="row wrap mt"><button class="btn" data-a="expCSV">${ic("download","sm")} CSV for Excel / Sheets</button><button class="btn" data-a="expPrint">${ic("printer","sm")} Printable report with receipts</button></div></div>`}
 
 /* ---------- per-category spending limits (home currency, saved on the trip) ---------- */
 function openCatBudgets(){
   const t=curTrip();if(!t)return;const B=budgetOf(t),lim=t.catBudgets||{};
   const keys=[...new Set([...EXP_CATS,...Object.keys(B.cats),...Object.keys(lim)])];
-  const ov=sheet({title:`${ic("sliders")} Category limits`,body:`<p class="small muted">Set a ${esc(HC())} limit for any category, or leave it blank for no limit. Bars turn amber near a limit and red over it, and Trip readiness flags anything over.</p>
+  const ov=sheet({title:`${ic("sliders")} Category limits`,body:`<p class="small muted">Leave blank for no limit.</p>
    <div class="fg mt">${keys.map(k=>`<div><label>${esc(k)} <span class="dim">· ${fmtM(B.cats[k]||0)} so far</span></label><input type="number" inputmode="decimal" min="0" step="1" data-cb="${esc(k)}" value="${lim[k]||""}" placeholder="No limit"></div>`).join("")}</div>`,
    foot:`<button class="btn" data-close>Cancel</button><button class="btn pri" id="cbSv">${ic("check","sm")} Save limits</button>`});
   $("#cbSv",ov).onclick=async()=>{const n={};$$("[data-cb]",ov).forEach(i=>{const v=+i.value;if(v>0)n[i.dataset.cb]=v});t.catBudgets=n;await saveTrip(t);ov.remove();render();toast(Object.keys(n).length?"Limits saved":"Limits cleared")}}

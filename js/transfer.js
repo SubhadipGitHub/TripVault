@@ -33,7 +33,7 @@ function qrStop(){clearInterval(QRX.timer);QRX.timer=null;cancelAnimationFrame(Q
 /* ---------- send ---------- */
 function openSendQR(){
   const t=curTrip();
-  const ov=sheet({title:`${ic("share")} Send by QR`,body:`<p class="small muted">On the other phone open Trip Vault → Backup → <b>Receive by QR</b>, then point its camera at this screen.</p>
+  const ov=sheet({title:`${ic("share")} Send by QR`,body:`<p class="small muted">Other phone: Settings → Backup &amp; restore → <b>Receive by QR</b></p>
    <div class="fg mt">${Sel("What to send","qrScope",t?"trip":"all",[...(t?[["trip",`This trip · ${t.name}`]]:[]),["all",`All ${S.trips.length} trips`]],{full:1})}</div>
    <label class="row mt" style="cursor:pointer"><input type="checkbox" id="qrFiles"> <span style="font-size:12.5px;color:var(--tx)">Include attachments and photos <span class="dim">(much slower: a 1 MB photo takes several minutes)</span></span></label>
    <div class="small dim mt" id="qrEst"></div>`,
@@ -53,7 +53,7 @@ function showSendQR(frames,code,o){
    <div class="qrs"><canvas id="qrCv" aria-label="QR code frame"></canvas></div>
    <div class="row" style="justify-content:center;gap:10px;margin-top:8px"><span class="small muted" id="qrPos"></span><button class="btn xs" id="qrSpd">Slower</button><button class="btn xs" id="qrPause">Pause</button></div>
    <div class="qrcode-box"><small>Code to type on the other phone</small><b class="mono" data-copy="${code}">${code}</b></div>
-   <div class="small dim" style="text-align:center">${frames.length} frames repeat until the other phone has them all. Keep this screen bright and steady.</div>`,
+   <div class="small dim" style="text-align:center">Keep this screen bright and steady</div>`,
    foot:`<button class="btn pri" data-close>Done</button>`,onClose:qrStop});
   const cv=$("#qrCv",ov);let i=0,ms=300;const show=()=>{if(!document.body.contains(cv)){qrStop();return}qrDraw(cv,frames[i]);$("#qrPos",ov).textContent=`Frame ${i+1} of ${frames.length}`;i=(i+1)%frames.length};
   const run=()=>{clearInterval(QRX.timer);QRX.timer=frames.length>1?setInterval(show,ms):null};show();run();

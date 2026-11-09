@@ -47,12 +47,12 @@ function memCard(m){
 function openMemory(m,isNew){
   const t=S.trips.find(x=>x.id===m.tripId)||curTrip();const pend=[];let keep=[...(m.photoIds||[])],mood=m.mood||"",fav=!!m.fav;
   const prompt=PROMPTS[Math.floor(Math.random()*PROMPTS.length)];
-  const ov=sheet({title:`${ic("camera")} ${isNew?"Capture a memory":"Edit memory"}`,body:`
+  const ov=sheet({title:`${ic("camera")} ${isNew?"Capture a memory":"Edit memory"}`,help:"memory",body:`
     <div class="fg">${F("Title","title",m.title,{full:1,ph:"Sunrise at Batu Caves"})}${F("Date","date",m.date,{type:"date"})}${F("Place","place",m.place,{ph:"Kuala Lumpur"})}</div>
     <div class="mt"><label>The story</label><textarea class="prose" name="text" placeholder="${esc(prompt)}">${esc(m.text||"")}</textarea></div>
     <div class="mt"><label>How did it feel?</label><div class="moods" id="moods">${Object.entries(MOODS).map(([k,v])=>`<button type="button" data-mood="${k}" style="--mc:${v.c}" class="${k===mood?"on":""}"><i></i>${v.n}</button>`).join("")}</div></div>
     <div class="mt"><div class="row"><label style="margin:0">Photos</label><span class="sp"></span><label class="btn xs" style="margin:0">${ic("camera","sm")} Add photos<input type="file" id="mpIn" accept="image/*" multiple hidden></label></div>
-      <div class="thumbs" id="thumbs"></div><div class="small dim mt">${S.settings.optimizePhotos?"Photos are resized to 1600px on this device to save space (change in Settings).":"Photos are stored at full size."} They are never uploaded.</div></div>
+      <div class="thumbs" id="thumbs"></div></div>
     <div class="mt"><label class="row" style="cursor:pointer"><input type="checkbox" id="mFav" ${fav?"checked":""}> <span>${ic("star","sm")} Mark as a highlight (featured in your Wrapped)</span></label></div>`,
     foot:`${isNew?"":`<button class="btn bad" id="mDel" style="margin-right:auto">${ic("trash","sm")} Delete</button>`}<button class="btn" data-close>Cancel</button><button class="btn pri" id="mSv">${ic("check","sm")} Save memory</button>`});
   const paint=()=>{$("#thumbs",ov).innerHTML=keep.map(id=>`<div class="th"><img src="${photoUrl(id)}" alt=""><button type="button" data-rm="${id}" aria-label="Remove photo">${ic("x","sm")}</button></div>`).join("")+pend.map((f,i)=>`<div class="th"><img src="${URL.createObjectURL(f)}" alt=""><button type="button" data-rmp="${i}" aria-label="Remove photo">${ic("x","sm")}</button></div>`).join("")};paint();

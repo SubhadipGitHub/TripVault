@@ -35,10 +35,10 @@ const payRow=p=>`<div class="payrow fg f4" style="margin-top:6px;align-items:end
 /* Expense split: who paid, and who it's shared between (empty = everyone on the trip). */
 function splitFields(it){const t=S.trips.find(x=>x.id===it.tripId)||curTrip(),ppl=t?tripPeople(t):[];if(ppl.length<2)return"";
   const on=it.splitWith?.length?it.splitWith:ppl;
-  return`<div class="fg mt">${Sel("Paid by","paidBy",it.paidBy||"",[["","—"],...ppl.map(p=>[p,p])])}<div class="full"><label>Split between</label><div class="row wrap" style="gap:6px 14px">${ppl.map(p=>`<label class="row" style="margin:0;cursor:pointer;font-size:13px;color:var(--tx)"><input type="checkbox" name="sp:${esc(p)}" ${on.includes(p)?"checked":""}> ${esc(p)}</label>`).join("")}</div><div class="small dim" style="margin-top:4px">Untick people this wasn't for. Shares are equal among those ticked.</div></div></div>`}
+  return`<div class="fg mt">${Sel("Paid by","paidBy",it.paidBy||"",[["","—"],...ppl.map(p=>[p,p])])}<div class="full"><label>Split between</label><div class="row wrap" style="gap:6px 14px">${ppl.map(p=>`<label class="row" style="margin:0;cursor:pointer;font-size:13px;color:var(--tx)"><input type="checkbox" name="sp:${esc(p)}" ${on.includes(p)?"checked":""}> ${esc(p)}</label>`).join("")}</div></div></div>`}
 function costBlock(it){const isExp=it.kind==="expense";
   return`<div class="sep"></div><div class="fg f4">${F(isExp?"Amount":"Total cost","cost",it.cost,{type:"number",step:"0.01"})}${Sel("Currency","cur",it.cur||HC(),CURS)}${isExp?"":`<div class="full row" style="gap:6px;align-self:end"><input type="checkbox" name="refundable" ${it.refundable?"checked":""} id="rf"><label for="rf" style="margin:0">Refundable / free cancellation</label></div>`}</div>
-   ${isExp?"":`<div id="pays">${(it.payments||[]).map(payRow).join("")}</div><div class="row wrap mt"><button class="btn xs" data-addpay>${ic("plus","sm")} Payment</button><button class="btn xs ok" data-fullpay>${ic("check","sm")} Mark fully paid</button><span class="small dim">Pending = cost − paid</span></div>`}`}
+   ${isExp?"":`<div id="pays">${(it.payments||[]).map(payRow).join("")}</div><div class="row wrap mt"><button class="btn xs" data-addpay>${ic("plus","sm")} Payment</button><button class="btn xs ok" data-fullpay>${ic("check","sm")} Mark fully paid</button></div>`}`}
 function gatherPays(root){return $$(".payrow",root).map(r=>({id:uid(),status:$("[data-p=status]",r).value,amount:+$("[data-p=amount]",r).value||0,due:$("[data-p=due]",r).value,method:$("[data-p=method]",r).value})).filter(p=>p.amount>0)}
 function wirePays(root){root.addEventListener("click",e=>{
   if(e.target.closest("[data-addpay]")){const c=+$("[name=cost]",root).value||0;const paid=gatherPays(root).filter(p=>p.status==="paid").reduce((a,p)=>a+p.amount,0);$("#pays",root).insertAdjacentHTML("beforeend",payRow({status:"pending",amount:Math.max(0,c-paid)||""}))}
@@ -111,7 +111,7 @@ function openItem(it,isNew){
    <div class="sep"></div><div class="h" style="margin:0 0 4px">${ic("clip")}<h2>Attachments</h2><span class="sp"></span><label class="btn xs" style="margin:0">${ic("plus","sm")} Attach<input type="file" id="attIn" multiple hidden></label></div>
    <div id="attL">${files.map(f=>`<div class="row small" style="padding:4px 0"><span class="sp" style="word-break:break-all">${ic("file","sm")} ${esc(f.name)}</span><button class="btn xs" data-a="openFile" data-id="${f.id}">Open</button><button class="btn xs ghost" data-unlink="${f.id}">Unlink</button></div>`).join("")||`<div class="small dim">None</div>`}</div><div id="attNew" class="small muted"></div>
    <div id="dupBox"></div>`;
-  const ov=sheet({title:`${isNew?"Add":"Edit"} ${KINDS[it.kind].n.toLowerCase()}`,body,foot:`${isNew?"":`<button class="btn bad" id="delIt" style="margin-right:auto">${ic("trash","sm")} Delete</button>`}<button class="btn" data-close>Cancel</button><button class="btn pri" id="svIt">${ic("check","sm")} Save</button>`});
+  const ov=sheet({title:`${isNew?"Add":"Edit"} ${KINDS[it.kind].n.toLowerCase()}`,help:"item",body,foot:`${isNew?"":`<button class="btn bad" id="delIt" style="margin-right:auto">${ic("trash","sm")} Delete</button>`}<button class="btn" data-close>Cancel</button><button class="btn pri" id="svIt">${ic("check","sm")} Save</button>`});
   const sb=$(".sb",ov);wirePays(sb);wireAirports(sb);
   const pend=[],unlink=new Set();
   $("#attIn",ov).onchange=e=>{pend.push(...e.target.files);$("#attNew",ov).textContent=pend.length?`${pend.length} file(s) will be attached on save`:""};
@@ -155,12 +155,11 @@ function destTz(t){const h=hotels(t)[0];if(h?.tz)return h.tz;const f=tripItems(t
 /* ===================== Smart import ===================== */
 const IMP={q:[],sh:null};
 function openImport(){
-  const ov=sheet({title:`${ic("zap")} Smart import`,body:`
+  const ov=sheet({title:`${ic("zap")} Smart import`,help:"import",body:`
    <div class="row" style="margin-bottom:10px"><label style="margin:0;white-space:nowrap">Add to</label><select id="impTrip">${S.trips.map(t=>`<option value="${t.id}" ${t.id===S.cur?"selected":""}>${esc(t.name)}</option>`).join("")}<option value="__new" ${!S.cur?"selected":""}>+ New trip from this booking</option></select></div>
-   <label class="drop" id="impDrop">${ic("upload","lg")}<div style="font-weight:650;margin-top:6px">Drop tickets & confirmations</div><div class="small muted">PDF e-tickets · email (.eml) · HTML · text — several at once is fine<br>Screenshots and photos of tickets are read on this device too</div><input type="file" id="impFile" multiple accept=".pdf,.eml,.txt,.html,.htm,image/*,application/pdf,message/rfc822,text/plain,text/html" hidden></label>
-   <div class="mt"><label>…or paste the confirmation email / SMS / ticket text</label><textarea id="impText" placeholder="Paste here — IndiGo / Air India / airline e-ticket, MakeMyTrip, Booking.com, Agoda, IRCTC ERS…"></textarea></div>
-   <div class="row wrap mt small"><span class="dim">Try a sample:</span><button class="btn xs" data-smp="flight">${ic("plane","sm")} Flight</button><button class="btn xs" data-smp="hotel">${ic("bed","sm")} Hotel</button><button class="btn xs" data-smp="train">${ic("train","sm")} IRCTC</button></div>
-   <div class="note info mt">${ic("info")}<div>Everything is read on this device. You confirm every field before saving. The <b>same file</b> is blocked; the <b>same booking</b> arriving another way (email vs PDF) is flagged.</div></div>`,
+   <label class="drop" id="impDrop">${ic("upload","lg")}<div style="font-weight:650;margin-top:6px">Drop tickets & confirmations</div><div class="small muted">PDF, email, HTML, text or screenshots</div><input type="file" id="impFile" multiple accept=".pdf,.eml,.txt,.html,.htm,image/*,application/pdf,message/rfc822,text/plain,text/html" hidden></label>
+   <div class="mt"><label>…or paste the text</label><textarea id="impText" placeholder="Paste here — IndiGo / Air India / airline e-ticket, MakeMyTrip, Booking.com, Agoda, IRCTC ERS…"></textarea></div>
+   <div class="row wrap mt small"><span class="dim">Try a sample:</span><button class="btn xs" data-smp="flight">${ic("plane","sm")} Flight</button><button class="btn xs" data-smp="hotel">${ic("bed","sm")} Hotel</button><button class="btn xs" data-smp="train">${ic("train","sm")} IRCTC</button></div>`,
    foot:`<button class="btn" data-close>Cancel</button><button class="btn pri" id="impGo">${ic("sparkle","sm")} Extract</button>`});
   const dz=$("#impDrop",ov),fi=$("#impFile",ov);
   ["dragenter","dragover"].forEach(e=>dz.addEventListener(e,x=>{x.preventDefault();dz.classList.add("dg")}));["dragleave","drop"].forEach(e=>dz.addEventListener(e,x=>{x.preventDefault();dz.classList.remove("dg")}));
@@ -173,7 +172,7 @@ async function startFiles(files,tid,ov){ov?.remove();IMP.q=files.map(f=>({f,tid}
 async function nextFile(){const j=IMP.q.shift();if(!j)return;const{f,tid}=j;const idx=IMP.total-IMP.q.length;
   const buf=await f.arrayBuffer();const hash=await sha256(buf);const ex=S.files.find(x=>x.hash===hash);
   if(ex){const its=S.items.filter(i=>(ex.itemIds||[]).includes(i.id));const tr=S.trips.find(t=>t.id===ex.tripId);
-    const ov=sheet({title:`${ic("layers")} Already in your vault`,body:`<div class="note bad">${ic("alert")}<div><b>${esc(f.name)}</b> is byte-for-byte identical to <b>${esc(ex.name)}</b>, added ${new Date(ex.createdAt).toLocaleString()} to <b>${esc(tr?.name||"a trip")}</b>.<div class="small muted mt">Linked to: ${its.map(i=>esc(itemTitle(i))+" · "+esc(itemSub(i))).join("; ")||"nothing"}</div></div></div><div class="small muted mt">Not imported again, so totals and the itinerary aren't double-counted.</div>`,
+    const ov=sheet({title:`${ic("layers")} Already in your vault`,body:`<div class="note bad">${ic("alert")}<div><b>${esc(f.name)}</b> is byte-for-byte identical to <b>${esc(ex.name)}</b>, added ${new Date(ex.createdAt).toLocaleString()} to <b>${esc(tr?.name||"a trip")}</b>.<div class="small muted mt">Linked to: ${its.map(i=>esc(itemTitle(i))+" · "+esc(itemSub(i))).join("; ")||"nothing"}</div></div></div>`,
       foot:`<button class="btn" id="dOpen">${ic("eye","sm")} Open existing</button><button class="btn pri" id="dSkip">${IMP.q.length?"Skip · next file":"OK"}</button>`});
     $("#dOpen",ov).onclick=()=>openBlob(ex);$("#dSkip",ov).onclick=()=>{ov.remove();nextFile()};return}
   let r;try{r=await fileToText(new File([buf],f.name,{type:f.type}))}catch(e){r={text:"",method:"Unreadable: "+e.message}}
@@ -189,7 +188,7 @@ function openReview(R,kind){
   const segs=P.kind==="flight"?P.segments:[P];
   const found=P.kind==="flight"?P.segments.reduce((a,s)=>a+Object.values(s._f||{}).filter(Boolean).length,0):Object.values(P._f||{}).filter(Boolean).length;
   let notes="";
-  if(R.ocr)notes+=`<div class="note info">${ic("eye")}<div>Text was read from the image on this device. OCR can mix up similar characters (0/O, 1/I, 5/S), so check the PNR, dates and times.</div></div>`;
+  if(R.ocr)notes+=`<div class="note info">${ic("eye")}<div>Read from an image: check the PNR, dates and times.</div></div>`;
   else if(R.image)notes+=`<div class="note warn">${ic("eye")}<div>No text could be read from this image. It will be attached; fill in the key fields below (pick the type first).</div></div>`;
   if(R.encrypted&&!R.texts.length)notes+=`<div class="note warn">${ic("alert")}<div>This PDF is password-protected/encrypted. Open it, copy the text and paste it instead — the PDF will still be attached if you import it after.</div></div>`;
   else if(R.texts.length&&found<3)notes+=`<div class="note warn">${ic("alert")}<div>Couldn't find much. This may be a scanned/image PDF or an unusual layout — check the raw text below, switch the type, or fill in manually.</div></div>`;
@@ -246,7 +245,7 @@ function sampleText(k){const d0=addDays(todayIn("Asia/Kolkata"),40),d5=addDays(d
 function openTrips(){const rows=S.trips.slice().sort((a,b)=>(a.start||"9").localeCompare(b.start||"9")).map(t=>{const ph=tripPhase(t);const n=tripItems(t.id).length;
   return`<div class="li tap" data-a="selTrip" data-id="${t.id}">${kic(isIntlTrip(t)?"hotel":"train")}<div class="b"><div class="t">${esc(t.name)} ${t.id===S.cur?pill("current","info"):""}</div><div class="d">${tripMeta(t)} · ${n} entries</div></div><div class="r small">${ph.p==="before"?`in ${ph.days}d`:ph.p==="during"?`<span style="color:var(--ok)">ongoing</span>`:ph.p==="after"?"done":""}</div></div>`}).join("");
   sheet({title:"Your trips",body:rows||`<div class="empty">No trips yet.</div>`,foot:`<button class="btn" data-a="loadSample">${ic("sparkle","sm")} Sample</button><button class="btn pri" data-a="newTrip">${ic("plus","sm")} New trip</button>`})}
-function openTrip(t,isNew){const ov=sheet({title:isNew?"New trip":"Trip settings",body:`<div class="fg">
+function openTrip(t,isNew){const ov=sheet({title:isNew?"New trip":"Trip settings",help:"trip",body:`<div class="fg">
   ${F("Trip name","name",t.name,{full:1,ph:"Honeymoon · Malaysia"})}${F("Destination","dest",t.dest,{full:1,ph:"Kuala Lumpur, Langkawi"})}
   <div class="full"><label>Who's going</label><div id="crewPk"></div></div>
   ${F("Start","start",t.start,{type:"date"})}${F("End","end",t.end,{type:"date"})}
