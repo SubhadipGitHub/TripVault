@@ -20,6 +20,7 @@ const A={
   avPoke:()=>AV.poke(),
   acct:()=>openAcctMenu(),gsHub:()=>openAcctMenu(),profile:()=>{$$(".ov").forEach(o=>o.remove());openProfile()},about:()=>openAbout(),
   privacyNotice:()=>openNotice(),help:el=>openHelp(el?.dataset?.k||el?.closest?.(".ov")?.dataset.help||""),
+  reloadApp:()=>location.reload(),updClose:()=>$("#updBar")?.remove(),addDevice:()=>gsAddDevice().catch(e=>{if(e.code!=="consent")toast(esc(e.message),"bad")}),getTrips:()=>gsKcOffer(true).catch(e=>{if(e.code!=="consent")toast(esc(e.message),"bad")}),
   places:()=>openPlaces(),phrases:()=>openPhrases(),translate:()=>openTranslate(),offMap:()=>openOfflineMap(),
   plMenu:el=>{const p=placeFrom(el.dataset.p);if(p)openPlaceMenu(p)},plDrv:el=>{const p=placeFrom(el.dataset.p);if(p)openDriver(p)},plGo:el=>{const p=placeFrom(el.dataset.p);if(p)plGo(p)},
   plCab:el=>{const p=placeFrom(el.dataset.p);if(p)plCab(p)},plTr:el=>{const p=placeFrom(el.dataset.p);if(p)plTr(p)},
@@ -142,4 +143,10 @@ async function consumeLaunch(){
 setInterval(()=>{if(S.cur&&(S.view==="today"||S.view==="plan")&&!$(".ov")&&!SEARCH.ov&&!WR.ov&&!Vault.locked&&document.visibilityState==="visible"&&!document.activeElement?.matches("input,select,textarea"))render()},60000);
 document.addEventListener("toggle",e=>{if(e.target.matches?.(".upi-ids"))S.upiOpen=e.target.open},true);
 addEventListener("hashchange",()=>{if(location.hash.startsWith("#join="))consumeLaunch()}); // invite opened while Trip Vault is already open
-if("serviceWorker"in navigator&&location.protocol.startsWith("http"))addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+/* Updates: check when the app comes back to the front; when a new version takes over an open page, offer a reload. */
+if("serviceWorker"in navigator&&location.protocol.startsWith("http")){
+  let had=!!navigator.serviceWorker.controller;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{if(!had){had=true;return}updateBar()});
+  addEventListener("load",()=>navigator.serviceWorker.register("sw.js").then(r=>{document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")r.update().catch(()=>{})})}).catch(()=>{}))}
+function updateBar(){if($("#updBar"))return;const d=document.createElement("div");d.id="updBar";d.className="updbar";d.setAttribute("role","status");
+  d.innerHTML=`${ic("sparkle","sm")}<span>Trip Vault was updated</span><button class="btn xs pri" data-a="reloadApp">Reload</button><button class="ibtn" data-a="updClose" aria-label="Later">${ic("x","sm")}</button>`;document.body.append(d)}

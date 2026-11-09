@@ -240,7 +240,7 @@ function gsSumMsg(ch){if(!ch?.length)return"";const who=[...new Set(ch.map(c=>c.
 async function gsSyncNow(){await GAuth.token(true);await gsMe();const L=gsLinked();
   const ok=await Promise.all(L.map(t=>syncTrip(t,{interactive:true,quiet:true})));if(!L.length||ok.some(x=>!x))return;
   syncToast(gsSumMsg(L.flatMap(t=>GS.lastCh[t.id]||[]))||"Synced · up to date")}
-function gsSyncAll(o={}){if(!gsReady()||Vault.locked||!S.settings)return;if(S.meta.gsAll&&gsOn())gsAllStart();for(const t of gsLinked())syncTrip(t,o)}
+function gsSyncAll(o={}){if(!gsReady()||Vault.locked||!S.settings)return;if(S.meta.gsAll&&gsOn())gsAllStart();if(S.meta.kc&&gsOn())kcPull();for(const t of gsLinked())syncTrip(t,o)}
 /* "All trips" mode: any trip not yet in Drive starts syncing (one at a time). */
 let _gsAllRun=null;
 function gsAllStart(){if(_gsAllRun)return _gsAllRun;_gsAllRun=(async()=>{let n=0;
@@ -298,18 +298,18 @@ async function gsUnlink(t){if(t.sync?.fileId){(S.meta.kcGone||={})[t.id]=Date.no
 /* ---------- joining ---------- */
 function gsParseInvite(s){s=String(s||"").trim();const m=s.match(/join=([A-Za-z0-9_-]{10,})\.([A-Za-z0-9-]{16,})/)||s.match(/^([A-Za-z0-9_-]{20,})[\s.:]+([A-Za-z0-9-]{16,})$/);
   return m&&qrNorm(m[2]).length===20?{fileId:m[1],code:qrNorm(m[2]).replace(/(.{4})(?=.)/g,"$1-")}:null}
-async function gsJoin(inv){
-  await GAuth.token(true);await gsMe();let bytes;
-  try{bytes=await GDrive.read(inv.fileId)}catch(e){if(e.status!==404&&e.status!==403)throw e;
+async function gsJoin(inv,o={}){
+  await GAuth.token(!o.bg);await gsMe();let bytes;
+  try{bytes=await GDrive.read(inv.fileId)}catch(e){if(e.status!==404&&e.status!==403||o.bg&&!o.picker)throw e;
     toast("Choose the shared trip file in the Google window","info");const id=await GPicker.pick();if(!id)throw gsErr("No trip file chosen");inv.fileId=id;bytes=await GDrive.read(id)}
   const R0=await gsOpen(bytes,inv.code);if(R0.kind!=="shared-trip")throw gsErr("That isn't a Trip Vault shared trip");
   const R=cleanBundle(R0);if(!R.trip?.id)throw gsErr("That shared trip is damaged");
   let t=S.trips.find(x=>x.id===R.trip.id);const relink=!!(t?.sync?.fileId&&t.sync.fileId===inv.fileId);
   if(!t){t={...R.trip};S.trips.push(t)}
   t.sync={fileId:inv.fileId,code:inv.code,role:(t.sync?.role==="owner"&&t.sync.fileId===inv.fileId)||(R.owner&&R.owner===GS.email)?"owner":"member",owner:R.owner||"",members:R.members||[],tomb:t.sync?.tomb||[],keyring:R.keyring||[],lastSync:t.sync?.lastSync||0,me:GS.email,recent:t.sync?.recent||[]};
-  await DB.put("trips",t);S.cur=t.id;S.meta.cur=t.id;S.day=null;S.calM=null;saveMeta();
+  await DB.put("trips",t);if(!o.bg){S.cur=t.id;S.meta.cur=t.id;S.day=null;S.calM=null}saveMeta();
   if(S.meta.kcGone?.[t.id]){delete S.meta.kcGone[t.id];saveMeta()}
-  await syncTrip(t,{interactive:true,quiet:true});kcPushSoon();return{t,relink}}
+  await syncTrip(t,{interactive:!o.bg,quiet:true});kcPushSoon();return{t,relink}}
 
 /* ---------- undo a bad sync: bring back an earlier version of the trip file ----------
    Drive keeps earlier versions of the trip file (for binary files, about 30 days or 100 versions).
@@ -455,8 +455,8 @@ function gsHubBody(){
     ${on?"":`<div class="small dim" style="margin:6px 0 2px">Connect to choose trips</div>`}
     ${S.trips.length?S.trips.slice().sort((a,b)=>(a.start||"").localeCompare(b.start||"")).map(t=>gsTripRow(t,on,all)).join(""):`<div class="small muted">No trips yet.</div>`}
     <div class="h mt">${ic("phone")}<h2>Your other devices</h2></div>
-    <div class="row wrap" style="gap:6px">${on?(S.meta.kc?`<button class="btn" id="gsKcOpen">${ic("download","sm")} Open trips from my other devices</button><button class="btn ghost" id="gsKcPass">${ic("key","sm")} Change sync passphrase</button>`
-      :`<button class="btn" id="gsKcSet">${ic("key","sm")} Set up my other devices</button>`):""}</div>
+    ${(GS.kcAvail||[]).length?GS.kcAvail.map(x=>`<div class="li"><div class="b"><div class="t">${esc(x.name||"Trip")}</div><div class="d">On your other device</div></div><button class="btn xs" data-kcopen="${esc(x.id)}">${ic("download","sm")} Open</button></div>`).join(""):""}
+    <div class="row wrap" style="gap:6px">${on?`<button class="btn" id="gsAddDev">${ic("phone","sm")} Add a device</button><button class="btn" id="gsGetTrips">${ic("download","sm")} Get trips from my other device</button><button class="btn ghost" id="gsKcPass">${ic("key","sm")} Sync passphrase</button>`:""}</div>
     <div class="h mt">${ic("clock")}<h2>Recent changes from others</h2></div>
     ${rec.length?rec.map(c=>`<div class="li gsrec">${gsAv(c.who,"sm")}<div class="b"><div class="t" style="font-weight:500"><b>${esc(gsName(c.who))}</b> ${esc(c.verb)} ${esc(c.what)}</div><div class="d">${esc(c.tn)} · ${gsAgo(c.at)}</div></div></div>`).join(""):`<div class="small muted">Nothing yet</div>`}`}
 function openHub(){openSettings("sync")}
@@ -470,8 +470,9 @@ function gsHubWire(pane,close){
     else if(b.id==="gsHubSync")await run(gsSyncNow);
     else if(b.id==="gsHubJoin"){close();openJoin()}
     else if(b.dataset.gsmode)await run(()=>gsSetMode(b.dataset.gsmode));
-    else if(b.id==="gsKcSet")await run(()=>gsKcSetup());
-    else if(b.id==="gsKcOpen")await run(()=>gsKcOffer(true));
+    else if(b.id==="gsAddDev"){close();await run(gsAddDevice)}
+    else if(b.id==="gsGetTrips"){close();await run(()=>gsKcOffer(true))}
+    else if(b.dataset.kcopen){const x=(GS.kcAvail||[]).find(y=>y.id===b.dataset.kcopen);if(x)await run(async()=>{await kcOpenTrips([x]);GS.kcAvail=GS.kcAvail.filter(y=>y!==x)})}
     else if(b.id==="gsKcPass")await run(()=>gsKcChangePass())});
   pane.addEventListener("change",async e=>{const c=e.target.closest("[data-gstrip]");if(!c)return;const t=S.trips.find(x=>x.id===c.dataset.gstrip);if(!t)return;
     c.disabled=true;try{if(c.checked){await gsStartShare(t,[]);syncToast(`“${esc(t.name)}” now syncs to your Drive`)}else if(!(await gsStopSync(t)))c.checked=true}
@@ -535,42 +536,113 @@ const kcClean=o=>cList(o?.trips,x=>({id:cStr(x.id,80),name:cStr(x.name,200),file
 async function kcAskPass(title,isNew){return isNew?promptNewPass({title,ok:"Save",note:"<b>Only you know it; there is no reset.</b> Your trip keys in Drive are locked with it, so Google can't read them. If you forget it, your trips are still on this device and can be opened elsewhere with their invite links."}):new Promise(res=>{let v=null;
   const ov=sheet({title,onClose:()=>res(v),body:`<label for="kcP">Sync passphrase</label><input id="kcP" type="password" autocomplete="current-password"><div class="small dim mt">The one you set when you first saved your trip keys.</div>`,foot:`<button class="btn" data-close>Cancel</button><button class="btn pri" id="kcGo">${ic("unlock","sm")} Unlock</button>`});
   const go=()=>{v=$("#kcP",ov).value;ov.remove();res(v)};$("#kcGo",ov).onclick=go;$("#kcP",ov).onkeydown=e=>{if(e.key==="Enter")go()};setTimeout(()=>$("#kcP",ov)?.focus(),50)})}
-async function gsKcSetup(){await GAuth.token(true);await gsMe();
-  const found=(await GDrive.list("keys"))[0];if(found){S.meta.kc={fileId:found};await gsKcOffer(true);return}
-  const pass=await kcAskPass("Choose a sync passphrase",true);if(!pass)return;
-  const raw=crypto.getRandomValues(new Uint8Array(32)),salt=crypto.getRandomValues(new Uint8Array(16)),hdr=new Uint8Array(76);hdr.set(salt);hdr.set(new Uint8Array(await Crypt.enc(await kcPassKey(pass,salt),raw)),16);
-  const K=await kcImport(raw),r=await GDrive.create("Trip Vault keys",await kcSealFile(hdr,K,{app:"TripVault",kind:"keys",v:1,trips:kcEntries()}),{tv:"keys"});
-  S.meta.kc={fileId:r.id,sig:""};GS.kc={raw,K};await kcStore(raw);S.meta.kc.sig=kcSig();await saveMeta();
-  syncToast("Trip keys saved to your Drive. Use the sync passphrase on your other devices")}
-async function gsKcChangePass(){if(!S.meta.kc)return;await GAuth.token(true);const bytes=await GDrive.read(S.meta.kc.fileId),f=await kcOpenFile(bytes,null).catch(async e=>{if(e.code!=="kcpass")throw e;const p=await kcAskPass("Current sync passphrase");if(p==null)return null;return kcOpenFile(bytes,p)});if(!f)return;
+async function gsKcChangePass(){await GAuth.token(true);await gsMe();if(!(await kcEnsure())){await gsKcPassOpen();return}const bytes=await GDrive.read(S.meta.kc.fileId),f=await kcOpenFile(bytes,null).catch(async e=>{if(e.code!=="kcpass")throw e;const p=await kcAskPass("Current sync passphrase");if(p==null)return null;return kcOpenFile(bytes,p)});if(!f)return;
   const pass=await kcAskPass("New sync passphrase",true);if(!pass)return;const salt=crypto.getRandomValues(new Uint8Array(16)),hdr=new Uint8Array(76);hdr.set(salt);hdr.set(new Uint8Array(await Crypt.enc(await kcPassKey(pass,salt),f.raw)),16);
-  await GDrive.write(S.meta.kc.fileId,await kcSealFile(hdr,f.K,f.obj));toast("Sync passphrase changed")}
+  await GDrive.write(S.meta.kc.fileId,await kcSealFile(hdr,f.K,f.obj));toast("Sync passphrase set")}
 const kcSig=()=>gsStable([kcEntries().map(({at,...x})=>x).sort((a,b)=>a.id<b.id?-1:1),S.meta.kcGone||{}]);
 let _kcT=null;function kcPushSoon(){if(!S.meta.kc||!gsOn())return;clearTimeout(_kcT);_kcT=setTimeout(()=>kcPush().catch(e=>console.warn("Trip Vault: trip keys not saved yet",e.message)),1500)}
 async function kcPush(){const m=S.meta.kc;if(!m||!gsOn()||kcSig()===m.sig)return;if(!(await kcRaw()))return;
   const bytes=await GDrive.read(m.fileId),f=await kcOpenFile(bytes,null),map=new Map(kcClean(f.obj).map(x=>[x.id,x]));
   for(const e of kcEntries())map.set(e.id,e);for(const[id,at]of Object.entries(S.meta.kcGone||{}))if(!gsLinked().some(t=>t.id===id))map.set(id,{id,gone:true,at,fileId:map.get(id)?.fileId||"xxxxxxxxxx",code:""});
   await GDrive.write(m.fileId,await kcSealFile(f.hdr,f.K,{app:"TripVault",kind:"keys",v:1,trips:[...map.values()]}));m.sig=kcSig();await saveMeta()}
-/* After connecting (or from the Sync pane): if your Drive holds trip keys, offer this device the trips it doesn't have. */
+/* After connecting (or from the Sync pane): open your other devices' trips here.
+   With this device's keychain key: offer the trips it doesn't have. Without: pairing code (or the old passphrase). */
 async function gsKcOffer(force){
-  let id=S.meta.kc?.fileId;if(!id){id=(await GDrive.list("keys"))[0];if(!id){if(force)await gsKcSetup();return}}
-  const bytes=await GDrive.read(id);let f;
-  try{f=await kcOpenFile(bytes,null)}catch(e){if(e.code!=="kcpass")throw e;
-    for(;;){const p=await kcAskPass("Open your trips from your other devices");if(p==null)return;try{f=await kcOpenFile(bytes,p);break}catch(e2){if(e2.code!=="kcpass")throw e2;toast(esc(e2.message),"bad")}}}
-  S.meta.kc={...(S.meta.kc||{}),fileId:id};GS.kc={raw:f.raw,K:f.K};await kcStore(f.raw);
+  const id=S.meta.kc?.fileId;
+  if(!id||!(await kcRaw())){const mine=(await GDrive.list("trip")).filter(fid=>!gsLinked().some(t=>t.sync.fileId===fid));
+    if(mine.length||force)await gsGetTrips(mine.length);return}
+  const f=await kcOpenFile(await GDrive.read(id),null);
   const have=new Set(gsLinked().map(t=>t.id)),list=kcClean(f.obj).filter(x=>!x.gone&&!have.has(x.id));
   if(!list.length){if(force)syncToast("This device already has all your synced trips");kcPushSoon();return}
-  const ov=sheet({title:`${ic("download")} Open your trips on this device`,body:`<p class="small muted" style="margin:0 0 6px">These trips sync from your other devices. Choose the ones to open here.</p>
-     <label class="row" style="cursor:pointer;margin:4px 0 8px"><input type="checkbox" id="kcAll" checked> <b class="small">All trips</b></label>
+  await kcOpenList(list)}
+/* The old way in: a keychain locked with a sync passphrase. */
+async function gsKcPassOpen(){const id=(await GDrive.list("keys"))[0];if(!id){toast("No sync passphrase was set. Use a pairing code instead","info");return}
+  const bytes=await GDrive.read(id);let f;
+  for(;;){const p=await kcAskPass("Open your trips from your other devices");if(p==null)return;try{f=await kcOpenFile(bytes,p);break}catch(e){if(e.code!=="kcpass")throw e;toast(esc(e.message),"bad")}}
+  S.meta.kc={fileId:id,sig:""};GS.kc={raw:f.raw,K:f.K};await kcStore(f.raw);
+  const have=new Set(gsLinked().map(t=>t.id)),list=kcClean(f.obj).filter(x=>!x.gone&&!have.has(x.id));
+  if(list.length)await kcOpenList(list);else syncToast("This device already has all your synced trips")}
+/* Choose which of the offered trips to open here, then open them in the background (current trip unchanged). */
+function kcOpenList(list){return new Promise(res=>{
+  const ov=sheet({title:`${ic("download")} Open your trips here`,onClose:()=>res(0),body:`<label class="row" style="cursor:pointer;margin:0 0 8px"><input type="checkbox" id="kcAll" checked> <b class="small">All trips</b></label>
      ${list.map(x=>`<label class="li" style="cursor:pointer"><input type="checkbox" data-kc="${esc(x.id)}" checked><div class="b"><div class="t">${esc(x.name||"Trip")}</div><div class="d">${x.role==="owner"?"Yours":"Shared with you"}</div></div></label>`).join("")}`,
     foot:`<button class="btn" data-close>Not now</button><button class="btn pri" id="kcGo">${ic("download","sm")} Open</button>`});
   $("#kcAll",ov).onchange=e=>$$("[data-kc]",ov).forEach(c=>c.checked=e.target.checked);
   $$("[data-kc]",ov).forEach(c=>c.onchange=()=>{$("#kcAll",ov).checked=$$("[data-kc]",ov).every(x=>x.checked)});
-  $("#kcGo",ov).onclick=async e=>{const b=e.currentTarget,pick=list.filter(x=>$(`[data-kc="${x.id}"]`,ov)?.checked);if(!pick.length){ov.remove();return}
-    b.disabled=true;b.innerHTML=`${ic("clock","sm")} Opening…`;let ok=0,bad=[];
-    for(const x of pick){try{const{t}=await gsJoin({fileId:x.fileId,code:x.code});t.sync.keyring=[...new Set([...(t.sync.keyring||[]),...x.keyring])].slice(0,20);await DB.put("trips",t);ok++}catch(err){bad.push(`${x.name}: ${err.message}`)}}
-    ov.remove();render();gsPaint();
-    if(bad.length)toast(esc(`Opened ${ok}; couldn't open ${bad.length}: ${bad[0]}`),"bad");else syncToast(`Opened ${ok} trip${ok===1?"":"s"} from your other devices`)}}
+  $("#kcGo",ov).onclick=async e=>{const b=e.currentTarget,pick=list.filter(x=>$(`[data-kc="${x.id}"]`,ov)?.checked);if(!pick.length){ov.remove();res(0);return}
+    b.disabled=true;b.innerHTML=`${ic("clock","sm")} Opening…`;const n=await kcOpenTrips(pick);ov.remove();res(n)}})}
+async function kcOpenTrips(pick,quietOk){let ok=0;const bad=[];
+  for(const x of pick){try{const{t}=await gsJoin({fileId:x.fileId,code:x.code},{bg:true,picker:!quietOk});t.sync.keyring=[...new Set([...(t.sync.keyring||[]),...x.keyring])].slice(0,20);await DB.put("trips",t);ok++}catch(err){bad.push(`${x.name}: ${err.message}`)}}
+  if(!S.cur&&S.trips[0]){S.cur=S.trips[0].id;S.meta.cur=S.cur;saveMeta()}render();gsPaint();
+  if(bad.length)toast(esc(`Opened ${ok}; couldn't open ${bad.length}: ${bad[0]}`),"bad");else if(!quietOk)syncToast(`Opened ${ok} trip${ok===1?"":"s"} from your other device`);return ok}
+
+/* ---------- pairing a second device with a one-time code ----------
+   The device with the trips writes a short-lived "Trip Vault pairing" file to your Drive, encrypted with a key
+   made from a one-time code it shows you. The new device (same Google account) reads it with the code you type.
+   It carries each synced trip's file and code plus the keychain key, so later trips flow to both. */
+const GS_PAIR=[84,86,80,49],PAIR_TTL=10*60e3; // "TVP1"
+const pairCode=()=>gsNewCode().slice(0,14);
+async function pairSeal(code,obj){const salt=crypto.getRandomValues(new Uint8Array(16)),raw=new TextEncoder().encode(JSON.stringify(obj)),z=await gz(raw,true);
+  const ct=new Uint8Array(await Crypt.enc(await Crypt.derive(qrNorm(code),salt,200000),z||raw)),o=new Uint8Array(21+ct.length);o.set(GS_PAIR);o[4]=z?1:0;o.set(salt,5);o.set(ct,21);return o}
+async function pairOpen(bytes,code){if(!GS_PAIR.every((v,i)=>bytes[i]===v))return null;let p;
+  try{p=new Uint8Array(await Crypt.dec(await Crypt.derive(qrNorm(code),bytes.slice(5,21),200000),bytes.slice(21).buffer))}catch(e){return null}
+  return JSON.parse(new TextDecoder().decode(bytes[4]&1?await gz(p,false):p))}
+/* A keychain this device can open by itself (made here, no passphrase) so later trips flow to paired devices. */
+async function kcEnsure(){if(S.meta.kc?.fileId&&await kcRaw())return true;if((await GDrive.list("keys"))[0])return false;
+  const raw=crypto.getRandomValues(new Uint8Array(32)),salt=crypto.getRandomValues(new Uint8Array(16)),hdr=new Uint8Array(76);hdr.set(salt);
+  hdr.set(new Uint8Array(await Crypt.enc(await Crypt.derive(b64e8(crypto.getRandomValues(new Uint8Array(24))),salt,1000),raw)),16); // wrapped with a throwaway secret: only devices holding K open it
+  const K=await kcImport(raw),r=await GDrive.create("Trip Vault keys",await kcSealFile(hdr,K,{app:"TripVault",kind:"keys",v:1,trips:kcEntries()}),{tv:"keys"});
+  S.meta.kc={fileId:r.id,sig:""};GS.kc={raw,K};await kcStore(raw);S.meta.kc.sig=kcSig();await saveMeta();return true}
+/* On the device that has the trips: show a code for the other device to type. */
+async function gsAddDevice(){await GAuth.token(true);await gsMe();
+  const local=S.trips.filter(t=>!t.sync?.fileId);
+  if(local.length){const v=await gsChoose(`${ic("share")} Sync ${local.length} more trip${local.length>1?"s":""} first?`,`<div class="small muted">On this device only: ${local.slice(0,5).map(t=>esc(t.name)).join(", ")}${local.length>5?"…":""}</div>`,
+      [["skip","Only synced trips",""],["sync",`Sync ${local.length===1?"it":"them"} too`,"pri"]]);if(!v)return;
+    if(v==="sync")for(const t of local){try{await gsStartShare(t,[])}catch(e){if(e.code==="consent")return;toast(esc(e.message),"bad")}}}
+  if(!gsLinked().length){toast("Sync a trip first, then add your other device","info");return}
+  await kcEnsure();const raw=await kcRaw(),code=pairCode(),exp=Date.now()+PAIR_TTL;
+  const r=await GDrive.create("Trip Vault pairing",await pairSeal(code,{app:"TripVault",kind:"pair",v:1,exp,trips:kcEntries(),k:raw?b64e8(raw):"",kcId:S.meta.kc?.fileId||""}),{tv:"pair"});
+  let gone=false;const drop=()=>{if(gone)return;gone=true;clearInterval(tick);GDrive.del(r.id).catch(()=>{})};
+  const ov=sheet({title:`${ic("phone")} Add a device`,help:"pair",onClose:drop,body:`<div class="small muted">On your other device: sign in with ${esc(GS.email)}, open the account menu → <b>Get trips from my other device</b>, and type:</div>
+     <div class="paircode mono" data-copy="${code}" aria-label="Pairing code">${code}</div><div class="small dim" id="pairT" style="text-align:center"></div>`,foot:`<span class="sp"></span><button class="btn pri" data-close>Done</button>`});
+  const tick=setInterval(async()=>{const left=exp-Date.now(),el=$("#pairT",ov);if(!ov.isConnected||!el){drop();return}
+    if(left<=0){drop();el.textContent="This code has expired. Close and add the device again.";$(".paircode",ov).style.opacity=".35";return}
+    el.textContent=`Expires in ${Math.floor(left/60e3)}:${String(Math.floor(left%60e3/1e3)).padStart(2,"0")}`;
+    if(Math.floor(left/1e3)%4===0){try{await GDrive.meta(r.id)}catch(e){if(e.status===404&&!gone){gone=true;clearInterval(tick);el.innerHTML=`<b style="color:var(--ok)">${ic("check","sm")} Done: your other device has your trips</b>`}}}},1000)}
+/* On the new device: type the code from the other device. */
+let _pairFails=0,_pairWait=0;
+async function gsGetTrips(n){await GAuth.token(true);await gsMe();
+  const ov=sheet({title:`${ic("download")} Get trips from my other device`,help:"pair",body:`${n?`<div class="note info">${ic("share")}<div><b>${n} trip${n>1?"s are":" is"} synced from your other device.</b></div></div>`:""}
+     <div class="small muted mt">On that device: account menu → <b>Add a device</b>. Then type the code it shows.</div>
+     <label class="mt" for="pairIn">Code</label><input id="pairIn" class="mono" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-EFGH-JKMN" maxlength="20">
+     <div class="small mt"><a href="#" id="pairPass">I set a sync passphrase</a></div>`,
+    foot:`<button class="btn" data-close>Not now</button><button class="btn pri" id="pairGo">${ic("download","sm")} Get my trips</button>`});
+  $("#pairPass",ov).onclick=async e=>{e.preventDefault();ov.remove();await gsKcPassOpen()};
+  const go=async()=>{const b=$("#pairGo",ov),code=$("#pairIn",ov).value;
+    if(Date.now()<_pairWait){toast("Too many tries. Wait a moment and check the code","bad");return}
+    if(qrNorm(code).length!==12){toast("The code has 12 letters and numbers","bad");return}
+    b.disabled=true;b.innerHTML=`${ic("clock","sm")} Checking…`;
+    try{let found=null,fid=null;for(const id of await GDrive.list("pair")){const o=await pairOpen(await GDrive.read(id),code);if(o){found=o;fid=id;break}}
+      if(!found){if(++_pairFails>=5){_pairFails=0;_pairWait=Date.now()+30e3}toast("That code doesn't match. Check it on your other device","bad");return}
+      _pairFails=0;if(!(+found.exp>Date.now())){GDrive.del(fid).catch(()=>{});toast("This code has expired. Make a new one on your other device","bad");return}
+      const list=kcClean(found).filter(x=>!x.gone),have=new Set(gsLinked().map(t=>t.id));
+      if(found.k&&/^[\w-]{10,200}$/.test(found.kcId||"")){const raw=b64d8(found.k);if(raw.length===32){S.meta.kc={fileId:found.kcId,sig:""};GS.kc={raw,K:await kcImport(raw)};await kcStore(raw);await saveMeta()}}
+      await GDrive.del(fid).catch(()=>{});ov.remove();
+      const todo=list.filter(x=>!have.has(x.id));if(!todo.length){syncToast("This device already has all your synced trips");return}
+      await kcOpenList(todo)}
+    catch(err){if(err.code!=="consent")toast(esc(err.message||String(err)),"bad")}
+    finally{if(b.isConnected){b.disabled=false;b.innerHTML=`${ic("download","sm")} Get my trips`}}};
+  $("#pairGo",ov).onclick=go;$("#pairIn",ov).onkeydown=e=>{if(e.key==="Enter")go()};setTimeout(()=>$("#pairIn",ov)?.focus(),60)}
+/* Each sync: pick up trips your other devices started syncing (only when the keychain changed). */
+let _kcPulling=false;
+async function kcPull(){const m=S.meta.kc;if(!m?.fileId||!gsOn()||_kcPulling)return;if(!(await kcRaw()))return;_kcPulling=true;
+  try{const v=(await GDrive.meta(m.fileId)).version;if(v===m.ver&&GS.kcAvail)return;
+    const f=await kcOpenFile(await GDrive.read(m.fileId),null);m.ver=v;await saveMeta();
+    const have=new Set(gsLinked().map(t=>t.id)),skip=S.meta.kcGone||{},fresh=kcClean(f.obj).filter(x=>!x.gone&&!have.has(x.id)&&!skip[x.id]);
+    GS.kcAvail=fresh;if(!fresh.length)return;
+    if(S.meta.gsAll){const n=await kcOpenTrips(fresh,true);if(n)syncToast(n===1?`“${esc(fresh[0].name)}” added from your other device`:`${n} trips added from your other device`)}
+    else{const nw=fresh.filter(x=>!(GS.kcTold||=new Set()).has(x.id));nw.forEach(x=>GS.kcTold.add(x.id));if(nw.length)syncToast(`${nw.length===1?`“${esc(nw[0].name)}” is`:`${nw.length} trips are`} on your other device · open in Settings → Sync`,"info")}}
+  catch(e){console.warn("Trip Vault: couldn't read your trip keys",e.message)}finally{_kcPulling=false;gsPaint()}}
 
 /* ---------- the sync toast: its own spot under the account button, so it never replaces action toasts ---------- */
 function syncToast(msg,kind="ok"){let el=$("#stoast");if(!el){el=document.createElement("div");el.id="stoast";el.setAttribute("role","status");el.setAttribute("aria-live","polite");document.body.append(el)}
