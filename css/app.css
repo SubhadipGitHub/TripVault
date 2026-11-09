@@ -614,3 +614,43 @@ span.avsnap{display:contents}
 .bym+.bym{margin-left:3px}
 .li[data-by],.ev[data-by]{box-shadow:inset 3px 0 0 var(--bc);padding-left:10px;background:linear-gradient(90deg,color-mix(in srgb,var(--bc) 9%,transparent),transparent 45%)}
 .mem[data-by]{box-shadow:0 6px 18px rgba(0,0,0,.32),0 0 0 2px var(--bc)}
+
+/* Account button: always the last thing in the header; offline profile until Google is connected */
+.gspill[data-s=off] .gsdot{background:var(--tx3)}
+.gspill[data-s=off] .gsw{color:var(--tx2)}
+.gspill[aria-expanded=true]{border-color:var(--acc)}
+/* account menu: a popover under the button; a bottom sheet on phones */
+.pmov{position:fixed;inset:0;z-index:80}
+.pmenu{position:fixed;width:300px;max-width:calc(100vw - 16px);background:var(--card2);border:1px solid var(--line2);border-radius:16px;box-shadow:var(--sh);padding:8px;animation:su .18s}
+.pm-h{display:flex;gap:11px;align-items:center;padding:8px 8px 10px;border-bottom:1px solid var(--line)}
+.pm-h .b{min-width:0;flex:1}.pm-h .t{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pm-h .small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pm-st{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--tx2);margin-top:3px}.pm-st .gsdot{position:static;border:0;width:8px;height:8px;flex:none}
+.pm-st[data-s=paused] .gsdot,.pm-st[data-s=warn] .gsdot{background:var(--warn)}.pm-st[data-s=bad] .gsdot{background:var(--bad)}.pm-st[data-s=syncing] .gsdot{background:var(--acc)}
+.pm-l{display:flex;flex-direction:column;padding-top:6px}
+.pm-i{display:flex;gap:11px;align-items:center;text-align:left;padding:9px 10px;border-radius:11px;color:var(--tx);width:100%}
+.pm-i:hover,.pm-i:focus-visible{background:var(--card);outline:none}
+.pm-i>.ic{color:var(--tx3);flex:none}.pm-i b{display:block;font-weight:600;font-size:13.5px}.pm-i small{display:block;color:var(--tx3);font-size:11.5px;margin-top:1px}
+.pm-i.hi>.ic{color:var(--acc)}.pm-i.hi b{color:var(--acc)}
+@media(max-width:560px){.pmov{background:rgba(0,0,0,.35)}.pmenu{left:0;right:0;bottom:0;width:auto;max-width:none;border-radius:20px 20px 0 0;padding:10px 10px calc(14px + var(--safe-b));animation:sheetUp .22s}}
+@keyframes sheetUp{from{transform:translateY(30px);opacity:0}}
+/* sync toast: its own spot under the account button, so it never replaces the action toast at the bottom */
+.stoast{position:fixed;top:calc(64px + var(--safe-t));right:12px;z-index:85;background:var(--card2);border:1px solid color-mix(in srgb,var(--ok) 40%,var(--line2));color:var(--tx);padding:9px 13px;border-radius:13px;box-shadow:var(--sh);font-size:12.5px;display:flex;gap:8px;align-items:center;max-width:min(360px,calc(100vw - 24px));opacity:0;transform:translateY(-6px);pointer-events:none;transition:opacity .2s,transform .2s}
+.stoast.on{opacity:1;transform:none;pointer-events:auto}
+.stoast>.ic{color:var(--ok);flex:none}.stoast.bad{border-color:color-mix(in srgb,var(--bad) 45%,var(--line2))}.stoast.bad>.ic{color:var(--bad)}.stoast.info>.ic{color:var(--tx2)}
+@media(max-width:560px){.stoast{left:12px;right:12px;max-width:none;justify-content:center}}
+/* settings tabs */
+.sheet.settings{max-width:760px}
+.stabs{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;margin:-4px -4px 12px;padding:4px;border-bottom:1px solid var(--line);position:sticky;top:-14px;background:var(--bg2,var(--card2));z-index:2}
+.stabs::-webkit-scrollbar{display:none}
+.stab{display:flex;align-items:center;gap:6px;white-space:nowrap;padding:7px 11px;border-radius:10px;font-size:12.5px;font-weight:600;color:var(--tx3);flex:none}
+.stab[aria-selected=true]{background:var(--card);color:var(--tx);box-shadow:inset 0 -2px 0 var(--acc)}
+.stab:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+/* Sync & sharing: which trips sync */
+.gseg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:3px;gap:2px}
+.gseg button{padding:6px 12px;border-radius:8px;font-size:12.5px;font-weight:600;color:var(--tx3)}
+.gseg button.on{background:var(--acc);color:var(--acc-ink)}.gseg button:disabled{opacity:.55;cursor:not-allowed}
+.gstrip{align-items:center}.gstrip .gstick{width:18px;height:18px;flex:none;accent-color:var(--acc)}
+.gstrip .d .gsst{display:inline-block;width:8px;height:8px;margin:0 3px 0 0;vertical-align:0}.gsst[data-s=none]{background:var(--line2)}
+/* first-launch privacy note */
+.pnote{border-color:color-mix(in srgb,var(--ok) 35%,var(--line));margin-bottom:12px}
