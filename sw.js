@@ -1,7 +1,7 @@
 /* Trip Vault service worker: caches the app shell so it works offline.
    It never touches your data (that lives in IndexedDB) and makes no third-party requests itself. (Offline speech and
    translation packs come from Hugging Face only when you download one; js/ai-worker.js fetches and caches those.) */
-const VERSION = "tv-v23";
+const VERSION = "tv-v24";
 const SHARE = "tv-share"; // short-lived inbox for files shared to the installed app
 const SHELL = [
   "./", "index.html", "manifest.webmanifest", "css/app.css",

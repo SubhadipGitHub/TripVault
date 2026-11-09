@@ -39,15 +39,16 @@ const A={
   addMenu:()=>addMenuSheet(),
   planGap:el=>{const s=+el.dataset.s,e=+el.dataset.e;newItem("activity",{d:el.dataset.d,s:mhm(s),e:mhm(Math.min(e,s+120))})},
   markPaid:async el=>{const it=S.items.find(i=>i.id===el.dataset.id);const p=payInfo(it);it.payments=(it.payments||[]).filter(x=>x.status==="paid");it.payments.push({id:uid(),status:"paid",amount:p.pend,due:todayIn("Asia/Kolkata"),method:"UPI"});await saveItem(it);render();toast(`Marked ${fmtM(p.pend,p.cur)} as paid`)},
-  quickExp:async()=>{const t=curTrip();const a=+$("#qxA").value;if(!a){toast("Enter an amount","bad");return}const d=tripPhase(t).today||todayIn("Asia/Kolkata");const tz=dayTz(t,d);const p=tzParts(tz,Date.now());
-    await saveItem({id:uid(),tripId:t.id,kind:"expense",title:$("#qxN").value.trim()||$("#qxK").value,cat:$("#qxK").value,cost:a,cur:$("#qxC").value,date:d,time:`${pad(p.h)}:${pad(p.mi)}`,tz,payments:[],names:[],paidBy:$("#qxP")?.value||""});render();toast("Expense logged")},
+  quickExp:async()=>{const t=curTrip();const a=+$("#qxA").value;if(!a)return failSave($("#qx"),[{k:"#qxA",msg:"Enter an amount"}],"Enter an amount to log");const d=tripPhase(t).today||todayIn("Asia/Kolkata");const tz=dayTz(t,d);const p=tzParts(tz,Date.now());
+    const cur=$("#qxC").value,cat=$("#qxK").value;
+    await saveItem({id:uid(),tripId:t.id,kind:"expense",title:$("#qxN").value.trim()||cat,cat,cost:a,cur,date:d,time:`${pad(p.h)}:${pad(p.mi)}`,tz,payments:[],names:[],paidBy:$("#qxP")?.value||""});render();toast(`Logged · ${fmtM(a,cur)} ${esc(cat)}`)},
   openFile:el=>openBlob(S.files.find(f=>f.id===el.dataset.id)),
   delFile:async el=>{const f=S.files.find(x=>x.id===el.dataset.id);if(!f)return;const its=S.items.filter(i=>(f.itemIds||[]).includes(i.id));
     if(!(await gate({title:"Delete this file?",plan:[`Delete <b>${esc(f.name)}</b> (${(f.size/1024).toFixed(0)} KB)`,its.length?`Bookings stay; ${its.length} will lose this attachment`:"Not linked to any booking"],irreversible:"The file can't be recovered unless it's in a backup.",ok:"Delete file"})))return;await delFile(f.id);render();toast("File deleted")},
   persist:async()=>{const ok=await navigator.storage?.persist?.();toast(ok?"Storage is now persistent":"Browser declined — keep regular backups",ok?"ok":"info");storFill($("#stor"))},
   fitDates:async()=>{const t=curTrip();const ds=tripItems(t.id).filter(i=>i.kind!=="doc").flatMap(itemDates).sort();t.start=ds[0]<t.start?ds[0]:t.start;t.end=ds[ds.length-1]>t.end?ds[ds.length-1]:t.end;await saveTrip(t);render();toast("Trip dates extended")},
   dupTrip:()=>duplicateTrip(),
-  ideaAdd:async()=>{const t=curTrip(),v=$("#idT").value.trim();if(!v){toast("Type an idea first","bad");return}t.ideas=[...(t.ideas||[]),{id:uid(),text:v,cat:$("#idC").value,place:$("#idP").value.trim(),note:$("#idN").value.trim()}];await saveTrip(t);render()},
+  ideaAdd:async()=>{const t=curTrip(),v=$("#idT").value.trim();if(!v)return failSave($("#idT").closest(".card"),[{k:"#idT",msg:"Type an idea"}],"Type an idea first");t.ideas=[...(t.ideas||[]),{id:uid(),text:v,cat:$("#idC").value,place:$("#idP").value.trim(),note:$("#idN").value.trim()}];await saveTrip(t);render()},
   ideaDel:async el=>{const t=curTrip();t.ideas=(t.ideas||[]).filter(i=>i.id!==el.dataset.id);await saveTrip(t);render()},
   ideaSched:async el=>{const t=curTrip(),i=(t.ideas||[]).find(x=>x.id===el.dataset.id);if(!i)return;i.scheduled=true;await saveTrip(t);const d=S.day||tripDays(t)[0];newItem("activity",{d,title:i.text,location:i.place||t.dest||""});render()},
   ics:()=>exportICS(),install:()=>{$$(".ov").forEach(o=>o.remove());openInstall()},gsHub:()=>openHub(),
@@ -98,7 +99,7 @@ document.addEventListener("change",async e=>{
   const r=e.target.closest("[data-rate]");if(r){const t=curTrip();t.rates={...(t.rates||{})};const v=+r.value;if(v>0)t.rates[r.dataset.rate]=v;else delete t.rates[r.dataset.rate];await saveTrip(t);render();toast(`Rate saved: 1 ${r.dataset.rate} = ${sym(HC())}${v}`)}});
 let _emgT=null;
 document.addEventListener("change",async e=>{const hm2=e.target.closest("[data-home]");if(hm2){S.settings={...S.settings,[hm2.dataset.home]:hm2.value};await DB.put("meta",{k:"settings",v:S.settings});toast("Saved");return}
-  const up=e.target.closest("[data-upi]");if(up){const t=curTrip(),v=up.value.trim();if(v&&!UPI_RE.test(v)){toast("That doesn't look like a UPI ID (name@bank)","bad");return}
+  const up=e.target.closest("[data-upi]");if(up){const t=curTrip(),v=up.value.trim();if(v&&!UPI_RE.test(v))return failSave(up.closest(".card")||document.body,[{k:up,msg:"Use the name@bank format"}],"That doesn't look like a UPI ID (name@bank)");
     t.upi={...(t.upi||{})};if(v)t.upi[up.dataset.upi]=v;else delete t.upi[up.dataset.upi];await saveTrip(t);render();return}
   const pp=e.target.closest("[data-people]");if(pp){const t=curTrip();t.people=pp.value.split(/\s*,\s*/).filter(Boolean);await saveTrip(t);render()}});
 document.addEventListener("input",e=>{

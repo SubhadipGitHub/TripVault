@@ -1,7 +1,44 @@
 "use strict";
 /* ===================== Form helpers ===================== */
-function F(label,name,val,o={}){return`<div class="${o.full?"full":""}"><label>${label}</label><input name="${name}" type="${o.type||"text"}" value="${esc(val??"")}" ${o.ph?`placeholder="${esc(o.ph)}"`:""} ${o.list?`list="${o.list}"`:""} ${o.step?`step="${o.step}"`:""} ${o.up?`style="text-transform:uppercase"`:""} class="${o.cls||""}" autocomplete="off"></div>`}
-function Sel(label,name,val,opts,o={}){return`<div class="${o.full?"full":""}"><label>${label}</label><select name="${name}" class="${o.cls||""}">${opts.map(x=>{const[v,l]=Array.isArray(x)?x:[x,x];return`<option value="${esc(v)}" ${String(v)===String(val??"")?"selected":""}>${esc(l)}</option>`}).join("")}</select></div>`}
+/* Fields. o.req marks a required field (a * on the label, required + aria-required on the control); o.hint adds a
+   helper line under it. Every label is tied to its control with for/id. */
+let FLD_N=0;
+const reqMark=`<span class="req" aria-hidden="true">*</span>`;
+const fldLabel=(id,label,o)=>`<label for="${id}">${label}${o.req?reqMark:""}</label>`;
+const fldHint=(id,o)=>o.hint?`<div class="fhint small dim" id="${id}-h">${o.hint}</div>`:"";
+const fldAria=(id,o)=>`${o.req?`required aria-required="true"`:""} ${o.hint?`aria-describedby="${id}-h"`:""}`;
+function F(label,name,val,o={}){const id=`fld-${name}-${++FLD_N}`;return`<div class="${o.full?"full":""}">${fldLabel(id,label,o)}<input id="${id}" name="${name}" type="${o.type||"text"}" value="${esc(val??"")}" ${o.ph?`placeholder="${esc(o.ph)}"`:""} ${o.list?`list="${o.list}"`:""} ${o.step?`step="${o.step}"`:""} ${o.up?`style="text-transform:uppercase"`:""} class="${o.cls||""}" autocomplete="off" ${fldAria(id,o)}>${fldHint(id,o)}</div>`}
+function Sel(label,name,val,opts,o={}){const id=`fld-${name}-${++FLD_N}`;return`<div class="${o.full?"full":""}">${fldLabel(id,label,o)}<select id="${id}" name="${name}" class="${o.cls||""}" ${fldAria(id,o)}>${opts.map(x=>{const[v,l]=Array.isArray(x)?x:[x,x];return`<option value="${esc(v)}" ${String(v)===String(val??"")?"selected":""}>${esc(l)}</option>`}).join("")}</select>${fldHint(id,o)}</div>`}
+/* "* Required" key for a form that has required fields. */
+const reqNote=()=>`<div class="reqnote small dim">${reqMark} Required</div>`;
+
+/* ---------- Inline validation ----------
+   A field is named by its name attribute, or by "#id". fieldError marks it (red outline, aria-invalid) and puts the
+   message under it; typing in it clears that. failSave marks every field given, focuses the first, nudges the sheet
+   and shows one error toast. */
+const fieldEl=(root,k)=>k instanceof Element?k:k.startsWith("#")?$(k,root):$(`[name="${k}"]`,root);
+function fieldError(root,k,msg){const el=fieldEl(root,k);if(!el)return null;
+  el.classList.add("invalid");el.setAttribute("aria-invalid","true");
+  let m=el.nextElementSibling?.classList.contains("ferr")?el.nextElementSibling:null;
+  if(!m){m=document.createElement("div");m.className="ferr";m.id=(el.id||"f-"+uid())+"-err";el.after(m)}
+  m.innerHTML=`${ic("alert","sm")}<span>${msg}</span>`;el.setAttribute("aria-errormessage",m.id);
+  if(!el._clr){el._clr=()=>clearFieldError(el);el.addEventListener("input",el._clr);el.addEventListener("change",el._clr)}
+  return el}
+function clearFieldError(el){el.classList.remove("invalid");el.removeAttribute("aria-invalid");el.removeAttribute("aria-errormessage");
+  const m=el.nextElementSibling;if(m?.classList.contains("ferr"))m.remove()}
+function clearErrors(root){$$(".invalid",root).forEach(clearFieldError)}
+/* The required fields in root that are still empty. */
+const missingRequired=root=>$$("[required]",root).filter(e=>!e.disabled&&!e.closest("[hidden]")&&(e.type==="checkbox"?!e.checked:!String(e.value).trim()));
+function failSave(root,fields,msg){
+  const els=fields.map(f=>typeof f==="string"?fieldError(root,f,msgFor(root,f)):f?.k?fieldError(root,f.k,f.msg):f).filter(Boolean);
+  const first=els[0];if(first){first.scrollIntoView({block:"center",behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth"});first.focus({preventScroll:true})}
+  const sh=root.closest?.(".sheet")||root.querySelector?.(".sheet");if(sh){sh.classList.remove("shake");void sh.offsetWidth;sh.classList.add("shake")}
+  toast(msg||(els.length>1?`${els.length} required fields are missing`:"This field is required"),"bad");return false}
+/* The message under a field: the label text, e.g. "Check-in date is required". */
+function msgFor(root,k){const el=fieldEl(root,k);const l=el?.id?$(`label[for="${el.id}"]`,root):null;const t=(l?.childNodes[0]?.textContent||"").trim();return t?`${esc(t)} is required`:"Required"}
+/* Check the form's required fields; mark the empty ones. True when all are filled. */
+function checkRequired(root,msg){const miss=missingRequired(root);if(!miss.length)return true;
+  return failSave(root,miss.map(e=>{fieldError(root,e.name?e.name:"#"+e.id,msgFor(root,e.name?e.name:"#"+e.id));return e}),msg)}
 const TZsel=(l,n,v)=>Sel(l,n,v||"",[["","Auto (from airport/city)"],...TZS.map(z=>[z,`${tzShort(z)} · ${offLabel(z)}`])]);
 function gather(root){const o={};$$("[name]",root).forEach(e=>{if(e.closest(".payrow"))return;o[e.name]=e.type==="checkbox"?e.checked:e.value.trim()});return o}
 const hl=(f,k)=>f?(f[k]?"found":"miss"):"";
@@ -9,26 +46,26 @@ function apDatalist(){if($("#apl"))return;const d=document.createElement("datali
 function itemFields(it,o={}){
   const k=it.kind,a=splitLT(it.dep||it.start||it.checkIn),b=splitLT(it.arr||it.end||it.checkOut),f=o.f;
   switch(k){
-    case"flight":return`<div class="fg f4">${F("Flight no.","flightNo",it.flightNo,{ph:"6E 1061",up:1,cls:hl(f,"flightNo")})}${F("Airline","airline",it.airline,{ph:"auto"})}${F("From (IATA)","from",it.from,{list:"apl",ph:"BLR",up:1,cls:hl(f,"from")})}${F("To (IATA)","to",it.to,{list:"apl",ph:"KUL",up:1,cls:hl(f,"to")})}
-      ${F("Departs (local date)","depD",a.d,{type:"date",cls:hl(f,"dep")})}${F("Dep. time","depT",a.t,{type:"time",cls:hl(f,"dep")})}${F("Arrives (local date)","arrD",b.d,{type:"date",cls:hl(f,"arr")})}${F("Arr. time","arrT",b.t,{type:"time",cls:hl(f,"arr")})}
+    case"flight":return`<div class="fg f4">${F("Flight no.","flightNo",it.flightNo,{ph:"6E 1061",up:1,cls:hl(f,"flightNo"),hint:o.compact?"":"Or fill in From and To"})}${F("Airline","airline",it.airline,{ph:"auto"})}${F("From (IATA)","from",it.from,{list:"apl",ph:"BLR",up:1,cls:hl(f,"from")})}${F("To (IATA)","to",it.to,{list:"apl",ph:"KUL",up:1,cls:hl(f,"to")})}
+      ${F("Departs (local date)","depD",a.d,{type:"date",cls:hl(f,"dep"),req:1})}${F("Dep. time","depT",a.t,{type:"time",cls:hl(f,"dep")})}${F("Arrives (local date)","arrD",b.d,{type:"date",cls:hl(f,"arr")})}${F("Arr. time","arrT",b.t,{type:"time",cls:hl(f,"arr")})}
       ${F("Terminal","terminal",it.terminal,{ph:"T1"})}${o.compact?"":F("Seat","seat",it.seat)+F("PNR","ref",it.ref,{up:1})+F("Booking ID","bookingId",it.bookingId)}
       ${o.compact?"":`<div class="full"><details><summary>Timezones (auto from airport)</summary><div class="fg" style="margin-top:6px">${TZsel("Departure TZ","depTz",it.depTz)}${TZsel("Arrival TZ","arrTz",it.arrTz)}</div></details></div>`}</div>`;
     case"train":case"bus":case"ferry":{const L=RIDE_L[k],tr=k==="train";return`<div class="fg f4">${F(L.no,"trainNo",it.trainNo,{ph:L.noPh,cls:hl(f,"trainNo")})}${F(L.nm,"trainName",it.trainName,{ph:L.nmPh||"",cls:hl(f,"trainName")})}${F(L.from,"from",it.from,{up:tr,cls:hl(f,"from")})}${F(L.to,"to",it.to,{up:tr,cls:hl(f,"to")})}
       ${F(L.fromN,"fromName",it.fromName,{cls:hl(f,"fromName")})}${F(L.toN,"toName",it.toName,{cls:hl(f,"toName")})}${F(L.cls,"cls",it.cls,{ph:L.clsPh})}${F(L.seat,"seat",it.seat,{ph:L.seatPh,cls:hl(f,"seat")})}
-      ${F("Departs","depD",a.d,{type:"date",cls:hl(f,"dep")})}${F("Dep. time","depT",a.t,{type:"time",cls:hl(f,"dep")})}${F("Arrives","arrD",b.d,{type:"date",cls:hl(f,"arr")})}${F("Arr. time","arrT",b.t,{type:"time",cls:hl(f,"arr")})}
+      ${F("Departs","depD",a.d,{type:"date",cls:hl(f,"dep"),req:1})}${F("Dep. time","depT",a.t,{type:"time",cls:hl(f,"dep")})}${F("Arrives","arrD",b.d,{type:"date",cls:hl(f,"arr")})}${F("Arr. time","arrT",b.t,{type:"time",cls:hl(f,"arr")})}
       ${o.compact?"":F(L.ref,"ref",it.ref,{cls:hl(f,"ref")})}${tr?"":`<div class="${o.compact?"full":""}">${TZsel("Timezone","tz",it.tz)}</div>`}</div>`}
     case"car":{const s0=splitLT(it.start),e0=splitLT(it.end);return`<div class="fg f4">${F("Rental company","name",it.name,{full:1,ph:"Hertz, Zoomcar, Avis…",cls:hl(f,"name")})}
-      ${F("Pick-up location","pickup",it.pickup,{full:1,ph:"Airport counter / address",cls:hl(f,"pickup")})}${F("Pick-up date","puD",s0.d,{type:"date",cls:hl(f,"start")})}${F("Time","puT",s0.t||"10:00",{type:"time"})}
+      ${F("Pick-up location","pickup",it.pickup,{full:1,ph:"Airport counter / address",cls:hl(f,"pickup")})}${F("Pick-up date","puD",s0.d,{type:"date",cls:hl(f,"start"),req:1})}${F("Time","puT",s0.t||"10:00",{type:"time"})}
       ${F("Drop-off date","doD",e0.d,{type:"date",cls:hl(f,"end")})}${F("Time","doT",e0.t||"10:00",{type:"time"})}${F("Drop-off location","dropoff",it.dropoff,{full:1,ph:"Same as pick-up if blank"})}
       ${F("Car type","carType",it.carType,{ph:"Compact / SUV / automatic"})}${o.compact?"":F("Confirmation no.","ref",it.ref,{cls:hl(f,"ref")})}<div class="${o.compact?"full":""}">${TZsel("Timezone","tz",it.tz)}</div></div>`}
-    case"hotel":return`<div class="fg f4">${F("Property","name",it.name,{full:1,cls:hl(f,"name"),ph:"Hotel / homestay name"})}${F("Address","address",it.address,{full:1,cls:hl(f,"address")})}${F("Address in local language","addrLocal",it.addrLocal,{full:1,ph:"For the driver card (optional)"})}
-      ${F("Check-in date","ciD",a.d,{type:"date",cls:hl(f,"checkIn")})}${F("From","ciT",a.t||"14:00",{type:"time"})}${F("Check-out date","coD",b.d,{type:"date",cls:hl(f,"checkOut")})}${F("Until","coT",b.t||"12:00",{type:"time"})}
+    case"hotel":return`<div class="fg f4">${F("Property","name",it.name,{full:1,cls:hl(f,"name"),ph:"Hotel / homestay name",req:1})}${F("Address","address",it.address,{full:1,cls:hl(f,"address")})}${F("Address in local language","addrLocal",it.addrLocal,{full:1,ph:"For the driver card (optional)"})}
+      ${F("Check-in date","ciD",a.d,{type:"date",cls:hl(f,"checkIn"),req:1})}${F("From","ciT",a.t||"14:00",{type:"time"})}${F("Check-out date","coD",b.d,{type:"date",cls:hl(f,"checkOut")})}${F("Until","coT",b.t||"12:00",{type:"time"})}
       ${o.compact?"":F("Confirmation no.","ref",it.ref,{cls:hl(f,"ref")})}${F("PIN","pin",it.pin)}${F("Phone","phone",it.phone,{type:"tel"})}${F("Room","roomType",it.roomType)}
       <div class="full">${TZsel("Timezone","tz",it.tz)}</div></div>`;
     case"expense":return`<div class="fg f4">${F("What","title",it.title,{full:1,ph:"Dinner, cab, SIM card…"})}${Sel("Category","cat",it.cat||"Food",EXP_CATS)}${F("Date","date",it.date,{type:"date"})}${F("Time","time",it.time,{type:"time"})}${Sel("Paid via","method",it.method||"Card",["Card","Cash","UPI","Forex card","Wallet","Other"])}</div>${splitFields(it)}`;
     case"doc":return`<div class="fg f4">${Sel("Type","docType",it.docType||"Passport",DOC_TYPES)}${F("Title","title",it.title,{ph:"e.g. Malaysia eVisa"})}${F("Expiry","expiry",it.expiry,{type:"date"})}${F("Ref / policy no.","ref",it.ref)}${F("Holder(s)","names",(it.names||[]).join(", "),{full:1,ph:"Comma separated"})}</div>`;
-    default:return`<div class="fg f4">${F(k==="transfer"?"Transfer":"Activity","title",it.title,{full:1,ph:k==="transfer"?"KLIA Ekspres to KL Sentral / airport cab":"Petronas Towers skybridge"})}
-      ${F("Date","stD",a.d,{type:"date"})}${F("Start","stT",a.t,{type:"time"})}${F("End date","enD",b.d||a.d,{type:"date"})}${F("End","enT",b.t,{type:"time"})}
+    default:return`<div class="fg f4">${F(k==="transfer"?"Transfer":"Activity","title",it.title,{full:1,req:1,ph:k==="transfer"?"KLIA Ekspres to KL Sentral / airport cab":"Petronas Towers skybridge"})}
+      ${F("Date","stD",a.d,{type:"date",req:1})}${F("Start","stT",a.t,{type:"time"})}${F("End date","enD",b.d||a.d,{type:"date"})}${F("End","enT",b.t,{type:"time"})}
       ${F("Where","location",it.location,{full:1,ph:"Meeting point / address"})}${o.compact?"":F("Address in local language","addrLocal",it.addrLocal,{full:1,ph:"For the driver card (optional)"})}${o.compact?"":F("Ticket / ref","ref",it.ref)}<div class="${o.compact?"full":""}">${TZsel("Timezone","tz",it.tz)}</div></div>`}}
 const PAY_M=["UPI","Card","Net banking","Cash","Wallet","Forex card","Pay at property","Agent","Other"];
 const payRow=p=>`<div class="payrow fg f4" style="margin-top:6px;align-items:end"><div><label>Status</label><select data-p="status"><option value="paid" ${p.status==="paid"?"selected":""}>Paid</option><option value="pending" ${p.status!=="paid"?"selected":""}>Pending</option></select></div><div><label>Amount</label><input data-p="amount" type="number" step="0.01" value="${esc(p.amount??"")}"></div><div><label>${p.status==="paid"?"Paid on":"Due by"}</label><input data-p="due" type="date" value="${esc(p.due||p.date||"")}"></div><div class="row" style="gap:4px"><select data-p="method">${PAY_M.map(m=>`<option ${m===p.method?"selected":""}>${m}</option>`).join("")}</select><button class="ibtn" data-rmpay title="Remove">${ic("x","sm")}</button></div></div>`;
@@ -37,7 +74,7 @@ function splitFields(it){const t=S.trips.find(x=>x.id===it.tripId)||curTrip(),pp
   const on=it.splitWith?.length?it.splitWith:ppl;
   return`<div class="fg mt">${Sel("Paid by","paidBy",it.paidBy||"",[["","—"],...ppl.map(p=>[p,p])])}<div class="full"><label>Split between</label><div class="row wrap" style="gap:6px 14px">${ppl.map(p=>`<label class="row" style="margin:0;cursor:pointer;font-size:13px;color:var(--tx)"><input type="checkbox" name="sp:${esc(p)}" ${on.includes(p)?"checked":""}> ${esc(p)}</label>`).join("")}</div></div></div>`}
 function costBlock(it){const isExp=it.kind==="expense";
-  return`<div class="sep"></div><div class="fg f4">${F(isExp?"Amount":"Total cost","cost",it.cost,{type:"number",step:"0.01"})}${Sel("Currency","cur",it.cur||HC(),CURS)}${isExp?"":`<div class="full row" style="gap:6px;align-self:end"><input type="checkbox" name="refundable" ${it.refundable?"checked":""} id="rf"><label for="rf" style="margin:0">Refundable / free cancellation</label></div>`}</div>
+  return`<div class="sep"></div><div class="fg f4">${F(isExp?"Amount":"Total cost","cost",it.cost,{type:"number",step:"0.01",req:isExp})}${Sel("Currency","cur",it.cur||HC(),CURS)}${isExp?"":`<div class="full row" style="gap:6px;align-self:end"><input type="checkbox" name="refundable" ${it.refundable?"checked":""} id="rf"><label for="rf" style="margin:0">Refundable / free cancellation</label></div>`}</div>
    ${isExp?"":`<div id="pays">${(it.payments||[]).map(payRow).join("")}</div><div class="row wrap mt"><button class="btn xs" data-addpay>${ic("plus","sm")} Payment</button><button class="btn xs ok" data-fullpay>${ic("check","sm")} Mark fully paid</button></div>`}`}
 function gatherPays(root){return $$(".payrow",root).map(r=>({id:uid(),status:$("[data-p=status]",r).value,amount:+$("[data-p=amount]",r).value||0,due:$("[data-p=due]",r).value,method:$("[data-p=method]",r).value})).filter(p=>p.amount>0)}
 function wirePays(root){root.addEventListener("click",e=>{
@@ -68,9 +105,16 @@ function buildItem(base,g){const it={...base};const lt=(d,t)=>d?`${d}T${t||"00:0
   if(it.sex){const keep=new Set((it.names||[]).map(n=>n.toLowerCase()));it.sex=Object.fromEntries(Object.entries(it.sex).filter(([k,v])=>keep.has(k)&&(v==="m"||v==="f")));if(!Object.keys(it.sex).length)delete it.sex}
   if(g.cost!==undefined){it.cost=+g.cost||0;it.cur=g.cur||HC()}if(g.refundable!==undefined)it.refundable=g.refundable;if(g.notes!==undefined)it.notes=g.notes;
   return it}
-function validItem(it){switch(it.kind){case"flight":return(it.from&&it.to||it.flightNo)&&it.dep?null:"Need flight no. or route, and departure date";
-  case"train":case"bus":case"ferry":return it.dep?null:"Need departure date";case"car":return it.start?null:"Need a pick-up date";case"hotel":return it.name&&it.checkIn?null:"Need property name and check-in date";
-  case"expense":return it.cost>0?null:"Enter an amount";case"doc":return null;default:return it.title&&it.start?null:"Need a title and date"}}
+/* What a booking needs before it can be saved: null, or {msg, fields} naming the inputs to mark. */
+function validItem(it){const need=(pairs,msg)=>{const f=pairs.filter(([ok])=>!ok).map(([,n])=>n);return f.length?{msg,fields:f}:null};
+  switch(it.kind){
+  case"flight":return need([[it.flightNo||(it.from&&it.to),"flightNo"],[it.dep,"depD"]],!it.dep&&!(it.flightNo||(it.from&&it.to))?"Add the flight no. (or From and To) and the departure date":!it.dep?"Add the departure date":"Add the flight no., or From and To");
+  case"train":case"bus":case"ferry":return need([[it.dep,"depD"]],"Add the departure date");
+  case"car":return need([[it.start,"puD"]],"Add the pick-up date");
+  case"hotel":return need([[it.name,"name"],[it.checkIn,"ciD"]],!it.name&&!it.checkIn?"Add the property and check-in date":!it.name?"Add the property name":"Add the check-in date");
+  case"expense":return need([[it.cost>0,"cost"]],"Enter an amount");
+  case"doc":return null;
+  default:return need([[it.title,"title"],[it.start,"stD"]],!it.title&&!it.start?"Add a title and a date":!it.title?"Add a title":"Add a date")}}
 
 /* ===================== Duplicate detection ===================== */
 const nref=s=>(s||"").toUpperCase().replace(/[\s.\-\/]/g,"");
@@ -103,7 +147,7 @@ function openItem(it,isNew){
   const files=S.files.filter(f=>(f.itemIds||[]).includes(it.id));
   const grp=it.groupId?S.items.filter(x=>x.groupId===it.groupId&&x.id!==it.id):[];
   const body=`${isNew?`<div class="tabs" style="margin-bottom:10px">${Object.entries(KINDS).map(([k,v])=>`<button class="${k===it.kind?"on":""}" data-kind="${k}">${ic(v.i,"sm")} ${v.n}</button>`).join("")}</div>`:""}
-   <div id="kf">${itemFields(it)}</div>
+   ${it.kind!=="doc"?reqNote():""}<div id="kf">${itemFields(it)}</div>
    ${it.kind!=="doc"?`<div class="fg mt">${F("Traveller names","names",(it.names||[]).join(", "),{full:1,ph:"Comma separated"})}</div>`:""}
    ${it.kind!=="doc"?costBlock(it):""}
    ${grp.length?`<div class="note info mt">${ic("layers")}<div>Part of one booking with ${grp.map(g=>esc(itemTitle(g))).join(", ")}. Cost is tracked on the first segment.</div></div>`:""}
@@ -121,12 +165,12 @@ function openItem(it,isNew){
   if(!isNew)recheck();sb.addEventListener("change",recheck);
   $("#svIt",ov).onclick=async()=>{const g=gather(sb);const n=buildItem(it,g);if(it.kind!=="doc"&&it.kind!=="expense")n.payments=gatherPays(sb);
     if(n.kind==="expense"){n.payments=[]}
-    const err=validItem(n);if(err){toast(err,"bad");return}
+    clearErrors(sb);const err=validItem(n);if(err)return failSave(sb,err.fields,err.msg);
     const d=dupCheck(n,it.id);if(isNew&&d.lvl==="dup"&&!(await gate({title:"Looks like a duplicate",plan:d.res.map(x=>`${esc(x.r)} — ${esc(itemTitle(x.it))}`).concat(["Save it anyway as a separate entry"]),ok:"Save anyway",danger:false})))return;
     delete n._warn;await saveItem(n);
     for(const fid of unlink){const f=S.files.find(x=>x.id===fid);if(f){f.itemIds=(f.itemIds||[]).filter(x=>x!==n.id);await saveFile(f)}}
     const r=await storeFiles(pend,n.tripId,[n.id]);await fitTrip(n.tripId,true);
-    ov.remove();render();toast(`Saved${r.linked?` · ${r.linked} file(s) already in vault were linked, not duplicated`:""}`)};
+    ov.remove();render();toast(`Saved · ${esc(itemTitle(n))}${r.linked?`<br><span class="dim">${r.linked} file(s) already in the vault were linked, not copied</span>`:""}`)};
   $("#delIt",ov)?.addEventListener("click",async()=>{const g=it.groupId?S.items.filter(x=>x.groupId===it.groupId&&x.id!==it.id):[];
     if(!(await gate({title:"Delete this entry?",plan:[`Remove <b>${esc(itemTitle(it))}</b> (${esc(itemSub(it))}) from the itinerary and budget`,files.length?`Unlink ${files.length} attachment(s) — the files stay in Docs`:"No attachments affected",g.length?`Other segments of this booking (${g.length}) are kept`:""].filter(Boolean),irreversible:"The entry can't be recovered unless you restore a backup.",ok:"Delete"})))return;
     if(g.length&&+it.cost){const n=g[0];n.cost=it.cost;n.cur=it.cur;n.payments=it.payments;await saveItem(n)}
@@ -215,7 +259,7 @@ function openReview(R,kind){
     const shared=gather($(".seg:not([data-i])",ov));
     let tripId=R.tripId;const gid=segEls.length>1?uid():null;
     const items=segEls.map((se,i)=>{const g={...gather(se),...shared};if(i>0){g.cost="0"}return buildItem({id:uid(),kind:P.kind,tripId:tripId==="__new"?"_":tripId,payments:[],groupId:gid,srcHash:R.textHash,createdAt:Date.now(),sex:{...(P.sex||{})}},g)});
-    for(const it of items){const e=validItem(it);if(e){toast(e,"bad");return}}
+    for(const[i,it]of items.entries()){const e=validItem(it);if(e)return failSave(segEls[i],e.fields,(items.length>1?`Segment ${i+1}: `:"")+e.msg)}
     if(tripId!=="__new"){const t0=S.trips.find(t=>t.id===tripId),rg=t0?tripRange(t0):{};const ds=items.flatMap(itemDates).sort();
       if(rg.s&&ds.length&&(ds[0]<addDays(rg.s,-2)||ds[ds.length-1]>addDays(rg.e,2))){
         const ch=await new Promise(res=>{let done=0;const o=sheet({title:"Dates don't match this trip",body:`<div class="note warn">${ic("alert")}<div>This booking is <b>${fmtD(ds[0])} – ${fmtD(ds[ds.length-1])}</b>, but <b>${esc(t0.name)}</b> runs ${fmtD(rg.s)} – ${fmtD(rg.e)}.<div class="small muted mt">Extending would stretch the trip to cover both ranges.</div></div></div>`,
@@ -245,8 +289,8 @@ function sampleText(k){const d0=addDays(todayIn("Asia/Kolkata"),40),d5=addDays(d
 function openTrips(){const rows=S.trips.slice().sort((a,b)=>(a.start||"9").localeCompare(b.start||"9")).map(t=>{const ph=tripPhase(t);const n=tripItems(t.id).length;
   return`<div class="li tap" data-a="selTrip" data-id="${t.id}">${kic(isIntlTrip(t)?"hotel":"train")}<div class="b"><div class="t">${esc(t.name)} ${t.id===S.cur?pill("current","info"):""}</div><div class="d">${tripMeta(t)} · ${n} entries</div></div><div class="r small">${ph.p==="before"?`in ${ph.days}d`:ph.p==="during"?`<span style="color:var(--ok)">ongoing</span>`:ph.p==="after"?"done":""}</div></div>`}).join("");
   sheet({title:"Your trips",body:rows||`<div class="empty">No trips yet.</div>`,foot:`<button class="btn" data-a="loadSample">${ic("sparkle","sm")} Sample</button><button class="btn pri" data-a="newTrip">${ic("plus","sm")} New trip</button>`})}
-function openTrip(t,isNew){const ov=sheet({title:isNew?"New trip":"Trip settings",help:"trip",body:`<div class="fg">
-  ${F("Trip name","name",t.name,{full:1,ph:"Honeymoon · Malaysia"})}${F("Destination","dest",t.dest,{full:1,ph:"Kuala Lumpur, Langkawi"})}
+function openTrip(t,isNew){const ov=sheet({title:isNew?"New trip":"Trip settings",help:"trip",body:`${reqNote()}<div class="fg">
+  ${F("Trip name","name",t.name,{full:1,ph:"Honeymoon · Malaysia",req:1})}${F("Destination","dest",t.dest,{full:1,ph:"Kuala Lumpur, Langkawi"})}
   <div class="full"><label>Who's going</label><div id="crewPk"></div></div>
   ${F("Start","start",t.start,{type:"date"})}${F("End","end",t.end,{type:"date"})}
   ${Sel("Type","type",t.type||"auto",[["auto","Auto-detect"],["domestic","Domestic (India)"],["international","International"]])}${TZsel("Main timezone","tz",t.tz)}
@@ -266,10 +310,10 @@ function openTrip(t,isNew){const ov=sheet({title:isNew?"New trip":"Trip settings
     else if(b.dataset.cn){const n=Math.min(6,Math.max(3,cr.length+ +b.dataset.cn));cr=Array.from({length:n},(_,i)=>cr[i]||(i%2?"f":"m"))}
     drawCrew()});drawCrew();
   const sI=$("[name=start]",ov),eI=$("[name=end]",ov),syncEnd=()=>{eI.min=sI.value||"";if(sI.value&&(!eI.value||eI.value<sI.value))eI.value=sI.value};sI.addEventListener("change",syncEnd);eI.min=sI.value||"";
-  $("#tSv",ov).onclick=async()=>{const g=gather(ov);if(!g.name){toast("Name the trip","bad");return}if(g.start&&g.end&&g.end<g.start){toast("End is before start","bad");return}
+  $("#tSv",ov).onclick=async()=>{const g=gather(ov);clearErrors(ov);if(!g.name)return failSave(ov,["name"],"Give the trip a name");if(g.start&&g.end&&g.end<g.start)return failSave(ov,[{k:"end",msg:"Must be on or after the start date"}],"The end date is before the start date");
     const crewWas=JSON.stringify(crewOf(t));t.party=party;t.crew=cr.slice();if(isNew||crewWas!==JSON.stringify(crewOf(t)))AV.cheer();
     Object.assign(t,{name:g.name,dest:g.dest,start:g.start,end:g.end,type:g.type==="auto"?"":g.type,tz:g.tz||t.tz||"Asia/Kolkata",budget:+g.budget||0,localCur:g.localCur,rates:parseRates(g.rates)});for(const k of["expCur","lang"])if(g[k])t[k]=g[k];else delete t[k];t.createdAt??=Date.now();
-    await saveTrip(t);S.cur=t.id;S.meta.cur=t.id;S.day=null;S.calM=null;saveMeta();ov.remove();$$(".ov").forEach(o=>o.remove());render();toast(isNew?"Trip created — now import a booking":"Saved")};
+    await saveTrip(t);S.cur=t.id;S.meta.cur=t.id;S.day=null;S.calM=null;saveMeta();ov.remove();$$(".ov").forEach(o=>o.remove());render();toast(isNew?"Now import a booking or add one with +":`Saved · ${esc(t.name)}`,"ok",isNew?{title:"Trip created"}:{})};
   $("#tDel",ov)?.addEventListener("click",async()=>{const its=tripItems(t.id),fs=S.files.filter(f=>f.tripId===t.id),nm=tripMems(t.id).length;
     if(!(await gate({title:`Delete “${esc(t.name)}”?`,plan:[`Delete the trip and its ${its.length} entries (bookings, activities, expenses, documents)`,`Delete ${fs.length} stored file(s) and ${nm} memor${nm===1?"y":"ies"}`,"Other trips are not touched",...(t.sync?.fileId?["This is a shared trip: you leave it, and the others keep their copy in Google Drive"]:[])],irreversible:`All of the above. ${S.meta.lastBackup?"Your last backup was "+new Date(S.meta.lastBackup).toLocaleString()+".":"You have never exported a backup."}`,ok:"Delete trip"})))return;
     for(const i of its)await DB.del("items",i.id);for(const f of fs)await DB.del("files",f.id);for(const m of S.memories.filter(m=>m.tripId===t.id))await DB.del("memories",m.id);await DB.del("trips",t.id);S.memories=S.memories.filter(m=>m.tripId!==t.id);

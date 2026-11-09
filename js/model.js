@@ -1,6 +1,38 @@
 "use strict";
 /* ===================== UI infrastructure ===================== */
-function toast(msg,kind="ok"){$$(".toast").forEach(t=>t.remove());const t=document.createElement("div");t.className="toast";t.innerHTML=`${ic(kind==="ok"?"check":kind==="bad"?"alert":"info","sm")}<span>${msg}</span>`;t.style.color=kind==="bad"?"var(--bad)":"";document.body.append(t);setTimeout(()=>t.remove(),2800)}
+/* ---------- Toasts ----------
+   toast(msg, kind, opts): kind is "ok" (success), "bad" (error), "info" or "warn". msg is HTML; callers escape what
+   they pass. opts: {title, ms, action:{label, run}}. Up to three stack at the top; each dismisses itself after a time
+   that suits its kind and length, shown by a progress line that pauses on hover, focus or touch. ✕ or a swipe closes it.
+   Showing the same message again restarts its timer instead of stacking a copy. Returns {close}. */
+const TOAST={max:3,ms:{ok:3000,info:4000,warn:4000,bad:6000},ic:{ok:"check",bad:"alert",info:"info",warn:"alert"}};
+function toastHost(){let h=document.getElementById("toasts");
+  if(!h){h=document.createElement("div");h.id="toasts";h.setAttribute("aria-live","polite");document.body.append(h)}return h}
+function toast(msg,kind="ok",o={}){
+  if(!TOAST.ms[kind])kind="ok";const host=toastHost(),key=kind+"|"+msg;
+  const same=[...host.children].find(x=>x._key===key&&!x._gone);if(same){same._restart();return same._api}
+  const plain=String(msg).replace(/<[^>]+>/g,""),ms=o.ms||Math.min(9000,TOAST.ms[kind]+Math.max(0,plain.length-60)*40);
+  const t=document.createElement("div");t.className=`toast t-${kind}`;t._key=key;t.setAttribute("role",kind==="bad"?"alert":"status");t.style.setProperty("--ms",ms+"ms");
+  t.innerHTML=`<span class="t-ic">${ic(TOAST.ic[kind],"sm")}</span><div class="t-b">${o.title?`<b class="t-t">${esc(o.title)}</b>`:""}<div class="t-m">${msg}</div></div>`+
+    `${o.action?`<button type="button" class="t-act">${esc(o.action.label)}</button>`:""}<button type="button" class="t-x" aria-label="Dismiss">${ic("x","sm")}</button><i class="t-p" aria-hidden="true"></i>`;
+  let left=ms,at=0,timer=null,held=0;
+  const run=()=>{if(t._gone||held)return;at=Date.now();clearTimeout(timer);timer=setTimeout(close,left);t.classList.remove("held")};
+  const hold=()=>{held++;if(held>1||t._gone)return;clearTimeout(timer);left=Math.max(400,left-(Date.now()-at));t.classList.add("held")};
+  const free=()=>{held=Math.max(0,held-1);if(!held)run()};
+  function close(){if(t._gone)return;t._gone=true;clearTimeout(timer);t.classList.add("out");setTimeout(()=>t.remove(),240)}
+  t._restart=()=>{left=ms;const p=$(".t-p",t);p.style.animation="none";void p.offsetWidth;p.style.animation="";t.classList.remove("bump");void t.offsetWidth;t.classList.add("bump");run()};
+  t._api={close};
+  t.addEventListener("mouseenter",hold);t.addEventListener("mouseleave",free);t.addEventListener("focusin",hold);t.addEventListener("focusout",free);
+  $(".t-x",t).onclick=close;if(o.action)$(".t-act",t).onclick=()=>{close();o.action.run?.()};
+  /* swipe up or sideways to dismiss */
+  let x0=null,y0=0;
+  t.addEventListener("pointerdown",e=>{if(e.target.closest("button"))return;x0=e.clientX;y0=e.clientY;hold();t.setPointerCapture?.(e.pointerId)});
+  t.addEventListener("pointermove",e=>{if(x0==null)return;const dx=e.clientX-x0,dy=Math.min(0,e.clientY-y0);t.style.transform=`translate(${dx}px,${dy}px)`;t.style.opacity=String(Math.max(.2,1-(Math.abs(dx)+Math.abs(dy))/220))});
+  const up=e=>{if(x0==null)return;const dx=e.clientX-x0,dy=e.clientY-y0;x0=null;t.style.transform="";t.style.opacity="";if(Math.abs(dx)>80||dy<-36)close();else free()};
+  t.addEventListener("pointerup",up);t.addEventListener("pointercancel",up);
+  host.append(t);const live=[...host.children].filter(x=>!x._gone);if(live.length>TOAST.max)live.slice(0,live.length-TOAST.max).forEach(x=>x._api.close());
+  if(kind==="bad"&&matchMedia("(pointer:coarse)").matches)try{navigator.vibrate?.(12)}catch(e){}
+  run();return t._api}
 function sheet({title,body,foot="",onClose,cls="",help=""}){const ov=document.createElement("div");ov.className="ov";ov.setAttribute("role","dialog");ov.setAttribute("aria-modal","true");if(help)ov.dataset.help=help;
   ov.innerHTML=`<div class="sheet ${cls}"><div class="sh"><h3>${title}</h3>${help?`<button class="ibtn hq" data-a="help" aria-label="Help">?</button>`:""}<button class="ibtn" data-close aria-label="Close">${ic("x")}</button></div><div class="sb">${body}</div>${foot?`<div class="sf">${foot}</div>`:""}</div>`;
   document.body.append(ov);const close=()=>{ov.remove();onClose?.()};ov.close=close;if(matchMedia("(min-width:760px)").matches)ov.querySelector("input:not([type=file]):not([type=checkbox]):not([type=radio]),textarea")?.focus();
