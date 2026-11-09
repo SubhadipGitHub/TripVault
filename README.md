@@ -36,7 +36,7 @@ A private, offline-first home for everything about a trip: bookings, tickets, pa
 
 1. Push this repo to GitHub (branch `main`).
 2. Repo **Settings → Pages → Build and deployment → Source: GitHub Actions**. The included workflow publishes it.
-3. Open the URL on your phone and use *Add to Home Screen* / *Install app*. It then works fully offline.
+3. Open the URL on your phone or computer and tap **Install** (on the welcome screen, or account menu → Install app). Where the browser has an install prompt (Chrome and Edge on Android, Windows, macOS, Linux and ChromeOS; Samsung Internet) it opens it; on iPhone and iPad, Safari on a Mac and Firefox it shows the two or three taps instead. The installed app works fully offline.
 4. First launch: tap **Explore a sample** to look around, then **Set passphrase** and **Import a booking**.
 
 Run locally: `python3 -m http.server 8000` then open http://localhost:8000. There is no build step and no dependencies.

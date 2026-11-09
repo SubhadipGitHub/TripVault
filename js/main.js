@@ -50,7 +50,7 @@ const A={
   ideaAdd:async()=>{const t=curTrip(),v=$("#idT").value.trim();if(!v){toast("Type an idea first","bad");return}t.ideas=[...(t.ideas||[]),{id:uid(),text:v,cat:$("#idC").value,place:$("#idP").value.trim(),note:$("#idN").value.trim()}];await saveTrip(t);render()},
   ideaDel:async el=>{const t=curTrip();t.ideas=(t.ideas||[]).filter(i=>i.id!==el.dataset.id);await saveTrip(t);render()},
   ideaSched:async el=>{const t=curTrip(),i=(t.ideas||[]).find(x=>x.id===el.dataset.id);if(!i)return;i.scheduled=true;await saveTrip(t);const d=S.day||tripDays(t)[0];newItem("activity",{d,title:i.text,location:i.place||t.dest||""});render()},
-  ics:()=>exportICS(),gsHub:()=>openHub(),
+  ics:()=>exportICS(),install:()=>{$$(".ov").forEach(o=>o.remove());openInstall()},gsHub:()=>openHub(),
   pass:el=>openPass(el.dataset.id),catBud:()=>openCatBudgets(),emgView:()=>openEmgCard(),
   packTpl:async el=>{const t=curTrip(),T=PACK_TPL[el.dataset.k];if(!t||!T)return;const n=mergePack(t,T.L.map(([cat,text])=>({cat,text})));await saveTrip(t);render();toast(n?`Added ${n} ${T.n.toLowerCase()} item${n>1?"s":""}`:"Those items are already on your list","info")},
   packCopy:async()=>{const t=curTrip(),src=S.trips.find(x=>x.id===$("#pkFrom")?.value);if(!t||!src?.pack)return;const n=mergePack(t,src.pack);await saveTrip(t);render();toast(n?`Copied ${n} item${n>1?"s":""} from ${esc(src.name)}`:"Nothing new to copy","info")},expCSV:()=>exportCSV(),expPrint:()=>printExpenseReport(),

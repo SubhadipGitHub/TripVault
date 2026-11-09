@@ -37,7 +37,7 @@ function viewWelcome(){return`<div class="card welcome rise">${avSlot(null,"wel"
   <div class="row wrap" style="margin-top:16px"><button class="btn pri lg" data-a="import">${ic("zap")} Import a booking</button><button class="btn lg" data-a="newTrip">${ic("plus")} Start a trip</button><button class="btn lg ghost" data-a="loadSample">${ic("sparkle")} Explore a sample</button></div></div>
   <div class="card"><div class="h">${ic("lock")}<h2>Set up in 30 seconds</h2></div>
    <div class="li" style="border:0;padding-top:0">${kic("doc")}<div class="b"><div class="t">Lock the vault ${Vault.protected?pill("on","ok"):pill("recommended","warn")}</div><div class="d">Encrypts everything on this device</div></div>${Vault.protected?"":`<button class="btn" data-a="setupLock">${ic("key","sm")} Set passphrase</button>`}</div>
-   <div class="li">${kic("transfer")}<div class="b"><div class="t">Install on your phone</div><div class="d">iPhone: Share → Add to Home Screen · Android: Install app</div></div></div></div>`}
+   ${installRow()}</div>`}
 
 /* ===================== Today ===================== */
 function bpHero(t){
