@@ -1,17 +1,34 @@
 /* Trip Vault service worker: caches the app shell so it works offline.
-   It never touches your data (that lives in IndexedDB) and never makes third-party requests. */
-const VERSION = "tv-v18";
+   It never touches your data (that lives in IndexedDB) and makes no third-party requests itself. (Offline speech and
+   translation packs come from Hugging Face only when you download one; js/ai-worker.js fetches and caches those.) */
+const VERSION = "tv-v19";
 const SHARE = "tv-share"; // short-lived inbox for files shared to the installed app
 const SHELL = [
   "./", "index.html", "manifest.webmanifest", "css/app.css",
   "js/data.js", "js/core.js", "js/i18n.js", "js/store.js", "js/parsers.js", "js/model.js", "js/forms.js", "js/backup.js",
-  "js/security.js", "js/memories.js", "js/wrapped.js", "js/search.js", "js/extras.js", "js/pass.js", "js/ocr.js", "js/transfer.js", "js/ideas.js", "js/avatars.js", "js/sync-config.js", "js/gsync.js", "js/privacy.js", "js/profile.js", "js/help.js", "js/apps.js", "js/phrases.js", "js/converse.js", "js/views.js", "js/main.js",
+  "js/security.js", "js/memories.js", "js/wrapped.js", "js/search.js", "js/extras.js", "js/pass.js", "js/ocr.js", "js/transfer.js", "js/ideas.js", "js/avatars.js", "js/sync-config.js", "js/gsync.js", "js/privacy.js", "js/profile.js", "js/help.js", "js/apps.js", "js/phrases.js", "js/offline-ai.js", "js/ai-worker.js", "js/converse.js", "js/views.js", "js/main.js",
   "vendor/three/three.module.min.js", "vendor/three/three.core.min.js",
   "assets/icon.svg", "assets/icon-192.png", "assets/icon-512.png", "assets/apple-touch-icon.png"
 ];
 self.addEventListener("install", e => { e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
+// On update, keep the big on-demand files under vendor/ (text reader, offline speech & translation runtime) so they
+// still work offline after the app updates, then drop the old caches.
+async function carryVendor(old) {
+  const to = await caches.open(VERSION);
+  for (const k of old) {
+    const c = await caches.open(k);
+    for (const req of await c.keys()) {
+      if (!new URL(req.url).pathname.includes("/vendor/") || await to.match(req)) continue;
+      const res = await c.match(req); if (res) await to.put(req, res);
+    }
+  }
+}
 self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== VERSION && k !== SHARE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then(async ks => {
+    const old = ks.filter(k => k !== VERSION && k !== SHARE && k.startsWith("tv-"));
+    try { await carryVendor(old); } catch (err) { /* worst case they download again on next use */ }
+    await Promise.all(old.map(k => caches.delete(k)));
+  }).then(() => self.clients.claim()));
 });
 // Share target: the OS posts shared files/text here. Stash them for the page and redirect to it.
 async function receiveShare(req) {
